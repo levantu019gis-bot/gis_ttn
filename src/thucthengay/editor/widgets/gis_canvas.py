@@ -105,6 +105,11 @@ class GisCanvasWidget(QGraphicsView):
     def visible_layer_count(self) -> int:
         return len(self._visible_layers)
 
+    def render_output_size(self) -> tuple[int, int]:
+        """Return the pixel size that should be rendered for the visible map frame."""
+        frame = self._frame_rect()
+        return max(1, int(frame.width())), max(1, int(frame.height()))
+
     def set_frame_aspect(self, aspect: float) -> None:
         """Set map-frame aspect from template metadata when available."""
         if not isfinite(aspect) or aspect <= 0:

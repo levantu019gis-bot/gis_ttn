@@ -19,6 +19,7 @@ from PySide6.QtWidgets import (
     QTreeView,
 )
 
+import thucthengay.editor.modes.review_edit_mode as review_edit_mode
 from thucthengay.editor.app_shell import AppShell
 from thucthengay.editor.models.composition_tree_model import (
     CompositionTreeModel,
@@ -54,7 +55,13 @@ from thucthengay.models import (
     ViewState,
 )
 from thucthengay.models.template import MapFrame
-from thucthengay.render.spec import GeoWindow, RenderBackground, RenderLayerRef, RenderSpec
+from thucthengay.render.spec import (
+    GeoWindow,
+    RenderBackground,
+    RenderLayerRef,
+    RenderSpec,
+    RenderSpecError,
+)
 from thucthengay.workspace import WorkspaceService
 
 
@@ -324,6 +331,39 @@ def test_review_edit_mode_loads_selected_composition_through_workspace_service(
     assert mode.warnings_panel._list.count() >= 0  # panel is wired up
 
 
+def test_review_edit_uses_template_metadata_map_frame_aspect(
+    tmp_path: Path,
+) -> None:
+    qapp()
+    service = WorkspaceService(tmp_path / "workspace")
+    service.initialize(config_path="config.json")
+    service.write_composition(
+        composition("alpha__20260525", "alpha", date(2026, 5, 25), needs_revalidation=False)
+    )
+
+    mode = ReviewEditMode()
+    mode._request_canvas_render = lambda _composition: None  # noqa: SLF001
+    target = target_config("alpha", sort_order=1, name="Alpha Target").model_copy(
+        update={
+            "metadata": {
+                "template_metadata": {
+                    "template_pptx": "alpha.pptx",
+                    "slide_index": 0,
+                    "map_frame": {"x": 0, "y": 0, "width": 4, "height": 3},
+                }
+            }
+        }
+    )
+    mode.load_workspace(
+        service,
+        targets=[target],
+    )
+    target_index = mode.tree_model.index(0, 0)
+    mode.tree_view.setCurrentIndex(mode.tree_model.index(0, 0, target_index))
+
+    assert abs(mode.gis_canvas.frame_aspect() - (4 / 3)) < 0.02
+
+
 def test_review_edit_selection_persists_compact_validation_summary_only(
     tmp_path: Path,
 ) -> None:
@@ -469,6 +509,10 @@ def test_gis_canvas_states_fixed_frame_and_stale_render_guard() -> None:
     frame = canvas._frame_rect()  # noqa: SLF001
     viewport_width = max(canvas.viewport().width(), 640)
     assert abs(frame.width() / viewport_width - GisCanvasWidget.MAP_FRAME_FILL_RATIO) < 0.02
+    assert canvas.render_output_size() == (
+        max(1, int(frame.width())),
+        max(1, int(frame.height())),
+    )
 
     old_token = canvas.begin_render_request()
     old_generation = canvas.generation
@@ -506,6 +550,64 @@ def test_gis_canvas_states_fixed_frame_and_stale_render_guard() -> None:
     canvas.set_error("Không đọc được raster.")
     assert canvas.state() == GisCanvasState.ERROR
     assert "raster" in canvas.state_text()
+
+
+def test_review_edit_canvas_render_uses_map_frame_size_not_viewport(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    qapp()
+    raster_path = tmp_path / "alpha.tif"
+    raster_path.touch()
+    selected = composition(
+        "alpha__20260525",
+        "alpha",
+        date(2026, 5, 25),
+        needs_revalidation=False,
+    ).model_copy(
+        update={
+            "layers": [
+                ImageLayer(
+                    layer_id="alpha-layer",
+                    source_path=str(raster_path),
+                    order=0,
+                    capture_date=date(2026, 5, 25),
+                    capture_time=time(8, 30),
+                    metadata_status=MetadataStatus.VALID,
+                )
+            ]
+        }
+    )
+    service = WorkspaceService(tmp_path / "workspace")
+    service.initialize(config_path="config.json")
+    service.write_composition(selected)
+
+    mode = ReviewEditMode()
+    mode.load_workspace(
+        service,
+        targets=[target_config("alpha", sort_order=1, name="Alpha Target")],
+    )
+    mode.gis_canvas.resize(800, 500)
+    mode.gis_canvas.set_frame_aspect(GisCanvasWidget.DEFAULT_FRAME_ASPECT)
+    mode.gis_canvas.set_composition(selected)
+    expected_size = mode.gis_canvas.render_output_size()
+    viewport_size = (
+        max(mode.gis_canvas.viewport().width(), 640),
+        max(mode.gis_canvas.viewport().height(), 360),
+    )
+    assert expected_size != viewport_size
+
+    captured: dict[str, tuple[int, int]] = {}
+
+    def capture_render_size(**kwargs) -> RenderSpec:
+        captured["size"] = (kwargs["output_width"], kwargs["output_height"])
+        raise RenderSpecError([])
+
+    monkeypatch.setattr(review_edit_mode, "build_render_spec", capture_render_size)
+
+    mode._request_canvas_render(selected)  # noqa: SLF001
+
+    assert captured["size"] == expected_size
 
 
 def test_slide_preview_debounces_state_and_rejects_stale_results() -> None:

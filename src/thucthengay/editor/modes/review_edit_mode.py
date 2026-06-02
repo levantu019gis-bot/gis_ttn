@@ -608,8 +608,7 @@ class ReviewEditMode(QWidget):
         if not _has_existing_visible_raster(render_composition):
             self.gis_canvas.set_error("Không tìm thấy file raster visible để render canvas.")
             return
-        canvas_width = max(self.gis_canvas.viewport().width(), 640)
-        canvas_height = max(self.gis_canvas.viewport().height(), 360)
+        canvas_width, canvas_height = self.gis_canvas.render_output_size()
         try:
             spec = build_render_spec(
                 composition=render_composition,
@@ -1098,12 +1097,15 @@ class ReviewEditMode(QWidget):
             explicit_aspect = target.metadata.get("map_frame_aspect")
             if _is_positive_number(explicit_aspect):
                 return float(explicit_aspect)
+            template_metadata = target.metadata.get("template_metadata")
+            if isinstance(template_metadata, dict):
+                aspect = _map_frame_aspect(template_metadata.get("map_frame"))
+                if aspect is not None:
+                    return aspect
             map_frame = target.metadata.get("map_frame")
-            if isinstance(map_frame, dict):
-                width = map_frame.get("width")
-                height = map_frame.get("height")
-                if _is_positive_number(width) and _is_positive_number(height):
-                    return float(width) / float(height)
+            aspect = _map_frame_aspect(map_frame)
+            if aspect is not None:
+                return aspect
         return None
 
     def _load_grid_controls(self, composition: Composition) -> None:
@@ -1163,6 +1165,16 @@ class ReviewEditMode(QWidget):
 
 def _is_positive_number(value: object) -> bool:
     return isinstance(value, (int, float)) and not isinstance(value, bool) and value > 0
+
+
+def _map_frame_aspect(map_frame: object) -> float | None:
+    if not isinstance(map_frame, dict):
+        return None
+    width = map_frame.get("width")
+    height = map_frame.get("height")
+    if _is_positive_number(width) and _is_positive_number(height):
+        return float(width) / float(height)
+    return None
 
 
 def _has_existing_visible_raster(composition: Composition) -> bool:
