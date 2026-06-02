@@ -41,6 +41,8 @@ class GisCanvasWidget(QGraphicsView):
     viewEditCompleted = Signal(object, int)
 
     DEFAULT_FRAME_ASPECT = 16 / 9
+    EXPORT_DPI = 200
+    EXPORT_JPEG_QUALITY = 90
     MAP_FRAME_FILL_RATIO = 0.90
     MIN_SCALE = 1000
     MAX_SCALE = 20_000_000
@@ -117,7 +119,11 @@ class GisCanvasWidget(QGraphicsView):
             return False
         path = Path(output_path)
         path.parent.mkdir(parents=True, exist_ok=True)
-        return self._rendered_pixmap.save(str(path), "PNG")
+        image = self._rendered_pixmap.toImage().convertToFormat(QImage.Format.Format_RGB888)
+        dots_per_meter = round(self.EXPORT_DPI / 0.0254)
+        image.setDotsPerMeterX(dots_per_meter)
+        image.setDotsPerMeterY(dots_per_meter)
+        return image.save(str(path), "JPG", self.EXPORT_JPEG_QUALITY)
 
     def set_frame_aspect(self, aspect: float) -> None:
         """Set map-frame aspect from template metadata when available."""

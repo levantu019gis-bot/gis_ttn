@@ -9,6 +9,7 @@ from __future__ import annotations
 import math
 from collections.abc import Callable
 from dataclasses import dataclass
+from pathlib import Path
 
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
@@ -30,7 +31,7 @@ _SURROUND_INNER_STROKE_WIDTH = 4
 _SURROUND_TICK_LENGTH = 14
 _SURROUND_TICK_STROKE_WIDTH = 4
 _REFERENCE_LABEL_FONT_SIZE = 72
-_DEFAULT_LABEL_FONT = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
+_DEFAULT_LABEL_FONT = Path("fonts/arial-bold/Arial Bold/Arial Bold.ttf")
 
 
 @dataclass(frozen=True)
@@ -177,7 +178,8 @@ def _styled_dimension(
 
 def _label_font(size: int) -> ImageFont.ImageFont:
     try:
-        return ImageFont.truetype(_DEFAULT_LABEL_FONT, size=size)
+        font_path = Path(__file__).resolve().parents[3] / _DEFAULT_LABEL_FONT
+        return ImageFont.truetype(font_path, size=size)
     except OSError:
         return ImageFont.load_default()
 

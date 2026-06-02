@@ -1,10 +1,14 @@
 from __future__ import annotations
 
 import os
+import time as time_module
 from datetime import date, time
 from pathlib import Path
 
 import numpy as np
+from pptx import Presentation
+from pptx.enum.shapes import MSO_SHAPE
+from pptx.util import Inches
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
@@ -14,7 +18,7 @@ from PySide6.QtWidgets import QApplication
 from thucthengay.editor.app_shell import AppShell
 from thucthengay.editor.models.export_plan_model import ExportPlanRole
 from thucthengay.editor.modes.export_mode import ExportMode
-from thucthengay.export import ensure_final_renders_for_export
+from thucthengay.export import ensure_final_renders_for_export, run_full_export
 from thucthengay.models import (
     Composition,
     CompositionArtifacts,
@@ -37,7 +41,7 @@ def qapp() -> QApplication:
     return QApplication.instance() or QApplication([])
 
 
-def target_config() -> TargetConfig:
+def target_config(*, txt_template: str = "{slide_number}|{target_id}|{time_label}") -> TargetConfig:
     return TargetConfig(
         id="alpha",
         name="Alpha Target",
@@ -47,7 +51,7 @@ def target_config() -> TargetConfig:
         grid=GridConfig(interval=GridInterval(minutes=1)),
         export={
             "template_pptx_file": "templates/alpha.pptx",
-            "txt_line_template": "{slide_number}|{target_id}|{time_label}",
+            "txt_line_template": txt_template,
             "placeholders": [
                 {
                     "field": "map",
@@ -122,7 +126,7 @@ def success_render(spec: RenderSpec, is_cancelled=None) -> RasterRenderResult:
     )
 
 
-def test_export_mode_runs_preflight_and_populates_plan(tmp_path: Path) -> None:
+def test_export_mode_runs_preflight_and_enables_export_when_ready(tmp_path: Path) -> None:
     qapp()
     mode = ExportMode()
     service = workspace(tmp_path, final_render_path=None)
@@ -134,7 +138,7 @@ def test_export_mode_runs_preflight_and_populates_plan(tmp_path: Path) -> None:
 
     assert mode.plan_model.rowCount() == 1
     assert mode.summary.state_label.text() == "Preflight: ready"
-    assert mode.export_button.isEnabled() is False
+    assert mode.export_button.isEnabled() is True
     index = mode.plan_model.index(0, 0)
     assert index.data(ExportPlanRole.COMPOSITION_ID) == "alpha__20260525"
     assert mode.plan_model.index(0, 4).data(Qt.ItemDataRole.DisplayRole) == "0 issues"
@@ -142,8 +146,18 @@ def test_export_mode_runs_preflight_and_populates_plan(tmp_path: Path) -> None:
 
 def test_export_mode_blocks_export_and_exposes_jump_signal(tmp_path: Path) -> None:
     qapp()
-    mode = ExportMode()
-    mode.load_workspace(workspace(tmp_path, final_render_path=None), targets=[target_config()])
+    mode = ExportMode(
+        export_runner=lambda workspace_service, targets, **kwargs: run_full_export(
+            workspace_service,
+            targets,
+            render=success_render,
+            **kwargs,
+        )
+    )
+    mode.load_workspace(
+        workspace(tmp_path, final_render_path=None),
+        targets=[target_config(txt_template="{unknown}")],
+    )
     jumps: list[tuple[str, str, str]] = []
     mode.jumpRequested.connect(lambda target, comp, layer: jumps.append((target, comp, layer)))
 
@@ -153,6 +167,90 @@ def test_export_mode_blocks_export_and_exposes_jump_signal(tmp_path: Path) -> No
     assert mode.summary.state_label.text() == "Preflight: blocked"
     assert "blocking" in mode.export_button.toolTip()
     assert jumps == [("alpha", "alpha__20260525", "")]
+
+
+def test_export_mode_runs_full_export_pipeline(tmp_path: Path) -> None:
+    app = qapp()
+    map_id, _text_id = _write_template(tmp_path / "templates" / "alpha.pptx")
+    target = target_config_for_template(tmp_path / "templates" / "alpha.pptx", map_id)
+    service = workspace(tmp_path, final_render_path=None)
+    mode = ExportMode(
+        export_runner=lambda workspace_service, targets, **kwargs: run_full_export(
+            workspace_service,
+            targets,
+            render=success_render,
+            **kwargs,
+        )
+    )
+    mode.load_workspace(service, targets=[target])
+
+    mode.preflight_button.click()
+    mode.export_button.click()
+    _wait_until(app, lambda: "Export xong" in mode.status_label.text())
+
+    assert mode.export_button.isEnabled() is True
+    assert (service.paths.exports / "report.pptx").is_file()
+    assert (service.paths.exports / "report.txt").read_text("utf-8").strip() == "1|alpha|08:30:00"
+    assert (service.paths.exports / "report.export-log.json").is_file()
+
+
+def _write_template(path: Path) -> tuple[int, int]:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    presentation = Presentation()
+    presentation.slide_width = Inches(10)
+    presentation.slide_height = Inches(5.625)
+    slide = presentation.slides.add_slide(presentation.slide_layouts[6])
+    map_shape = slide.shapes.add_shape(
+        MSO_SHAPE.RECTANGLE,
+        Inches(0.5),
+        Inches(0.75),
+        Inches(4),
+        Inches(3),
+    )
+    text_shape = slide.shapes.add_textbox(Inches(5), Inches(0.75), Inches(4), Inches(0.5))
+    text_shape.text = "Alpha"
+    presentation.save(path)
+    return int(map_shape.shape_id), int(text_shape.shape_id)
+
+
+def target_config_for_template(template_path: Path, map_id: int) -> TargetConfig:
+    placeholder = TemplatePlaceholder(
+        field="map",
+        element_id=map_id,
+        kind=PlaceholderType.MAP_IMAGE,
+        required=True,
+    )
+    return TargetConfig(
+        id="alpha",
+        name="Alpha Target",
+        geojson_file="targets/alpha.geojson",
+        coordinate=[106.7, 10.8],
+        scale=50000,
+        grid=GridConfig(interval=GridInterval(minutes=1)),
+        export={
+            "template_pptx_file": str(template_path),
+            "txt_line_template": "{slide_number}|{target_id}|{time_label}",
+            "placeholders": [placeholder.model_dump(mode="json")],
+        },
+        metadata={
+            "template_metadata": TemplateMetadata(
+                template_pptx=str(template_path),
+                slide_index=0,
+                map_frame=MapFrame(x=36, y=54, width=288, height=216),
+                placeholders=[placeholder],
+            ).model_dump(mode="json")
+        },
+    )
+
+
+def _wait_until(app: QApplication, predicate, *, timeout: float = 5.0) -> None:  # noqa: ANN001
+    deadline = time_module.monotonic() + timeout
+    while time_module.monotonic() < deadline:
+        app.processEvents()
+        if predicate():
+            return
+    msg = "Timed out waiting for Qt condition"
+    raise AssertionError(msg)
 
 
 def test_app_shell_exposes_export_mode_and_jump_switches_to_review() -> None:

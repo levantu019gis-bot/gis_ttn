@@ -91,6 +91,15 @@ def _sample(canvas: np.ndarray, x_frac: float, y_frac: float) -> tuple[int, int,
     return tuple(int(value) for value in canvas[row, col])
 
 
+def _close_rgb(
+    actual: tuple[int, int, int],
+    expected: tuple[int, int, int],
+    *,
+    tolerance: int = 2,
+) -> bool:
+    return all(abs(channel - reference) <= tolerance for channel, reference in zip(actual, expected))
+
+
 @pytest.fixture
 def alignment_fixture(tmp_path: Path) -> AlignmentFixture:
     root = tmp_path / "fixture"
@@ -238,14 +247,20 @@ def test_preview_and_final_outputs_align_on_fixture_data(
         final_canvas = np.asarray(image)
 
     # Normalized samples make the expected preview/final resolution difference explicit.
-    assert _sample(preview_result.canvas, 0.25, 0.50) == _sample(final_canvas, 0.25, 0.50)
-    assert _sample(final_canvas, 0.25, 0.50) == (20, 30, 220)
-    assert _sample(preview_result.canvas, 0.75, 0.50) == _sample(final_canvas, 0.75, 0.50)
-    assert _sample(final_canvas, 0.75, 0.50) == (17, 34, 51)
+    assert _close_rgb(
+        _sample(final_canvas, 0.25, 0.50),
+        _sample(preview_result.canvas, 0.25, 0.50),
+    )
+    assert _close_rgb(_sample(final_canvas, 0.25, 0.50), (20, 30, 220))
+    assert _close_rgb(
+        _sample(final_canvas, 0.75, 0.50),
+        _sample(preview_result.canvas, 0.75, 0.50),
+    )
+    assert _close_rgb(_sample(final_canvas, 0.75, 0.50), (17, 34, 51))
 
     top_mid_preview = _sample(preview_result.canvas, 0.50, 0.0)
     top_mid_final = _sample(final_canvas, 0.50, 0.0)
-    assert top_mid_preview == top_mid_final
+    assert _close_rgb(top_mid_final, top_mid_preview)
     assert top_mid_final != (17, 34, 51)
 
 
@@ -320,7 +335,7 @@ def test_ingestion_default_orders_newest_valid_layer_first(tmp_path: Path) -> No
     assert composition.layers[-1].metadata_status == MetadataStatus.NEEDS_MANUAL_CORRECTION
 
 
-def test_invalid_fixture_final_render_returns_issue_without_partial_png(
+def test_invalid_fixture_final_render_returns_issue_without_partial_image(
     alignment_fixture: AlignmentFixture,
 ) -> None:
     missing_layer_spec = alignment_fixture.spec.model_copy(
@@ -338,4 +353,4 @@ def test_invalid_fixture_final_render_returns_issue_without_partial_png(
     assert result.status == FinalRenderStatus.FAILURE
     assert result.output_path is None
     assert [issue.issue_id for issue in result.issues] == ["render.raster.unreadable"]
-    assert list((alignment_fixture.root / "renders").glob("*.png")) == []
+    assert list((alignment_fixture.root / "renders").glob("*.jpg")) == []

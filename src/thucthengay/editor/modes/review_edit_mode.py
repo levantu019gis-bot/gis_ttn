@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from pydantic import ValidationError
-from PySide6.QtCore import Qt, QThread, Signal, Slot
+from PySide6.QtCore import Qt, QThread, QTimer, Signal, Slot
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QApplication,
@@ -40,6 +40,7 @@ from thucthengay.editor.widgets import (
     WarningsPanelWidget,
     confirm_date_change_dialog,
 )
+from thucthengay.export.final_render import final_render_output_size
 from thucthengay.jobs import (
     JobState,
     PreviewRenderJobResult,
@@ -54,7 +55,6 @@ from thucthengay.models import (
     TargetConfig,
     TemplateMetadata,
 )
-from thucthengay.export.final_render import final_render_output_size
 from thucthengay.render.raster import render_raster_layers
 from thucthengay.render.spec import RenderSpecError, build_render_spec
 from thucthengay.render.target_preview import build_target_preview_spec
@@ -70,6 +70,7 @@ class ReviewEditMode(QWidget):
     """Desktop Review/Edit layout and target-composition navigator."""
 
     compositionSelected = Signal(object)
+    CANVAS_VIEW_PERSIST_DEBOUNCE_MS = 250
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -79,9 +80,10 @@ class ReviewEditMode(QWidget):
         self._targets: list[TargetConfig] | None = None
         self.selected_composition: Composition | None = None
         self._suppress_selection_validation = False
-        self._render_thread: QThread | None = None
-        self._render_worker: RenderWorker | None = None
-        self._render_token: object | None = None
+        self._render_threads: dict[str, QThread] = {}
+        self._render_workers: dict[str, RenderWorker] = {}
+        self._render_tokens: dict[str, object] = {}
+        self._pending_canvas_view: tuple[list[float], int] | None = None
         self._target_render_thread: QThread | None = None
         self._target_render_worker: RenderWorker | None = None
         self._target_render_token: TargetPreviewRequestToken | None = None
@@ -189,6 +191,9 @@ class ReviewEditMode(QWidget):
 
         self.gis_canvas = GisCanvasWidget()
         self.gis_canvas.viewEditCompleted.connect(self._persist_canvas_view)
+        self._canvas_view_persist_timer = QTimer(self)
+        self._canvas_view_persist_timer.setSingleShot(True)
+        self._canvas_view_persist_timer.timeout.connect(self._flush_pending_canvas_view)
         self.export_canvas_button = QPushButton("Xuất ảnh")
         self.export_canvas_button.setObjectName("reviewGisExportImage")
         self.export_canvas_button.setToolTip("Xuất ảnh đang hiển thị trong GIS editor")
@@ -269,8 +274,9 @@ class ReviewEditMode(QWidget):
         self._restore_selection(selected_id)
 
     def closeEvent(self, event) -> None:  # noqa: ANN001, N802
+        self._flush_pending_canvas_view()
         self._cancel_target_render()
-        self._cancel_render()
+        self._cancel_render(wait=True)
         super().closeEvent(event)
 
     def _build_left_panel(self) -> QWidget:
@@ -426,12 +432,28 @@ class ReviewEditMode(QWidget):
         return self.selected_composition.composition_id
 
     def _restore_selection(self, composition_id: str | None) -> None:
+        self._restore_selection_with_signal_state(composition_id, emit=True)
+
+    def _restore_selection_with_signal_state(
+        self,
+        composition_id: str | None,
+        *,
+        emit: bool,
+    ) -> None:
         if composition_id is None:
             return
 
         index = self.tree_model.index_for_composition_id(composition_id)
         if index.isValid():
-            self.tree_view.setCurrentIndex(index)
+            selection_model = self.tree_view.selectionModel()
+            previous_blocked = False
+            if selection_model is not None and not emit:
+                previous_blocked = selection_model.blockSignals(True)
+            try:
+                self.tree_view.setCurrentIndex(index)
+            finally:
+                if selection_model is not None and not emit:
+                    selection_model.blockSignals(previous_blocked)
         else:
             self.tree_view.clearSelection()
 
@@ -645,13 +667,16 @@ class ReviewEditMode(QWidget):
         except (RenderSpecError, ValidationError):
             return
         request = PreviewRenderRequest(
-            job_id=f"canvas:{composition.composition_id}",
+            job_id=f"canvas:{composition.composition_id}:{self.gis_canvas.generation}",
             composition_id=composition.composition_id,
             revision=self.gis_canvas.generation,
             quality=PreviewRenderQuality.SETTLED_HIGH_RES,
             spec=spec,
         )
-        self._render_token = self.gis_canvas.set_loading("Đang render preview...")
+        token = self.gis_canvas.set_loading("Đang render preview...")
+        self._start_canvas_render(request, token)
+
+    def _start_canvas_render(self, request: PreviewRenderRequest, token: object) -> None:
         thread = QThread(self)
         worker = RenderWorker(request)
         worker.moveToThread(thread)
@@ -660,9 +685,12 @@ class ReviewEditMode(QWidget):
         worker.finished.connect(thread.quit)
         worker.finished.connect(worker.deleteLater)
         thread.finished.connect(thread.deleteLater)
-        thread.finished.connect(self._clear_render_worker)
-        self._render_thread = thread
-        self._render_worker = worker
+        thread.finished.connect(
+            lambda job_id=request.job_id: self._clear_canvas_render_worker(job_id)
+        )
+        self._render_threads[request.job_id] = thread
+        self._render_workers[request.job_id] = worker
+        self._render_tokens[request.job_id] = token
         thread.start()
 
     def _request_target_preview(self, composition: Composition) -> None:
@@ -714,7 +742,7 @@ class ReviewEditMode(QWidget):
 
     @Slot(object)
     def _handle_canvas_render_result(self, result: PreviewRenderJobResult) -> None:
-        token = self._render_token
+        token = self._render_tokens.get(result.job_id)
         if token is None:
             return
         self._apply_canvas_render(result, token)
@@ -747,26 +775,33 @@ class ReviewEditMode(QWidget):
         elif result.state == JobState.ERROR:
             self.target_preview.set_error(token, result.message)
 
-    def _cancel_render(self) -> None:
-        if self._render_thread is not None and self._render_thread.isRunning():
-            self._render_thread.quit()
-            self._render_thread.wait(2000)
-        self._render_thread = None
-        self._render_worker = None
-        self._render_token = None
+    def _cancel_render(self, *, wait: bool = False) -> None:
+        self._render_tokens.clear()
+        for worker in list(self._render_workers.values()):
+            worker.cancel()
+        if not wait:
+            return
+        for thread in list(self._render_threads.values()):
+            if thread.isRunning():
+                thread.quit()
+                thread.wait(2000)
+        self._render_threads.clear()
+        self._render_workers.clear()
 
     def _cancel_target_render(self) -> None:
         if self._target_render_thread is not None and self._target_render_thread.isRunning():
+            if self._target_render_worker is not None:
+                self._target_render_worker.cancel()
             self._target_render_thread.quit()
             self._target_render_thread.wait(2000)
         self._target_render_thread = None
         self._target_render_worker = None
         self._target_render_token = None
 
-    def _clear_render_worker(self) -> None:
-        self._render_thread = None
-        self._render_worker = None
-        self._render_token = None
+    def _clear_canvas_render_worker(self, job_id: str) -> None:
+        self._render_threads.pop(job_id, None)
+        self._render_workers.pop(job_id, None)
+        self._render_tokens.pop(job_id, None)
 
     def _clear_target_render_worker(self) -> None:
         self._target_render_thread = None
@@ -1026,9 +1061,19 @@ class ReviewEditMode(QWidget):
             self.layer_table.setCurrentIndex(new_index)
 
     def _persist_canvas_view(self, center: list[float], scale: int) -> None:
+        self._pending_canvas_view = (list(center), scale)
+        self._canvas_view_persist_timer.start(self.CANVAS_VIEW_PERSIST_DEBOUNCE_MS)
+
+    def _flush_pending_canvas_view(self) -> None:
+        pending = self._pending_canvas_view
+        self._pending_canvas_view = None
+        self._canvas_view_persist_timer.stop()
+        if pending is None:
+            return
         if self._workspace_service is None or self.selected_composition is None:
             return
 
+        center, scale = pending
         composition_id = self.selected_composition.composition_id
         try:
             updated = self._workspace_service.update_view_state(
@@ -1043,7 +1088,16 @@ class ReviewEditMode(QWidget):
 
         self.selected_composition = updated
         self._update_detail_panels(updated)
-        self._refresh_workspace_projection(updated.composition_id, validate_selection=False)
+        self._replace_workspace_projection_composition(updated)
+        self._request_canvas_render(updated)
+
+    def _replace_workspace_projection_composition(self, composition: Composition) -> None:
+        if not self.tree_model.replace_composition(composition):
+            self._refresh_workspace_projection(composition.composition_id, validate_selection=False)
+            return
+        self.tree_view.expandAll()
+        self._refresh_filter_controls()
+        self._restore_selection_with_signal_state(composition.composition_id, emit=False)
 
     def _save_grid_override(self) -> None:
         if self._workspace_service is None or self.selected_composition is None:
@@ -1093,10 +1147,10 @@ class ReviewEditMode(QWidget):
 
     def _default_canvas_export_path(self) -> Path:
         if self._workspace_service is None or self.selected_composition is None:
-            return Path("gis-editor.png")
+            return Path("gis-editor.jpg")
         return (
             self._workspace_service.paths.renders
-            / f"{self.selected_composition.composition_id}.gis-editor.png"
+            / f"{self.selected_composition.composition_id}.gis-editor.jpg"
         )
 
     def _select_canvas_export_path(self, default_path: Path) -> Path | None:
@@ -1104,13 +1158,13 @@ class ReviewEditMode(QWidget):
             self,
             "Xuất ảnh GIS editor",
             str(default_path),
-            "PNG image (*.png)",
+            "JPEG image (*.jpg *.jpeg)",
         )
         if not path:
             return None
         selected = Path(path)
-        if selected.suffix.lower() != ".png":
-            selected = selected.with_suffix(".png")
+        if selected.suffix.lower() not in {".jpg", ".jpeg"}:
+            selected = selected.with_suffix(".jpg")
         return selected
 
     def _refresh_workspace_projection(
@@ -1156,7 +1210,8 @@ class ReviewEditMode(QWidget):
         self._update_review_action_state()
         if target_preview_needs_render:
             self._request_target_preview(composition)
-        self._request_canvas_render(composition)
+        if not composition.needs_revalidation:
+            self._request_canvas_render(composition)
 
     def _frame_aspect_for_composition(self, composition: Composition) -> float | None:
         for target in self._targets or []:

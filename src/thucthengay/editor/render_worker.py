@@ -23,12 +23,24 @@ class RenderWorker(QObject):
         super().__init__(parent)
         self._request = request
         self._render = render
+        self._cancelled = False
+
+    def cancel(self) -> None:
+        """Request cooperative cancellation for the running render."""
+        self._cancelled = True
+
+    def is_cancelled(self) -> bool:
+        return self._cancelled
 
     @Slot()
     def run(self) -> None:
         """Worker entry point invoked by QThread."""
         if self._render is None:
-            result = run_preview_render_job(self._request)
+            result = run_preview_render_job(self._request, is_cancelled=self.is_cancelled)
         else:
-            result = run_preview_render_job(self._request, render=self._render)
+            result = run_preview_render_job(
+                self._request,
+                render=self._render,
+                is_cancelled=self.is_cancelled,
+            )
         self.finished.emit(result)

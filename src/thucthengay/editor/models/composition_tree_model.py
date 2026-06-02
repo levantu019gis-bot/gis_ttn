@@ -89,6 +89,26 @@ class CompositionTreeModel(QAbstractItemModel):
         self._rebuild_tree()
         self.endResetModel()
 
+    def replace_composition(self, composition: Composition) -> bool:
+        """Replace one composition in the current projection source."""
+        updated: list[Composition] = []
+        found = False
+        for existing in self._all_compositions:
+            if existing.composition_id == composition.composition_id:
+                updated.append(composition)
+                found = True
+            else:
+                updated.append(existing)
+        if not found:
+            return False
+
+        self.beginResetModel()
+        self._all_compositions = updated
+        self._filter_counts = _filter_counts(self._all_compositions)
+        self._rebuild_tree()
+        self.endResetModel()
+        return True
+
     @property
     def active_queue_filter(self) -> QueueFilter:
         """Current queue filter applied to visible tree rows."""

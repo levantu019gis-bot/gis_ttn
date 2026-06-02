@@ -6,6 +6,7 @@ from datetime import date, time
 from pathlib import Path
 
 import numpy as np
+from PIL import Image
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
@@ -41,7 +42,12 @@ from thucthengay.editor.widgets import (
     TargetPreviewState,
     TargetPreviewWidget,
 )
-from thucthengay.jobs import JobState, PreviewRenderController, PreviewRenderJobResult
+from thucthengay.jobs import (
+    JobState,
+    PreviewRenderController,
+    PreviewRenderJobResult,
+    PreviewRenderQuality,
+)
 from thucthengay.models import (
     Composition,
     GridConfig,
@@ -570,19 +576,24 @@ def test_gis_canvas_exports_current_displayed_image(tmp_path: Path) -> None:
 
     assert canvas.apply_render_result(token, "preview render", canvas=rendered) is True
 
-    output_path = tmp_path / "gis-editor.png"
+    output_path = tmp_path / "gis-editor.jpg"
     assert canvas.export_displayed_image(output_path) is True
 
     image = QImage(str(output_path))
     assert not image.isNull()
     assert image.width() == 160
     assert image.height() == 120
+    with Image.open(output_path) as saved:
+        assert saved.format == "JPEG"
+        dpi = saved.info["dpi"]
+        assert round(dpi[0]) == GisCanvasWidget.EXPORT_DPI
+        assert round(dpi[1]) == GisCanvasWidget.EXPORT_DPI
 
 
 def test_gis_canvas_export_requires_rendered_map_image(tmp_path: Path) -> None:
     qapp()
     canvas = GisCanvasWidget()
-    output_path = tmp_path / "gis-editor.png"
+    output_path = tmp_path / "gis-editor.jpg"
 
     assert canvas.export_displayed_image(output_path) is False
     assert not output_path.exists()
@@ -599,7 +610,7 @@ def test_review_edit_export_button_saves_gis_canvas_image(tmp_path: Path) -> Non
     mode = ReviewEditMode()
     mode._request_canvas_render = lambda _composition: None  # noqa: SLF001
     mode._request_target_preview = lambda _composition: None  # noqa: SLF001
-    output_path = tmp_path / "review-export.png"
+    output_path = tmp_path / "review-export.jpg"
     mode._select_canvas_export_path = lambda _default: output_path  # type: ignore[method-assign]  # noqa: SLF001
     mode.load_workspace(
         service,
@@ -619,6 +630,11 @@ def test_review_edit_export_button_saves_gis_canvas_image(tmp_path: Path) -> Non
     image = QImage(str(output_path))
     assert image.size().width() == 3306
     assert image.size().height() == 2340
+    with Image.open(output_path) as saved:
+        assert saved.format == "JPEG"
+        dpi = saved.info["dpi"]
+        assert round(dpi[0]) == GisCanvasWidget.EXPORT_DPI
+        assert round(dpi[1]) == GisCanvasWidget.EXPORT_DPI
     assert "Đã xuất ảnh GIS editor" in mode.action_summary.text()
 
 
@@ -712,6 +728,121 @@ def test_review_edit_canvas_render_uses_final_template_size_not_viewport(
     mode._request_canvas_render(selected)  # noqa: SLF001
 
     assert captured["size"] == expected_size
+
+
+def test_review_edit_canvas_render_request_keeps_export_size(tmp_path: Path) -> None:
+    qapp()
+    raster_path = tmp_path / "alpha.tif"
+    raster_path.touch()
+    selected = composition(
+        "alpha__20260525",
+        "alpha",
+        date(2026, 5, 25),
+        needs_revalidation=False,
+    ).model_copy(
+        update={
+            "layers": [
+                ImageLayer(
+                    layer_id="alpha-layer",
+                    source_path=str(raster_path),
+                    order=0,
+                    capture_date=date(2026, 5, 25),
+                    capture_time=time(8, 30),
+                    metadata_status=MetadataStatus.VALID,
+                )
+            ]
+        }
+    )
+    target = target_config("alpha", sort_order=1, name="Alpha Target").model_copy(
+        update={
+            "metadata": {
+                "template_metadata": {
+                    "template_pptx": "alpha.pptx",
+                    "slide_index": 0,
+                    "map_frame": {"x": 0, "y": 0, "width": 16.5223, "height": 11.6946},
+                    "placeholders": [
+                        {
+                            "field": "map",
+                            "element_id": 10,
+                            "kind": "map_image",
+                            "required": True,
+                        }
+                    ],
+                    "metadata": {
+                        "selected_slide": {
+                            "shapes": [
+                                {
+                                    "id": "10",
+                                    "picture": {
+                                        "media": {
+                                            "image": {
+                                                "width_px": 3306,
+                                                "height_px": 2340,
+                                            }
+                                        }
+                                    },
+                                }
+                            ]
+                        }
+                    },
+                }
+            }
+        }
+    )
+    service = WorkspaceService(tmp_path / "workspace")
+    service.initialize(config_path="config.json")
+    service.write_composition(selected)
+
+    mode = ReviewEditMode()
+    mode.load_workspace(service, targets=[target])
+    started: list[tuple[PreviewRenderQuality, int, int]] = []
+
+    def capture_start(request, _token) -> None:  # noqa: ANN001
+        started.append(
+            (
+                request.quality,
+                request.spec.output_width,
+                request.spec.output_height,
+            )
+        )
+
+    mode._start_canvas_render = capture_start  # type: ignore[method-assign]  # noqa: SLF001
+
+    mode._request_canvas_render(selected)  # noqa: SLF001
+
+    assert started == [(PreviewRenderQuality.SETTLED_HIGH_RES, 3306, 2340)]
+
+
+def test_review_edit_skips_canvas_render_for_stale_composition(tmp_path: Path) -> None:
+    qapp()
+    service = WorkspaceService(tmp_path / "workspace")
+    service.initialize(config_path="config.json")
+    stale = composition(
+        "alpha__20260525",
+        "alpha",
+        date(2026, 5, 25),
+        needs_revalidation=True,
+    )
+    service.write_composition(stale)
+
+    mode = ReviewEditMode()
+    requested: list[str] = []
+    mode._request_canvas_render = (  # type: ignore[method-assign]  # noqa: SLF001
+        lambda selected: requested.append(selected.composition_id)
+    )
+    mode._request_target_preview = lambda _composition: None  # noqa: SLF001
+    mode.load_workspace(
+        service,
+        targets=[target_config("alpha", sort_order=1, name="Alpha Target")],
+    )
+    target_index = mode.tree_model.index(0, 0)
+    mode.tree_view.setCurrentIndex(mode.tree_model.index(0, 0, target_index))
+
+    requested.clear()
+    mode._update_detail_panels(stale)  # noqa: SLF001
+
+    assert requested == []
+    assert mode.gis_canvas.state() == GisCanvasState.STALE
 
 
 def test_slide_preview_debounces_state_and_rejects_stale_results() -> None:
@@ -1106,6 +1237,9 @@ def test_review_edit_gis_canvas_saves_pan_zoom_and_marks_preview_stale(
     assert abs(mode.gis_canvas.frame_aspect() - (4 / 3)) < 0.02
 
     mode.gis_canvas.pan_by_pixels(48, -24)
+    assert service.read_composition("alpha__20260525").view.center == original_center
+
+    mode._flush_pending_canvas_view()  # noqa: SLF001
 
     panned = service.read_composition("alpha__20260525")
     assert panned.view.center != original_center
@@ -1116,6 +1250,7 @@ def test_review_edit_gis_canvas_saves_pan_zoom_and_marks_preview_stale(
     assert mode.target_preview.generation == target_preview_generation
 
     mode.gis_canvas.zoom_by_factor(0.5)
+    mode._flush_pending_canvas_view()  # noqa: SLF001
 
     zoomed = service.read_composition("alpha__20260525")
     assert zoomed.view.scale == 25000

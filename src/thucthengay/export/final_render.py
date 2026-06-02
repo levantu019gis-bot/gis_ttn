@@ -42,7 +42,7 @@ def ensure_final_renders_for_export(
     is_cancelled: CancelCallback | None = None,
     final_dpi: int = DEFAULT_FINAL_RENDER_DPI,
 ) -> ExportFinalRenderResult:
-    """Ensure every included composition has a current final PNG for export."""
+    """Ensure every included composition has a current final image for export."""
     target_map = {target.id: target for target in targets}
     included = [
         composition
@@ -157,15 +157,15 @@ def final_render_currentness_issue(
     if not composition.artifacts.final_render_path:
         return _issue(
             "export.final_render_missing",
-            "Composition chua co PNG final render de dua vao PPTX.",
+            "Composition chua co anh final render de dua vao PPTX.",
             "Chay buoc render final cho composition nay truoc khi export.",
             composition=composition,
         )
     if not composition.artifacts.render_log_path:
         return _issue(
             "export.final_render_log_missing",
-            "Composition chua co render log de xac minh PNG final.",
-            "Render lai final PNG de tao log va hash hien tai.",
+            "Composition chua co render log de xac minh anh final.",
+            "Render lai anh final de tao log va hash hien tai.",
             composition=composition,
         )
     if target is None:
@@ -181,7 +181,7 @@ def final_render_currentness_issue(
     except (RenderSpecError, ValueError) as error:
         return _issue(
             "export.final_render_spec_invalid",
-            "Khong tao duoc render spec de xac minh PNG final.",
+            "Khong tao duoc render spec de xac minh anh final.",
             f"Kiem tra composition, target va template metadata. Chi tiet: {error}",
             composition=composition,
         )
@@ -196,8 +196,8 @@ def final_render_currentness_issue(
         return None
     return _issue(
         "export.final_render_stale",
-        "PNG final render khong con khop voi composition hien tai.",
-        f"Render lai PNG final truoc khi export. Ly do: {currentness.reason}.",
+        "Anh final render khong con khop voi composition hien tai.",
+        f"Render lai anh final truoc khi export. Ly do: {currentness.reason}.",
         composition=composition,
     )
 
@@ -231,7 +231,7 @@ def _ensure_composition_final_render(
             [
                 _issue(
                     "export.final_render_cancelled",
-                    "Da huy tao PNG final cho export.",
+                    "Da huy tao anh final cho export.",
                     "Chay lai export preparation khi san sang.",
                     composition=composition,
                 )
@@ -304,7 +304,7 @@ def _ensure_composition_final_render(
             [
                 _issue(
                     "export.final_render_artifact_persist_failed",
-                    "Khong ghi duoc duong dan PNG final vao workspace.",
+                    "Khong ghi duoc duong dan anh final vao workspace.",
                     f"Kiem tra quyen ghi workspace va thu lai. Chi tiet: {error}",
                     composition=composition,
                 )

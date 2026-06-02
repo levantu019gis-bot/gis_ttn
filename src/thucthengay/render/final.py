@@ -1,4 +1,4 @@
-"""Final PNG rendering and render-log persistence."""
+"""Final image rendering and render-log persistence."""
 
 from __future__ import annotations
 
@@ -29,6 +29,7 @@ from thucthengay.render.spec import RenderSpec
 
 FinalRenderFunction = Callable[..., RasterRenderResult]
 FINAL_RENDER_DPI = 200
+FINAL_RENDER_JPEG_QUALITY = 90
 
 
 def render_spec_hash(spec: RenderSpec) -> str:
@@ -50,7 +51,7 @@ def render_final_png(
     is_cancelled: CancelCallback | None = None,
     timestamp: datetime | None = None,
 ) -> FinalRenderResult:
-    """Render a final PNG under ``workspace_root/renders`` and append its log."""
+    """Render a final JPEG under ``workspace_root/renders`` and append its log."""
     root = Path(workspace_root).expanduser().resolve()
     spec_hash = render_spec_hash(spec)
     log_rel_path = _render_log_rel_path(spec.composition_id)
@@ -60,9 +61,9 @@ def render_final_png(
     try:
         render_result = render(spec, is_cancelled=is_cancelled)
         _validate_canvas_matches_spec(render_result.canvas, spec)
-        output_rel_path = _final_png_rel_path(spec.composition_id, spec_hash)
+        output_rel_path = _final_image_rel_path(spec.composition_id, spec_hash)
         output_path = root / output_rel_path
-        _atomic_write_png(output_path, render_result.canvas)
+        _atomic_write_jpeg(output_path, render_result.canvas)
         entry = _entry(
             spec=spec,
             status=FinalRenderStatus.SUCCESS,
@@ -151,14 +152,14 @@ def is_final_render_current(
         return FinalRenderCurrentness(current=False, reason="spec_hash_mismatch")
     if latest.width != spec.output_width or latest.height != spec.output_height:
         return FinalRenderCurrentness(current=False, reason="output_size_mismatch")
-    if not _png_has_expected_dpi(resolved_output):
+    if not _image_has_expected_dpi(resolved_output):
         return FinalRenderCurrentness(current=False, reason="output_dpi_mismatch")
 
     return FinalRenderCurrentness(current=True, reason=None)
 
 
-def _final_png_rel_path(composition_id: str, spec_hash: str) -> str:
-    return f"renders/{composition_id}.{spec_hash[:12]}.png"
+def _final_image_rel_path(composition_id: str, spec_hash: str) -> str:
+    return f"renders/{composition_id}.{spec_hash[:12]}.jpg"
 
 
 def _render_log_rel_path(composition_id: str) -> str:
@@ -235,22 +236,22 @@ def _record_failure(
 def _failure_reason(issues: list[Issue], fallback: str) -> str:
     if issues:
         return issues[0].message
-    return fallback or "Khong tao duoc PNG final."
+    return fallback or "Khong tao duoc anh final."
 
 
 def _failure_issue(spec: RenderSpec, detail: str) -> Issue:
     return Issue(
-        issue_id="render.final_png.failed",
+        issue_id="render.final_image.failed",
         severity=IssueSeverity.ERROR,
         scope=IssueScope.RENDER,
         target_id=spec.target_id,
         composition_id=spec.composition_id,
-        message="Khong tao duoc PNG final.",
+        message="Khong tao duoc anh final.",
         remediation=f"Kiem tra workspace render va thu lai. Chi tiet: {detail}",
     )
 
 
-def _atomic_write_png(path: Path, canvas: np.ndarray) -> None:
+def _atomic_write_jpeg(path: Path, canvas: np.ndarray) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     temp_path: Path | None = None
     try:
@@ -264,8 +265,11 @@ def _atomic_write_png(path: Path, canvas: np.ndarray) -> None:
             temp_path = Path(temp_file.name)
         Image.fromarray(_as_rgb_uint8(canvas)).save(
             temp_path,
-            format="PNG",
+            format="JPEG",
             dpi=(FINAL_RENDER_DPI, FINAL_RENDER_DPI),
+            optimize=True,
+            quality=FINAL_RENDER_JPEG_QUALITY,
+            subsampling=0,
         )
         os.replace(temp_path, path)
     except Exception:
@@ -298,7 +302,7 @@ def _as_rgb_uint8(canvas: np.ndarray) -> np.ndarray:
     return canvas
 
 
-def _png_has_expected_dpi(path: Path) -> bool:
+def _image_has_expected_dpi(path: Path) -> bool:
     try:
         with Image.open(path) as image:
             dpi = image.info.get("dpi")

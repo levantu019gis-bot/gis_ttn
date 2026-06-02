@@ -34,22 +34,34 @@
         "style": {
           "frame_color": "#000000",
           "label_color": "#000000",
-          "label_font_size": 10,
+          "label_font_size": 24,
           "tick_length_px": 8
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
+        "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
+        "date_format": "dd.MM.yy",
+        "time_format": "HH.mm/dd.MM.yy",
         "placeholders": [
           {
             "field": "map_image",
-            "element_id": 1026,
-            "kind": "map_image",
-            "diagnostic_name": null,
-            "required": true
+            "element_id": "1026"
+          },
+          {
+            "field": "title",
+            "element_id": "7",
+            "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
+          },
+          {
+            "field": "time",
+            "element_id": "14"
+          },
+          {
+            "field": "title",
+            "element_id": "2"
           }
-        ],
-        "txt_line_template": "{target_alias} {capture_date} {capture_time}"
+        ]
       },
       "metadata": {
         "geojson_type": "Feature",
@@ -118,22 +130,34 @@
         "style": {
           "frame_color": "#000000",
           "label_color": "#000000",
-          "label_font_size": 10,
+          "label_font_size": 24,
           "tick_length_px": 8
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
+        "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
+        "date_format": "dd.MM.yy",
+        "time_format": "HH.mm/dd.MM.yy",
         "placeholders": [
           {
             "field": "map_image",
-            "element_id": 1026,
-            "kind": "map_image",
-            "diagnostic_name": null,
-            "required": true
+            "element_id": "1026"
+          },
+          {
+            "field": "title",
+            "element_id": "7",
+            "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
+          },
+          {
+            "field": "time",
+            "element_id": "14"
+          },
+          {
+            "field": "title",
+            "element_id": "2"
           }
-        ],
-        "txt_line_template": "{target_alias} {capture_date} {capture_time}"
+        ]
       },
       "metadata": {
         "geojson_type": "Feature",
@@ -202,22 +226,34 @@
         "style": {
           "frame_color": "#000000",
           "label_color": "#000000",
-          "label_font_size": 10,
+          "label_font_size": 24,
           "tick_length_px": 8
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
+        "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
+        "date_format": "dd.MM.yy",
+        "time_format": "HH.mm/dd.MM.yy",
         "placeholders": [
           {
             "field": "map_image",
-            "element_id": 1026,
-            "kind": "map_image",
-            "diagnostic_name": null,
-            "required": true
+            "element_id": "1026"
+          },
+          {
+            "field": "title",
+            "element_id": "7",
+            "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
+          },
+          {
+            "field": "time",
+            "element_id": "14"
+          },
+          {
+            "field": "title",
+            "element_id": "2"
           }
-        ],
-        "txt_line_template": "{target_alias} {capture_date} {capture_time}"
+        ]
       },
       "metadata": {
         "geojson_type": "Feature",
@@ -286,22 +322,34 @@
         "style": {
           "frame_color": "#000000",
           "label_color": "#000000",
-          "label_font_size": 10,
+          "label_font_size": 24,
           "tick_length_px": 8
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
+        "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
+        "date_format": "dd.MM.yy",
+        "time_format": "HH.mm/dd.MM.yy",
         "placeholders": [
           {
             "field": "map_image",
-            "element_id": 1026,
-            "kind": "map_image",
-            "diagnostic_name": null,
-            "required": true
+            "element_id": "1026"
+          },
+          {
+            "field": "title",
+            "element_id": "7",
+            "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
+          },
+          {
+            "field": "time",
+            "element_id": "14"
+          },
+          {
+            "field": "title",
+            "element_id": "2"
           }
-        ],
-        "txt_line_template": "{target_alias} {capture_date} {capture_time}"
+        ]
       },
       "metadata": {
         "geojson_type": "Feature",
@@ -386,22 +434,34 @@
         "style": {
           "frame_color": "#000000",
           "label_color": "#000000",
-          "label_font_size": 10,
+          "label_font_size": 24,
           "tick_length_px": 8
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
+        "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
+        "date_format": "dd.MM.yy",
+        "time_format": "HH.mm/dd.MM.yy",
         "placeholders": [
           {
             "field": "map_image",
-            "element_id": 1026,
-            "kind": "map_image",
-            "diagnostic_name": null,
-            "required": true
+            "element_id": "1026"
+          },
+          {
+            "field": "title",
+            "element_id": "7",
+            "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
+          },
+          {
+            "field": "time",
+            "element_id": "14"
+          },
+          {
+            "field": "title",
+            "element_id": "2"
           }
-        ],
-        "txt_line_template": "{target_alias} {capture_date} {capture_time}"
+        ]
       },
       "metadata": {
         "geojson_type": "Feature",
@@ -470,22 +530,34 @@
         "style": {
           "frame_color": "#000000",
           "label_color": "#000000",
-          "label_font_size": 10,
+          "label_font_size": 24,
           "tick_length_px": 8
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
+        "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
+        "date_format": "dd.MM.yy",
+        "time_format": "HH.mm/dd.MM.yy",
         "placeholders": [
           {
             "field": "map_image",
-            "element_id": 1026,
-            "kind": "map_image",
-            "diagnostic_name": null,
-            "required": true
+            "element_id": "1026"
+          },
+          {
+            "field": "title",
+            "element_id": "7",
+            "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
+          },
+          {
+            "field": "time",
+            "element_id": "14"
+          },
+          {
+            "field": "title",
+            "element_id": "2"
           }
-        ],
-        "txt_line_template": "{target_alias} {capture_date} {capture_time}"
+        ]
       },
       "metadata": {
         "geojson_type": "Feature",
@@ -562,22 +634,34 @@
         "style": {
           "frame_color": "#000000",
           "label_color": "#000000",
-          "label_font_size": 10,
+          "label_font_size": 24,
           "tick_length_px": 8
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
+        "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
+        "date_format": "dd.MM.yy",
+        "time_format": "HH.mm/dd.MM.yy",
         "placeholders": [
           {
             "field": "map_image",
-            "element_id": 1026,
-            "kind": "map_image",
-            "diagnostic_name": null,
-            "required": true
+            "element_id": "1026"
+          },
+          {
+            "field": "title",
+            "element_id": "7",
+            "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
+          },
+          {
+            "field": "time",
+            "element_id": "14"
+          },
+          {
+            "field": "title",
+            "element_id": "2"
           }
-        ],
-        "txt_line_template": "{target_alias} {capture_date} {capture_time}"
+        ]
       },
       "metadata": {
         "geojson_type": "Feature",
@@ -650,22 +734,34 @@
         "style": {
           "frame_color": "#000000",
           "label_color": "#000000",
-          "label_font_size": 10,
+          "label_font_size": 24,
           "tick_length_px": 8
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
+        "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
+        "date_format": "dd.MM.yy",
+        "time_format": "HH.mm/dd.MM.yy",
         "placeholders": [
           {
             "field": "map_image",
-            "element_id": 1026,
-            "kind": "map_image",
-            "diagnostic_name": null,
-            "required": true
+            "element_id": "1026"
+          },
+          {
+            "field": "title",
+            "element_id": "7",
+            "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
+          },
+          {
+            "field": "time",
+            "element_id": "14"
+          },
+          {
+            "field": "title",
+            "element_id": "2"
           }
-        ],
-        "txt_line_template": "{target_alias} {capture_date} {capture_time}"
+        ]
       },
       "metadata": {
         "geojson_type": "Feature",
@@ -754,22 +850,34 @@
         "style": {
           "frame_color": "#000000",
           "label_color": "#000000",
-          "label_font_size": 10,
+          "label_font_size": 24,
           "tick_length_px": 8
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
+        "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
+        "date_format": "dd.MM.yy",
+        "time_format": "HH.mm/dd.MM.yy",
         "placeholders": [
           {
             "field": "map_image",
-            "element_id": 1026,
-            "kind": "map_image",
-            "diagnostic_name": null,
-            "required": true
+            "element_id": "1026"
+          },
+          {
+            "field": "title",
+            "element_id": "7",
+            "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
+          },
+          {
+            "field": "time",
+            "element_id": "14"
+          },
+          {
+            "field": "title",
+            "element_id": "2"
           }
-        ],
-        "txt_line_template": "{target_alias} {capture_date} {capture_time}"
+        ]
       },
       "metadata": {
         "geojson_type": "Feature",
@@ -838,22 +946,34 @@
         "style": {
           "frame_color": "#000000",
           "label_color": "#000000",
-          "label_font_size": 10,
+          "label_font_size": 24,
           "tick_length_px": 8
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
+        "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
+        "date_format": "dd.MM.yy",
+        "time_format": "HH.mm/dd.MM.yy",
         "placeholders": [
           {
             "field": "map_image",
-            "element_id": 1026,
-            "kind": "map_image",
-            "diagnostic_name": null,
-            "required": true
+            "element_id": "1026"
+          },
+          {
+            "field": "title",
+            "element_id": "7",
+            "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
+          },
+          {
+            "field": "time",
+            "element_id": "14"
+          },
+          {
+            "field": "title",
+            "element_id": "2"
           }
-        ],
-        "txt_line_template": "{target_alias} {capture_date} {capture_time}"
+        ]
       },
       "metadata": {
         "geojson_type": "Feature",
@@ -922,22 +1042,34 @@
         "style": {
           "frame_color": "#000000",
           "label_color": "#000000",
-          "label_font_size": 10,
+          "label_font_size": 24,
           "tick_length_px": 8
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
+        "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
+        "date_format": "dd.MM.yy",
+        "time_format": "HH.mm/dd.MM.yy",
         "placeholders": [
           {
             "field": "map_image",
-            "element_id": 1026,
-            "kind": "map_image",
-            "diagnostic_name": null,
-            "required": true
+            "element_id": "1026"
+          },
+          {
+            "field": "title",
+            "element_id": "7",
+            "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
+          },
+          {
+            "field": "time",
+            "element_id": "14"
+          },
+          {
+            "field": "title",
+            "element_id": "2"
           }
-        ],
-        "txt_line_template": "{target_alias} {capture_date} {capture_time}"
+        ]
       },
       "metadata": {
         "geojson_type": "Feature",
@@ -1006,22 +1138,34 @@
         "style": {
           "frame_color": "#000000",
           "label_color": "#000000",
-          "label_font_size": 10,
+          "label_font_size": 24,
           "tick_length_px": 8
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
+        "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
+        "date_format": "dd.MM.yy",
+        "time_format": "HH.mm/dd.MM.yy",
         "placeholders": [
           {
             "field": "map_image",
-            "element_id": 1026,
-            "kind": "map_image",
-            "diagnostic_name": null,
-            "required": true
+            "element_id": "1026"
+          },
+          {
+            "field": "title",
+            "element_id": "7",
+            "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
+          },
+          {
+            "field": "time",
+            "element_id": "14"
+          },
+          {
+            "field": "title",
+            "element_id": "2"
           }
-        ],
-        "txt_line_template": "{target_alias} {capture_date} {capture_time}"
+        ]
       },
       "metadata": {
         "geojson_type": "Feature",
@@ -1090,22 +1234,34 @@
         "style": {
           "frame_color": "#000000",
           "label_color": "#000000",
-          "label_font_size": 10,
+          "label_font_size": 24,
           "tick_length_px": 8
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
+        "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
+        "date_format": "dd.MM.yy",
+        "time_format": "HH.mm/dd.MM.yy",
         "placeholders": [
           {
             "field": "map_image",
-            "element_id": 1026,
-            "kind": "map_image",
-            "diagnostic_name": null,
-            "required": true
+            "element_id": "1026"
+          },
+          {
+            "field": "title",
+            "element_id": "7",
+            "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
+          },
+          {
+            "field": "time",
+            "element_id": "14"
+          },
+          {
+            "field": "title",
+            "element_id": "2"
           }
-        ],
-        "txt_line_template": "{target_alias} {capture_date} {capture_time}"
+        ]
       },
       "metadata": {
         "geojson_type": "Feature",
@@ -1178,22 +1334,34 @@
         "style": {
           "frame_color": "#000000",
           "label_color": "#000000",
-          "label_font_size": 10,
+          "label_font_size": 24,
           "tick_length_px": 8
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
+        "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
+        "date_format": "dd.MM.yy",
+        "time_format": "HH.mm/dd.MM.yy",
         "placeholders": [
           {
             "field": "map_image",
-            "element_id": 1026,
-            "kind": "map_image",
-            "diagnostic_name": null,
-            "required": true
+            "element_id": "1026"
+          },
+          {
+            "field": "title",
+            "element_id": "7",
+            "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
+          },
+          {
+            "field": "time",
+            "element_id": "14"
+          },
+          {
+            "field": "title",
+            "element_id": "2"
           }
-        ],
-        "txt_line_template": "{target_alias} {capture_date} {capture_time}"
+        ]
       },
       "metadata": {
         "geojson_type": "Feature",
@@ -1262,22 +1430,34 @@
         "style": {
           "frame_color": "#000000",
           "label_color": "#000000",
-          "label_font_size": 10,
+          "label_font_size": 24,
           "tick_length_px": 8
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
+        "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
+        "date_format": "dd.MM.yy",
+        "time_format": "HH.mm/dd.MM.yy",
         "placeholders": [
           {
             "field": "map_image",
-            "element_id": 1026,
-            "kind": "map_image",
-            "diagnostic_name": null,
-            "required": true
+            "element_id": "1026"
+          },
+          {
+            "field": "title",
+            "element_id": "7",
+            "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
+          },
+          {
+            "field": "time",
+            "element_id": "14"
+          },
+          {
+            "field": "title",
+            "element_id": "2"
           }
-        ],
-        "txt_line_template": "{target_alias} {capture_date} {capture_time}"
+        ]
       },
       "metadata": {
         "geojson_type": "Feature",
@@ -1346,22 +1526,34 @@
         "style": {
           "frame_color": "#000000",
           "label_color": "#000000",
-          "label_font_size": 10,
+          "label_font_size": 24,
           "tick_length_px": 8
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
+        "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
+        "date_format": "dd.MM.yy",
+        "time_format": "HH.mm/dd.MM.yy",
         "placeholders": [
           {
             "field": "map_image",
-            "element_id": 1026,
-            "kind": "map_image",
-            "diagnostic_name": null,
-            "required": true
+            "element_id": "1026"
+          },
+          {
+            "field": "title",
+            "element_id": "7",
+            "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
+          },
+          {
+            "field": "time",
+            "element_id": "14"
+          },
+          {
+            "field": "title",
+            "element_id": "2"
           }
-        ],
-        "txt_line_template": "{target_alias} {capture_date} {capture_time}"
+        ]
       },
       "metadata": {
         "geojson_type": "Feature",
@@ -1438,22 +1630,34 @@
         "style": {
           "frame_color": "#000000",
           "label_color": "#000000",
-          "label_font_size": 10,
+          "label_font_size": 24,
           "tick_length_px": 8
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
+        "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
+        "date_format": "dd.MM.yy",
+        "time_format": "HH.mm/dd.MM.yy",
         "placeholders": [
           {
             "field": "map_image",
-            "element_id": 1026,
-            "kind": "map_image",
-            "diagnostic_name": null,
-            "required": true
+            "element_id": "1026"
+          },
+          {
+            "field": "title",
+            "element_id": "7",
+            "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
+          },
+          {
+            "field": "time",
+            "element_id": "14"
+          },
+          {
+            "field": "title",
+            "element_id": "2"
           }
-        ],
-        "txt_line_template": "{target_alias} {capture_date} {capture_time}"
+        ]
       },
       "metadata": {
         "geojson_type": "Feature",
@@ -1538,22 +1742,34 @@
         "style": {
           "frame_color": "#000000",
           "label_color": "#000000",
-          "label_font_size": 10,
+          "label_font_size": 24,
           "tick_length_px": 8
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
+        "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
+        "date_format": "dd.MM.yy",
+        "time_format": "HH.mm/dd.MM.yy",
         "placeholders": [
           {
             "field": "map_image",
-            "element_id": 1026,
-            "kind": "map_image",
-            "diagnostic_name": null,
-            "required": true
+            "element_id": "1026"
+          },
+          {
+            "field": "title",
+            "element_id": "7",
+            "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
+          },
+          {
+            "field": "time",
+            "element_id": "14"
+          },
+          {
+            "field": "title",
+            "element_id": "2"
           }
-        ],
-        "txt_line_template": "{target_alias} {capture_date} {capture_time}"
+        ]
       },
       "metadata": {
         "geojson_type": "Feature",
@@ -1630,22 +1846,34 @@
         "style": {
           "frame_color": "#000000",
           "label_color": "#000000",
-          "label_font_size": 10,
+          "label_font_size": 24,
           "tick_length_px": 8
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
+        "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
+        "date_format": "dd.MM.yy",
+        "time_format": "HH.mm/dd.MM.yy",
         "placeholders": [
           {
             "field": "map_image",
-            "element_id": 1026,
-            "kind": "map_image",
-            "diagnostic_name": null,
-            "required": true
+            "element_id": "1026"
+          },
+          {
+            "field": "title",
+            "element_id": "7",
+            "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
+          },
+          {
+            "field": "time",
+            "element_id": "14"
+          },
+          {
+            "field": "title",
+            "element_id": "2"
           }
-        ],
-        "txt_line_template": "{target_alias} {capture_date} {capture_time}"
+        ]
       },
       "metadata": {
         "geojson_type": "Feature",
@@ -1726,22 +1954,34 @@
         "style": {
           "frame_color": "#000000",
           "label_color": "#000000",
-          "label_font_size": 10,
+          "label_font_size": 24,
           "tick_length_px": 8
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
+        "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
+        "date_format": "dd.MM.yy",
+        "time_format": "HH.mm/dd.MM.yy",
         "placeholders": [
           {
             "field": "map_image",
-            "element_id": 1026,
-            "kind": "map_image",
-            "diagnostic_name": null,
-            "required": true
+            "element_id": "1026"
+          },
+          {
+            "field": "title",
+            "element_id": "7",
+            "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
+          },
+          {
+            "field": "time",
+            "element_id": "14"
+          },
+          {
+            "field": "title",
+            "element_id": "2"
           }
-        ],
-        "txt_line_template": "{target_alias} {capture_date} {capture_time}"
+        ]
       },
       "metadata": {
         "geojson_type": "Feature",
@@ -1822,22 +2062,34 @@
         "style": {
           "frame_color": "#000000",
           "label_color": "#000000",
-          "label_font_size": 10,
+          "label_font_size": 24,
           "tick_length_px": 8
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
+        "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
+        "date_format": "dd.MM.yy",
+        "time_format": "HH.mm/dd.MM.yy",
         "placeholders": [
           {
             "field": "map_image",
-            "element_id": 1026,
-            "kind": "map_image",
-            "diagnostic_name": null,
-            "required": true
+            "element_id": "1026"
+          },
+          {
+            "field": "title",
+            "element_id": "7",
+            "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
+          },
+          {
+            "field": "time",
+            "element_id": "14"
+          },
+          {
+            "field": "title",
+            "element_id": "2"
           }
-        ],
-        "txt_line_template": "{target_alias} {capture_date} {capture_time}"
+        ]
       },
       "metadata": {
         "geojson_type": "Feature",
@@ -1914,22 +2166,34 @@
         "style": {
           "frame_color": "#000000",
           "label_color": "#000000",
-          "label_font_size": 10,
+          "label_font_size": 24,
           "tick_length_px": 8
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
+        "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
+        "date_format": "dd.MM.yy",
+        "time_format": "HH.mm/dd.MM.yy",
         "placeholders": [
           {
             "field": "map_image",
-            "element_id": 1026,
-            "kind": "map_image",
-            "diagnostic_name": null,
-            "required": true
+            "element_id": "1026"
+          },
+          {
+            "field": "title",
+            "element_id": "7",
+            "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
+          },
+          {
+            "field": "time",
+            "element_id": "14"
+          },
+          {
+            "field": "title",
+            "element_id": "2"
           }
-        ],
-        "txt_line_template": "{target_alias} {capture_date} {capture_time}"
+        ]
       },
       "metadata": {
         "geojson_type": "Feature",
@@ -2006,22 +2270,34 @@
         "style": {
           "frame_color": "#000000",
           "label_color": "#000000",
-          "label_font_size": 10,
+          "label_font_size": 24,
           "tick_length_px": 8
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
+        "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
+        "date_format": "dd.MM.yy",
+        "time_format": "HH.mm/dd.MM.yy",
         "placeholders": [
           {
             "field": "map_image",
-            "element_id": 1026,
-            "kind": "map_image",
-            "diagnostic_name": null,
-            "required": true
+            "element_id": "1026"
+          },
+          {
+            "field": "title",
+            "element_id": "7",
+            "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
+          },
+          {
+            "field": "time",
+            "element_id": "14"
+          },
+          {
+            "field": "title",
+            "element_id": "2"
           }
-        ],
-        "txt_line_template": "{target_alias} {capture_date} {capture_time}"
+        ]
       },
       "metadata": {
         "geojson_type": "Feature",
@@ -2110,22 +2386,34 @@
         "style": {
           "frame_color": "#000000",
           "label_color": "#000000",
-          "label_font_size": 10,
+          "label_font_size": 24,
           "tick_length_px": 8
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
+        "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
+        "date_format": "dd.MM.yy",
+        "time_format": "HH.mm/dd.MM.yy",
         "placeholders": [
           {
             "field": "map_image",
-            "element_id": 1026,
-            "kind": "map_image",
-            "diagnostic_name": null,
-            "required": true
+            "element_id": "1026"
+          },
+          {
+            "field": "title",
+            "element_id": "7",
+            "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
+          },
+          {
+            "field": "time",
+            "element_id": "14"
+          },
+          {
+            "field": "title",
+            "element_id": "2"
           }
-        ],
-        "txt_line_template": "{target_alias} {capture_date} {capture_time}"
+        ]
       },
       "metadata": {
         "geojson_type": "Feature",
@@ -2226,22 +2514,34 @@
         "style": {
           "frame_color": "#000000",
           "label_color": "#000000",
-          "label_font_size": 10,
+          "label_font_size": 24,
           "tick_length_px": 8
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
+        "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
+        "date_format": "dd.MM.yy",
+        "time_format": "HH.mm/dd.MM.yy",
         "placeholders": [
           {
             "field": "map_image",
-            "element_id": 1026,
-            "kind": "map_image",
-            "diagnostic_name": null,
-            "required": true
+            "element_id": "1026"
+          },
+          {
+            "field": "title",
+            "element_id": "7",
+            "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
+          },
+          {
+            "field": "time",
+            "element_id": "14"
+          },
+          {
+            "field": "title",
+            "element_id": "2"
           }
-        ],
-        "txt_line_template": "{target_alias} {capture_date} {capture_time}"
+        ]
       },
       "metadata": {
         "geojson_type": "Feature",
@@ -2326,22 +2626,34 @@
         "style": {
           "frame_color": "#000000",
           "label_color": "#000000",
-          "label_font_size": 10,
+          "label_font_size": 24,
           "tick_length_px": 8
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
+        "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
+        "date_format": "dd.MM.yy",
+        "time_format": "HH.mm/dd.MM.yy",
         "placeholders": [
           {
             "field": "map_image",
-            "element_id": 1026,
-            "kind": "map_image",
-            "diagnostic_name": null,
-            "required": true
+            "element_id": "1026"
+          },
+          {
+            "field": "title",
+            "element_id": "7",
+            "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
+          },
+          {
+            "field": "time",
+            "element_id": "14"
+          },
+          {
+            "field": "title",
+            "element_id": "2"
           }
-        ],
-        "txt_line_template": "{target_alias} {capture_date} {capture_time}"
+        ]
       },
       "metadata": {
         "geojson_type": "Feature",
@@ -2426,22 +2738,34 @@
         "style": {
           "frame_color": "#000000",
           "label_color": "#000000",
-          "label_font_size": 10,
+          "label_font_size": 24,
           "tick_length_px": 8
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
+        "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
+        "date_format": "dd.MM.yy",
+        "time_format": "HH.mm/dd.MM.yy",
         "placeholders": [
           {
             "field": "map_image",
-            "element_id": 1026,
-            "kind": "map_image",
-            "diagnostic_name": null,
-            "required": true
+            "element_id": "1026"
+          },
+          {
+            "field": "title",
+            "element_id": "7",
+            "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
+          },
+          {
+            "field": "time",
+            "element_id": "14"
+          },
+          {
+            "field": "title",
+            "element_id": "2"
           }
-        ],
-        "txt_line_template": "{target_alias} {capture_date} {capture_time}"
+        ]
       },
       "metadata": {
         "geojson_type": "Feature",
@@ -2578,22 +2902,34 @@
         "style": {
           "frame_color": "#000000",
           "label_color": "#000000",
-          "label_font_size": 10,
+          "label_font_size": 24,
           "tick_length_px": 8
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
+        "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
+        "date_format": "dd.MM.yy",
+        "time_format": "HH.mm/dd.MM.yy",
         "placeholders": [
           {
             "field": "map_image",
-            "element_id": 1026,
-            "kind": "map_image",
-            "diagnostic_name": null,
-            "required": true
+            "element_id": "1026"
+          },
+          {
+            "field": "title",
+            "element_id": "7",
+            "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
+          },
+          {
+            "field": "time",
+            "element_id": "14"
+          },
+          {
+            "field": "title",
+            "element_id": "2"
           }
-        ],
-        "txt_line_template": "{target_alias} {capture_date} {capture_time}"
+        ]
       },
       "metadata": {
         "geojson_type": "Feature",
@@ -2674,22 +3010,34 @@
         "style": {
           "frame_color": "#000000",
           "label_color": "#000000",
-          "label_font_size": 10,
+          "label_font_size": 24,
           "tick_length_px": 8
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
+        "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
+        "date_format": "dd.MM.yy",
+        "time_format": "HH.mm/dd.MM.yy",
         "placeholders": [
           {
             "field": "map_image",
-            "element_id": 1026,
-            "kind": "map_image",
-            "diagnostic_name": null,
-            "required": true
+            "element_id": "1026"
+          },
+          {
+            "field": "title",
+            "element_id": "7",
+            "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
+          },
+          {
+            "field": "time",
+            "element_id": "14"
+          },
+          {
+            "field": "title",
+            "element_id": "2"
           }
-        ],
-        "txt_line_template": "{target_alias} {capture_date} {capture_time}"
+        ]
       },
       "metadata": {
         "geojson_type": "Feature",
@@ -2762,22 +3110,34 @@
         "style": {
           "frame_color": "#000000",
           "label_color": "#000000",
-          "label_font_size": 10,
+          "label_font_size": 24,
           "tick_length_px": 8
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
+        "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
+        "date_format": "dd.MM.yy",
+        "time_format": "HH.mm/dd.MM.yy",
         "placeholders": [
           {
             "field": "map_image",
-            "element_id": 1026,
-            "kind": "map_image",
-            "diagnostic_name": null,
-            "required": true
+            "element_id": "1026"
+          },
+          {
+            "field": "title",
+            "element_id": "7",
+            "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
+          },
+          {
+            "field": "time",
+            "element_id": "14"
+          },
+          {
+            "field": "title",
+            "element_id": "2"
           }
-        ],
-        "txt_line_template": "{target_alias} {capture_date} {capture_time}"
+        ]
       },
       "metadata": {
         "geojson_type": "Feature",
@@ -2858,22 +3218,34 @@
         "style": {
           "frame_color": "#000000",
           "label_color": "#000000",
-          "label_font_size": 10,
+          "label_font_size": 24,
           "tick_length_px": 8
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
+        "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
+        "date_format": "dd.MM.yy",
+        "time_format": "HH.mm/dd.MM.yy",
         "placeholders": [
           {
             "field": "map_image",
-            "element_id": 1026,
-            "kind": "map_image",
-            "diagnostic_name": null,
-            "required": true
+            "element_id": "1026"
+          },
+          {
+            "field": "title",
+            "element_id": "7",
+            "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
+          },
+          {
+            "field": "time",
+            "element_id": "14"
+          },
+          {
+            "field": "title",
+            "element_id": "2"
           }
-        ],
-        "txt_line_template": "{target_alias} {capture_date} {capture_time}"
+        ]
       },
       "metadata": {
         "geojson_type": "Feature",
@@ -2946,22 +3318,34 @@
         "style": {
           "frame_color": "#000000",
           "label_color": "#000000",
-          "label_font_size": 10,
+          "label_font_size": 24,
           "tick_length_px": 8
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
+        "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
+        "date_format": "dd.MM.yy",
+        "time_format": "HH.mm/dd.MM.yy",
         "placeholders": [
           {
             "field": "map_image",
-            "element_id": 1026,
-            "kind": "map_image",
-            "diagnostic_name": null,
-            "required": true
+            "element_id": "1026"
+          },
+          {
+            "field": "title",
+            "element_id": "7",
+            "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
+          },
+          {
+            "field": "time",
+            "element_id": "14"
+          },
+          {
+            "field": "title",
+            "element_id": "2"
           }
-        ],
-        "txt_line_template": "{target_alias} {capture_date} {capture_time}"
+        ]
       },
       "metadata": {
         "geojson_type": "Feature",
@@ -3042,22 +3426,34 @@
         "style": {
           "frame_color": "#000000",
           "label_color": "#000000",
-          "label_font_size": 10,
+          "label_font_size": 24,
           "tick_length_px": 8
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
+        "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
+        "date_format": "dd.MM.yy",
+        "time_format": "HH.mm/dd.MM.yy",
         "placeholders": [
           {
             "field": "map_image",
-            "element_id": 1026,
-            "kind": "map_image",
-            "diagnostic_name": null,
-            "required": true
+            "element_id": "1026"
+          },
+          {
+            "field": "title",
+            "element_id": "7",
+            "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
+          },
+          {
+            "field": "time",
+            "element_id": "14"
+          },
+          {
+            "field": "title",
+            "element_id": "2"
           }
-        ],
-        "txt_line_template": "{target_alias} {capture_date} {capture_time}"
+        ]
       },
       "metadata": {
         "geojson_type": "Feature",
@@ -3134,22 +3530,34 @@
         "style": {
           "frame_color": "#000000",
           "label_color": "#000000",
-          "label_font_size": 10,
+          "label_font_size": 24,
           "tick_length_px": 8
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
+        "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
+        "date_format": "dd.MM.yy",
+        "time_format": "HH.mm/dd.MM.yy",
         "placeholders": [
           {
             "field": "map_image",
-            "element_id": 1026,
-            "kind": "map_image",
-            "diagnostic_name": null,
-            "required": true
+            "element_id": "1026"
+          },
+          {
+            "field": "title",
+            "element_id": "7",
+            "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
+          },
+          {
+            "field": "time",
+            "element_id": "14"
+          },
+          {
+            "field": "title",
+            "element_id": "2"
           }
-        ],
-        "txt_line_template": "{target_alias} {capture_date} {capture_time}"
+        ]
       },
       "metadata": {
         "geojson_type": "Feature",
@@ -3226,22 +3634,34 @@
         "style": {
           "frame_color": "#000000",
           "label_color": "#000000",
-          "label_font_size": 10,
+          "label_font_size": 24,
           "tick_length_px": 8
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
+        "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
+        "date_format": "dd.MM.yy",
+        "time_format": "HH.mm/dd.MM.yy",
         "placeholders": [
           {
             "field": "map_image",
-            "element_id": 1026,
-            "kind": "map_image",
-            "diagnostic_name": null,
-            "required": true
+            "element_id": "1026"
+          },
+          {
+            "field": "title",
+            "element_id": "7",
+            "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
+          },
+          {
+            "field": "time",
+            "element_id": "14"
+          },
+          {
+            "field": "title",
+            "element_id": "2"
           }
-        ],
-        "txt_line_template": "{target_alias} {capture_date} {capture_time}"
+        ]
       },
       "metadata": {
         "geojson_type": "Feature",
@@ -3322,22 +3742,34 @@
         "style": {
           "frame_color": "#000000",
           "label_color": "#000000",
-          "label_font_size": 10,
+          "label_font_size": 24,
           "tick_length_px": 8
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
+        "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
+        "date_format": "dd.MM.yy",
+        "time_format": "HH.mm/dd.MM.yy",
         "placeholders": [
           {
             "field": "map_image",
-            "element_id": 1026,
-            "kind": "map_image",
-            "diagnostic_name": null,
-            "required": true
+            "element_id": "1026"
+          },
+          {
+            "field": "title",
+            "element_id": "7",
+            "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
+          },
+          {
+            "field": "time",
+            "element_id": "14"
+          },
+          {
+            "field": "title",
+            "element_id": "2"
           }
-        ],
-        "txt_line_template": "{target_alias} {capture_date} {capture_time}"
+        ]
       },
       "metadata": {
         "geojson_type": "Feature",
@@ -3410,22 +3842,34 @@
         "style": {
           "frame_color": "#000000",
           "label_color": "#000000",
-          "label_font_size": 10,
+          "label_font_size": 24,
           "tick_length_px": 8
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
+        "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
+        "date_format": "dd.MM.yy",
+        "time_format": "HH.mm/dd.MM.yy",
         "placeholders": [
           {
             "field": "map_image",
-            "element_id": 1026,
-            "kind": "map_image",
-            "diagnostic_name": null,
-            "required": true
+            "element_id": "1026"
+          },
+          {
+            "field": "title",
+            "element_id": "7",
+            "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
+          },
+          {
+            "field": "time",
+            "element_id": "14"
+          },
+          {
+            "field": "title",
+            "element_id": "2"
           }
-        ],
-        "txt_line_template": "{target_alias} {capture_date} {capture_time}"
+        ]
       },
       "metadata": {
         "geojson_type": "Feature",
@@ -3550,22 +3994,34 @@
         "style": {
           "frame_color": "#000000",
           "label_color": "#000000",
-          "label_font_size": 10,
+          "label_font_size": 24,
           "tick_length_px": 8
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
+        "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
+        "date_format": "dd.MM.yy",
+        "time_format": "HH.mm/dd.MM.yy",
         "placeholders": [
           {
             "field": "map_image",
-            "element_id": 1026,
-            "kind": "map_image",
-            "diagnostic_name": null,
-            "required": true
+            "element_id": "1026"
+          },
+          {
+            "field": "title",
+            "element_id": "7",
+            "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
+          },
+          {
+            "field": "time",
+            "element_id": "14"
+          },
+          {
+            "field": "title",
+            "element_id": "2"
           }
-        ],
-        "txt_line_template": "{target_alias} {capture_date} {capture_time}"
+        ]
       },
       "metadata": {
         "geojson_type": "Feature",
@@ -3650,22 +4106,34 @@
         "style": {
           "frame_color": "#000000",
           "label_color": "#000000",
-          "label_font_size": 10,
+          "label_font_size": 24,
           "tick_length_px": 8
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
+        "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
+        "date_format": "dd.MM.yy",
+        "time_format": "HH.mm/dd.MM.yy",
         "placeholders": [
           {
             "field": "map_image",
-            "element_id": 1026,
-            "kind": "map_image",
-            "diagnostic_name": null,
-            "required": true
+            "element_id": "1026"
+          },
+          {
+            "field": "title",
+            "element_id": "7",
+            "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
+          },
+          {
+            "field": "time",
+            "element_id": "14"
+          },
+          {
+            "field": "title",
+            "element_id": "2"
           }
-        ],
-        "txt_line_template": "{target_alias} {capture_date} {capture_time}"
+        ]
       },
       "metadata": {
         "geojson_type": "Feature",
@@ -3738,22 +4206,34 @@
         "style": {
           "frame_color": "#000000",
           "label_color": "#000000",
-          "label_font_size": 10,
+          "label_font_size": 24,
           "tick_length_px": 8
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
+        "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
+        "date_format": "dd.MM.yy",
+        "time_format": "HH.mm/dd.MM.yy",
         "placeholders": [
           {
             "field": "map_image",
-            "element_id": 1026,
-            "kind": "map_image",
-            "diagnostic_name": null,
-            "required": true
+            "element_id": "1026"
+          },
+          {
+            "field": "title",
+            "element_id": "7",
+            "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
+          },
+          {
+            "field": "time",
+            "element_id": "14"
+          },
+          {
+            "field": "title",
+            "element_id": "2"
           }
-        ],
-        "txt_line_template": "{target_alias} {capture_date} {capture_time}"
+        ]
       },
       "metadata": {
         "geojson_type": "Feature",
@@ -3826,22 +4306,34 @@
         "style": {
           "frame_color": "#000000",
           "label_color": "#000000",
-          "label_font_size": 10,
+          "label_font_size": 24,
           "tick_length_px": 8
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
+        "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
+        "date_format": "dd.MM.yy",
+        "time_format": "HH.mm/dd.MM.yy",
         "placeholders": [
           {
             "field": "map_image",
-            "element_id": 1026,
-            "kind": "map_image",
-            "diagnostic_name": null,
-            "required": true
+            "element_id": "1026"
+          },
+          {
+            "field": "title",
+            "element_id": "7",
+            "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
+          },
+          {
+            "field": "time",
+            "element_id": "14"
+          },
+          {
+            "field": "title",
+            "element_id": "2"
           }
-        ],
-        "txt_line_template": "{target_alias} {capture_date} {capture_time}"
+        ]
       },
       "metadata": {
         "geojson_type": "Feature",
@@ -3918,22 +4410,34 @@
         "style": {
           "frame_color": "#000000",
           "label_color": "#000000",
-          "label_font_size": 10,
+          "label_font_size": 24,
           "tick_length_px": 8
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
+        "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
+        "date_format": "dd.MM.yy",
+        "time_format": "HH.mm/dd.MM.yy",
         "placeholders": [
           {
             "field": "map_image",
-            "element_id": 1026,
-            "kind": "map_image",
-            "diagnostic_name": null,
-            "required": true
+            "element_id": "1026"
+          },
+          {
+            "field": "title",
+            "element_id": "7",
+            "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
+          },
+          {
+            "field": "time",
+            "element_id": "14"
+          },
+          {
+            "field": "title",
+            "element_id": "2"
           }
-        ],
-        "txt_line_template": "{target_alias} {capture_date} {capture_time}"
+        ]
       },
       "metadata": {
         "geojson_type": "Feature",
@@ -4010,22 +4514,34 @@
         "style": {
           "frame_color": "#000000",
           "label_color": "#000000",
-          "label_font_size": 10,
+          "label_font_size": 24,
           "tick_length_px": 8
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
+        "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
+        "date_format": "dd.MM.yy",
+        "time_format": "HH.mm/dd.MM.yy",
         "placeholders": [
           {
             "field": "map_image",
-            "element_id": 1026,
-            "kind": "map_image",
-            "diagnostic_name": null,
-            "required": true
+            "element_id": "1026"
+          },
+          {
+            "field": "title",
+            "element_id": "7",
+            "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
+          },
+          {
+            "field": "time",
+            "element_id": "14"
+          },
+          {
+            "field": "title",
+            "element_id": "2"
           }
-        ],
-        "txt_line_template": "{target_alias} {capture_date} {capture_time}"
+        ]
       },
       "metadata": {
         "geojson_type": "Feature",
@@ -4106,22 +4622,34 @@
         "style": {
           "frame_color": "#000000",
           "label_color": "#000000",
-          "label_font_size": 10,
+          "label_font_size": 24,
           "tick_length_px": 8
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
+        "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
+        "date_format": "dd.MM.yy",
+        "time_format": "HH.mm/dd.MM.yy",
         "placeholders": [
           {
             "field": "map_image",
-            "element_id": 1026,
-            "kind": "map_image",
-            "diagnostic_name": null,
-            "required": true
+            "element_id": "1026"
+          },
+          {
+            "field": "title",
+            "element_id": "7",
+            "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
+          },
+          {
+            "field": "time",
+            "element_id": "14"
+          },
+          {
+            "field": "title",
+            "element_id": "2"
           }
-        ],
-        "txt_line_template": "{target_alias} {capture_date} {capture_time}"
+        ]
       },
       "metadata": {
         "geojson_type": "Feature",
@@ -4190,22 +4718,34 @@
         "style": {
           "frame_color": "#000000",
           "label_color": "#000000",
-          "label_font_size": 10,
+          "label_font_size": 24,
           "tick_length_px": 8
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
+        "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
+        "date_format": "dd.MM.yy",
+        "time_format": "HH.mm/dd.MM.yy",
         "placeholders": [
           {
             "field": "map_image",
-            "element_id": 1026,
-            "kind": "map_image",
-            "diagnostic_name": null,
-            "required": true
+            "element_id": "1026"
+          },
+          {
+            "field": "title",
+            "element_id": "7",
+            "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
+          },
+          {
+            "field": "time",
+            "element_id": "14"
+          },
+          {
+            "field": "title",
+            "element_id": "2"
           }
-        ],
-        "txt_line_template": "{target_alias} {capture_date} {capture_time}"
+        ]
       },
       "metadata": {
         "geojson_type": "Feature",
@@ -4278,22 +4818,34 @@
         "style": {
           "frame_color": "#000000",
           "label_color": "#000000",
-          "label_font_size": 10,
+          "label_font_size": 24,
           "tick_length_px": 8
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
+        "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
+        "date_format": "dd.MM.yy",
+        "time_format": "HH.mm/dd.MM.yy",
         "placeholders": [
           {
             "field": "map_image",
-            "element_id": 1026,
-            "kind": "map_image",
-            "diagnostic_name": null,
-            "required": true
+            "element_id": "1026"
+          },
+          {
+            "field": "title",
+            "element_id": "7",
+            "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
+          },
+          {
+            "field": "time",
+            "element_id": "14"
+          },
+          {
+            "field": "title",
+            "element_id": "2"
           }
-        ],
-        "txt_line_template": "{target_alias} {capture_date} {capture_time}"
+        ]
       },
       "metadata": {
         "geojson_type": "Feature",
@@ -4382,22 +4934,34 @@
         "style": {
           "frame_color": "#000000",
           "label_color": "#000000",
-          "label_font_size": 10,
+          "label_font_size": 24,
           "tick_length_px": 8
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
+        "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
+        "date_format": "dd.MM.yy",
+        "time_format": "HH.mm/dd.MM.yy",
         "placeholders": [
           {
             "field": "map_image",
-            "element_id": 1026,
-            "kind": "map_image",
-            "diagnostic_name": null,
-            "required": true
+            "element_id": "1026"
+          },
+          {
+            "field": "title",
+            "element_id": "7",
+            "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
+          },
+          {
+            "field": "time",
+            "element_id": "14"
+          },
+          {
+            "field": "title",
+            "element_id": "2"
           }
-        ],
-        "txt_line_template": "{target_alias} {capture_date} {capture_time}"
+        ]
       },
       "metadata": {
         "geojson_type": "Feature",
@@ -4470,22 +5034,34 @@
         "style": {
           "frame_color": "#000000",
           "label_color": "#000000",
-          "label_font_size": 10,
+          "label_font_size": 24,
           "tick_length_px": 8
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
+        "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
+        "date_format": "dd.MM.yy",
+        "time_format": "HH.mm/dd.MM.yy",
         "placeholders": [
           {
             "field": "map_image",
-            "element_id": 1026,
-            "kind": "map_image",
-            "diagnostic_name": null,
-            "required": true
+            "element_id": "1026"
+          },
+          {
+            "field": "title",
+            "element_id": "7",
+            "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
+          },
+          {
+            "field": "time",
+            "element_id": "14"
+          },
+          {
+            "field": "title",
+            "element_id": "2"
           }
-        ],
-        "txt_line_template": "{target_alias} {capture_date} {capture_time}"
+        ]
       },
       "metadata": {
         "geojson_type": "Feature",
@@ -4558,22 +5134,34 @@
         "style": {
           "frame_color": "#000000",
           "label_color": "#000000",
-          "label_font_size": 10,
+          "label_font_size": 24,
           "tick_length_px": 8
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
+        "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
+        "date_format": "dd.MM.yy",
+        "time_format": "HH.mm/dd.MM.yy",
         "placeholders": [
           {
             "field": "map_image",
-            "element_id": 1026,
-            "kind": "map_image",
-            "diagnostic_name": null,
-            "required": true
+            "element_id": "1026"
+          },
+          {
+            "field": "title",
+            "element_id": "7",
+            "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
+          },
+          {
+            "field": "time",
+            "element_id": "14"
+          },
+          {
+            "field": "title",
+            "element_id": "2"
           }
-        ],
-        "txt_line_template": "{target_alias} {capture_date} {capture_time}"
+        ]
       },
       "metadata": {
         "geojson_type": "Feature",
@@ -4646,22 +5234,34 @@
         "style": {
           "frame_color": "#000000",
           "label_color": "#000000",
-          "label_font_size": 10,
+          "label_font_size": 24,
           "tick_length_px": 8
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
+        "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
+        "date_format": "dd.MM.yy",
+        "time_format": "HH.mm/dd.MM.yy",
         "placeholders": [
           {
             "field": "map_image",
-            "element_id": 1026,
-            "kind": "map_image",
-            "diagnostic_name": null,
-            "required": true
+            "element_id": "1026"
+          },
+          {
+            "field": "title",
+            "element_id": "7",
+            "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
+          },
+          {
+            "field": "time",
+            "element_id": "14"
+          },
+          {
+            "field": "title",
+            "element_id": "2"
           }
-        ],
-        "txt_line_template": "{target_alias} {capture_date} {capture_time}"
+        ]
       },
       "metadata": {
         "geojson_type": "Feature",
@@ -4734,22 +5334,34 @@
         "style": {
           "frame_color": "#000000",
           "label_color": "#000000",
-          "label_font_size": 10,
+          "label_font_size": 24,
           "tick_length_px": 8
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
+        "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
+        "date_format": "dd.MM.yy",
+        "time_format": "HH.mm/dd.MM.yy",
         "placeholders": [
           {
             "field": "map_image",
-            "element_id": 1026,
-            "kind": "map_image",
-            "diagnostic_name": null,
-            "required": true
+            "element_id": "1026"
+          },
+          {
+            "field": "title",
+            "element_id": "7",
+            "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
+          },
+          {
+            "field": "time",
+            "element_id": "14"
+          },
+          {
+            "field": "title",
+            "element_id": "2"
           }
-        ],
-        "txt_line_template": "{target_alias} {capture_date} {capture_time}"
+        ]
       },
       "metadata": {
         "geojson_type": "Feature",
@@ -4826,22 +5438,34 @@
         "style": {
           "frame_color": "#000000",
           "label_color": "#000000",
-          "label_font_size": 10,
+          "label_font_size": 24,
           "tick_length_px": 8
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
+        "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
+        "date_format": "dd.MM.yy",
+        "time_format": "HH.mm/dd.MM.yy",
         "placeholders": [
           {
             "field": "map_image",
-            "element_id": 1026,
-            "kind": "map_image",
-            "diagnostic_name": null,
-            "required": true
+            "element_id": "1026"
+          },
+          {
+            "field": "title",
+            "element_id": "7",
+            "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
+          },
+          {
+            "field": "time",
+            "element_id": "14"
+          },
+          {
+            "field": "title",
+            "element_id": "2"
           }
-        ],
-        "txt_line_template": "{target_alias} {capture_date} {capture_time}"
+        ]
       },
       "metadata": {
         "geojson_type": "Feature",
@@ -4922,22 +5546,34 @@
         "style": {
           "frame_color": "#000000",
           "label_color": "#000000",
-          "label_font_size": 10,
+          "label_font_size": 24,
           "tick_length_px": 8
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
+        "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
+        "date_format": "dd.MM.yy",
+        "time_format": "HH.mm/dd.MM.yy",
         "placeholders": [
           {
             "field": "map_image",
-            "element_id": 1026,
-            "kind": "map_image",
-            "diagnostic_name": null,
-            "required": true
+            "element_id": "1026"
+          },
+          {
+            "field": "title",
+            "element_id": "7",
+            "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
+          },
+          {
+            "field": "time",
+            "element_id": "14"
+          },
+          {
+            "field": "title",
+            "element_id": "2"
           }
-        ],
-        "txt_line_template": "{target_alias} {capture_date} {capture_time}"
+        ]
       },
       "metadata": {
         "geojson_type": "Feature",
@@ -5018,22 +5654,34 @@
         "style": {
           "frame_color": "#000000",
           "label_color": "#000000",
-          "label_font_size": 10,
+          "label_font_size": 24,
           "tick_length_px": 8
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
+        "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
+        "date_format": "dd.MM.yy",
+        "time_format": "HH.mm/dd.MM.yy",
         "placeholders": [
           {
             "field": "map_image",
-            "element_id": 1026,
-            "kind": "map_image",
-            "diagnostic_name": null,
-            "required": true
+            "element_id": "1026"
+          },
+          {
+            "field": "title",
+            "element_id": "7",
+            "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
+          },
+          {
+            "field": "time",
+            "element_id": "14"
+          },
+          {
+            "field": "title",
+            "element_id": "2"
           }
-        ],
-        "txt_line_template": "{target_alias} {capture_date} {capture_time}"
+        ]
       },
       "metadata": {
         "geojson_type": "Feature",
@@ -5106,22 +5754,34 @@
         "style": {
           "frame_color": "#000000",
           "label_color": "#000000",
-          "label_font_size": 10,
+          "label_font_size": 24,
           "tick_length_px": 8
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
+        "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
+        "date_format": "dd.MM.yy",
+        "time_format": "HH.mm/dd.MM.yy",
         "placeholders": [
           {
             "field": "map_image",
-            "element_id": 1026,
-            "kind": "map_image",
-            "diagnostic_name": null,
-            "required": true
+            "element_id": "1026"
+          },
+          {
+            "field": "title",
+            "element_id": "7",
+            "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
+          },
+          {
+            "field": "time",
+            "element_id": "14"
+          },
+          {
+            "field": "title",
+            "element_id": "2"
           }
-        ],
-        "txt_line_template": "{target_alias} {capture_date} {capture_time}"
+        ]
       },
       "metadata": {
         "geojson_type": "Feature",
@@ -5194,22 +5854,34 @@
         "style": {
           "frame_color": "#000000",
           "label_color": "#000000",
-          "label_font_size": 10,
+          "label_font_size": 24,
           "tick_length_px": 8
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
+        "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
+        "date_format": "dd.MM.yy",
+        "time_format": "HH.mm/dd.MM.yy",
         "placeholders": [
           {
             "field": "map_image",
-            "element_id": 1026,
-            "kind": "map_image",
-            "diagnostic_name": null,
-            "required": true
+            "element_id": "1026"
+          },
+          {
+            "field": "title",
+            "element_id": "7",
+            "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
+          },
+          {
+            "field": "time",
+            "element_id": "14"
+          },
+          {
+            "field": "title",
+            "element_id": "2"
           }
-        ],
-        "txt_line_template": "{target_alias} {capture_date} {capture_time}"
+        ]
       },
       "metadata": {
         "geojson_type": "Feature",
@@ -5278,22 +5950,34 @@
         "style": {
           "frame_color": "#000000",
           "label_color": "#000000",
-          "label_font_size": 10,
+          "label_font_size": 24,
           "tick_length_px": 8
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
+        "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
+        "date_format": "dd.MM.yy",
+        "time_format": "HH.mm/dd.MM.yy",
         "placeholders": [
           {
             "field": "map_image",
-            "element_id": 1026,
-            "kind": "map_image",
-            "diagnostic_name": null,
-            "required": true
+            "element_id": "1026"
+          },
+          {
+            "field": "title",
+            "element_id": "7",
+            "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
+          },
+          {
+            "field": "time",
+            "element_id": "14"
+          },
+          {
+            "field": "title",
+            "element_id": "2"
           }
-        ],
-        "txt_line_template": "{target_alias} {capture_date} {capture_time}"
+        ]
       },
       "metadata": {
         "geojson_type": "Feature",
@@ -5378,22 +6062,34 @@
         "style": {
           "frame_color": "#000000",
           "label_color": "#000000",
-          "label_font_size": 10,
+          "label_font_size": 24,
           "tick_length_px": 8
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
+        "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
+        "date_format": "dd.MM.yy",
+        "time_format": "HH.mm/dd.MM.yy",
         "placeholders": [
           {
             "field": "map_image",
-            "element_id": 1026,
-            "kind": "map_image",
-            "diagnostic_name": null,
-            "required": true
+            "element_id": "1026"
+          },
+          {
+            "field": "title",
+            "element_id": "7",
+            "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
+          },
+          {
+            "field": "time",
+            "element_id": "14"
+          },
+          {
+            "field": "title",
+            "element_id": "2"
           }
-        ],
-        "txt_line_template": "{target_alias} {capture_date} {capture_time}"
+        ]
       },
       "metadata": {
         "geojson_type": "Feature",
@@ -5462,22 +6158,34 @@
         "style": {
           "frame_color": "#000000",
           "label_color": "#000000",
-          "label_font_size": 10,
+          "label_font_size": 24,
           "tick_length_px": 8
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
+        "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
+        "date_format": "dd.MM.yy",
+        "time_format": "HH.mm/dd.MM.yy",
         "placeholders": [
           {
             "field": "map_image",
-            "element_id": 1026,
-            "kind": "map_image",
-            "diagnostic_name": null,
-            "required": true
+            "element_id": "1026"
+          },
+          {
+            "field": "title",
+            "element_id": "7",
+            "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
+          },
+          {
+            "field": "time",
+            "element_id": "14"
+          },
+          {
+            "field": "title",
+            "element_id": "2"
           }
-        ],
-        "txt_line_template": "{target_alias} {capture_date} {capture_time}"
+        ]
       },
       "metadata": {
         "geojson_type": "Feature",
@@ -5546,22 +6254,34 @@
         "style": {
           "frame_color": "#000000",
           "label_color": "#000000",
-          "label_font_size": 10,
+          "label_font_size": 24,
           "tick_length_px": 8
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
+        "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
+        "date_format": "dd.MM.yy",
+        "time_format": "HH.mm/dd.MM.yy",
         "placeholders": [
           {
             "field": "map_image",
-            "element_id": 1026,
-            "kind": "map_image",
-            "diagnostic_name": null,
-            "required": true
+            "element_id": "1026"
+          },
+          {
+            "field": "title",
+            "element_id": "7",
+            "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
+          },
+          {
+            "field": "time",
+            "element_id": "14"
+          },
+          {
+            "field": "title",
+            "element_id": "2"
           }
-        ],
-        "txt_line_template": "{target_alias} {capture_date} {capture_time}"
+        ]
       },
       "metadata": {
         "geojson_type": "Feature",
@@ -5634,22 +6354,34 @@
         "style": {
           "frame_color": "#000000",
           "label_color": "#000000",
-          "label_font_size": 10,
+          "label_font_size": 24,
           "tick_length_px": 8
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
+        "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
+        "date_format": "dd.MM.yy",
+        "time_format": "HH.mm/dd.MM.yy",
         "placeholders": [
           {
             "field": "map_image",
-            "element_id": 1026,
-            "kind": "map_image",
-            "diagnostic_name": null,
-            "required": true
+            "element_id": "1026"
+          },
+          {
+            "field": "title",
+            "element_id": "7",
+            "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
+          },
+          {
+            "field": "time",
+            "element_id": "14"
+          },
+          {
+            "field": "title",
+            "element_id": "2"
           }
-        ],
-        "txt_line_template": "{target_alias} {capture_date} {capture_time}"
+        ]
       },
       "metadata": {
         "geojson_type": "Feature",
@@ -5718,22 +6450,34 @@
         "style": {
           "frame_color": "#000000",
           "label_color": "#000000",
-          "label_font_size": 10,
+          "label_font_size": 24,
           "tick_length_px": 8
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
+        "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
+        "date_format": "dd.MM.yy",
+        "time_format": "HH.mm/dd.MM.yy",
         "placeholders": [
           {
             "field": "map_image",
-            "element_id": 1026,
-            "kind": "map_image",
-            "diagnostic_name": null,
-            "required": true
+            "element_id": "1026"
+          },
+          {
+            "field": "title",
+            "element_id": "7",
+            "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
+          },
+          {
+            "field": "time",
+            "element_id": "14"
+          },
+          {
+            "field": "title",
+            "element_id": "2"
           }
-        ],
-        "txt_line_template": "{target_alias} {capture_date} {capture_time}"
+        ]
       },
       "metadata": {
         "geojson_type": "Feature",
@@ -5806,22 +6550,34 @@
         "style": {
           "frame_color": "#000000",
           "label_color": "#000000",
-          "label_font_size": 10,
+          "label_font_size": 24,
           "tick_length_px": 8
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
+        "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
+        "date_format": "dd.MM.yy",
+        "time_format": "HH.mm/dd.MM.yy",
         "placeholders": [
           {
             "field": "map_image",
-            "element_id": 1026,
-            "kind": "map_image",
-            "diagnostic_name": null,
-            "required": true
+            "element_id": "1026"
+          },
+          {
+            "field": "title",
+            "element_id": "7",
+            "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
+          },
+          {
+            "field": "time",
+            "element_id": "14"
+          },
+          {
+            "field": "title",
+            "element_id": "2"
           }
-        ],
-        "txt_line_template": "{target_alias} {capture_date} {capture_time}"
+        ]
       },
       "metadata": {
         "geojson_type": "Feature",
@@ -5894,22 +6650,34 @@
         "style": {
           "frame_color": "#000000",
           "label_color": "#000000",
-          "label_font_size": 10,
+          "label_font_size": 24,
           "tick_length_px": 8
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
+        "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
+        "date_format": "dd.MM.yy",
+        "time_format": "HH.mm/dd.MM.yy",
         "placeholders": [
           {
             "field": "map_image",
-            "element_id": 1026,
-            "kind": "map_image",
-            "diagnostic_name": null,
-            "required": true
+            "element_id": "1026"
+          },
+          {
+            "field": "title",
+            "element_id": "7",
+            "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
+          },
+          {
+            "field": "time",
+            "element_id": "14"
+          },
+          {
+            "field": "title",
+            "element_id": "2"
           }
-        ],
-        "txt_line_template": "{target_alias} {capture_date} {capture_time}"
+        ]
       },
       "metadata": {
         "geojson_type": "Feature",
@@ -5978,22 +6746,34 @@
         "style": {
           "frame_color": "#000000",
           "label_color": "#000000",
-          "label_font_size": 10,
+          "label_font_size": 24,
           "tick_length_px": 8
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
+        "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
+        "date_format": "dd.MM.yy",
+        "time_format": "HH.mm/dd.MM.yy",
         "placeholders": [
           {
             "field": "map_image",
-            "element_id": 1026,
-            "kind": "map_image",
-            "diagnostic_name": null,
-            "required": true
+            "element_id": "1026"
+          },
+          {
+            "field": "title",
+            "element_id": "7",
+            "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
+          },
+          {
+            "field": "time",
+            "element_id": "14"
+          },
+          {
+            "field": "title",
+            "element_id": "2"
           }
-        ],
-        "txt_line_template": "{target_alias} {capture_date} {capture_time}"
+        ]
       },
       "metadata": {
         "geojson_type": "Feature",
@@ -6062,22 +6842,34 @@
         "style": {
           "frame_color": "#000000",
           "label_color": "#000000",
-          "label_font_size": 10,
+          "label_font_size": 24,
           "tick_length_px": 8
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
+        "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
+        "date_format": "dd.MM.yy",
+        "time_format": "HH.mm/dd.MM.yy",
         "placeholders": [
           {
             "field": "map_image",
-            "element_id": 1026,
-            "kind": "map_image",
-            "diagnostic_name": null,
-            "required": true
+            "element_id": "1026"
+          },
+          {
+            "field": "title",
+            "element_id": "7",
+            "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
+          },
+          {
+            "field": "time",
+            "element_id": "14"
+          },
+          {
+            "field": "title",
+            "element_id": "2"
           }
-        ],
-        "txt_line_template": "{target_alias} {capture_date} {capture_time}"
+        ]
       },
       "metadata": {
         "geojson_type": "Feature",
@@ -6146,22 +6938,34 @@
         "style": {
           "frame_color": "#000000",
           "label_color": "#000000",
-          "label_font_size": 10,
+          "label_font_size": 24,
           "tick_length_px": 8
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
+        "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
+        "date_format": "dd.MM.yy",
+        "time_format": "HH.mm/dd.MM.yy",
         "placeholders": [
           {
             "field": "map_image",
-            "element_id": 1026,
-            "kind": "map_image",
-            "diagnostic_name": null,
-            "required": true
+            "element_id": "1026"
+          },
+          {
+            "field": "title",
+            "element_id": "7",
+            "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
+          },
+          {
+            "field": "time",
+            "element_id": "14"
+          },
+          {
+            "field": "title",
+            "element_id": "2"
           }
-        ],
-        "txt_line_template": "{target_alias} {capture_date} {capture_time}"
+        ]
       },
       "metadata": {
         "geojson_type": "Feature",
@@ -6230,22 +7034,34 @@
         "style": {
           "frame_color": "#000000",
           "label_color": "#000000",
-          "label_font_size": 10,
+          "label_font_size": 24,
           "tick_length_px": 8
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
+        "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
+        "date_format": "dd.MM.yy",
+        "time_format": "HH.mm/dd.MM.yy",
         "placeholders": [
           {
             "field": "map_image",
-            "element_id": 1026,
-            "kind": "map_image",
-            "diagnostic_name": null,
-            "required": true
+            "element_id": "1026"
+          },
+          {
+            "field": "title",
+            "element_id": "7",
+            "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
+          },
+          {
+            "field": "time",
+            "element_id": "14"
+          },
+          {
+            "field": "title",
+            "element_id": "2"
           }
-        ],
-        "txt_line_template": "{target_alias} {capture_date} {capture_time}"
+        ]
       },
       "metadata": {
         "geojson_type": "Feature",
@@ -6314,22 +7130,34 @@
         "style": {
           "frame_color": "#000000",
           "label_color": "#000000",
-          "label_font_size": 10,
+          "label_font_size": 24,
           "tick_length_px": 8
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
+        "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
+        "date_format": "dd.MM.yy",
+        "time_format": "HH.mm/dd.MM.yy",
         "placeholders": [
           {
             "field": "map_image",
-            "element_id": 1026,
-            "kind": "map_image",
-            "diagnostic_name": null,
-            "required": true
+            "element_id": "1026"
+          },
+          {
+            "field": "title",
+            "element_id": "7",
+            "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
+          },
+          {
+            "field": "time",
+            "element_id": "14"
+          },
+          {
+            "field": "title",
+            "element_id": "2"
           }
-        ],
-        "txt_line_template": "{target_alias} {capture_date} {capture_time}"
+        ]
       },
       "metadata": {
         "geojson_type": "Feature",
@@ -6398,22 +7226,34 @@
         "style": {
           "frame_color": "#000000",
           "label_color": "#000000",
-          "label_font_size": 10,
+          "label_font_size": 24,
           "tick_length_px": 8
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
+        "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
+        "date_format": "dd.MM.yy",
+        "time_format": "HH.mm/dd.MM.yy",
         "placeholders": [
           {
             "field": "map_image",
-            "element_id": 1026,
-            "kind": "map_image",
-            "diagnostic_name": null,
-            "required": true
+            "element_id": "1026"
+          },
+          {
+            "field": "title",
+            "element_id": "7",
+            "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
+          },
+          {
+            "field": "time",
+            "element_id": "14"
+          },
+          {
+            "field": "title",
+            "element_id": "2"
           }
-        ],
-        "txt_line_template": "{target_alias} {capture_date} {capture_time}"
+        ]
       },
       "metadata": {
         "geojson_type": "Feature",

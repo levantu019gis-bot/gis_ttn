@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from PySide6.QtCore import Signal
+from PySide6.QtCore import QThread, Signal, Slot
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QFrame,
@@ -14,9 +14,15 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from thucthengay.editor.export_worker import ExportRunner, ExportWorker
 from thucthengay.editor.models.export_plan_model import ExportPlanModel
 from thucthengay.editor.widgets.export_summary import ExportSummaryWidget
-from thucthengay.export import build_export_preflight_plan
+from thucthengay.export import (
+    FullExportResult,
+    build_export_preflight_plan,
+    preflight_allows_auto_export,
+    run_full_export,
+)
 from thucthengay.models import ExportPreflightPlan, TargetConfig
 from thucthengay.workspace import WorkspaceError, WorkspaceService
 
@@ -26,13 +32,21 @@ class ExportMode(QWidget):
 
     jumpRequested = Signal(str, str, str)
 
-    def __init__(self, parent: QWidget | None = None) -> None:
+    def __init__(
+        self,
+        parent: QWidget | None = None,
+        *,
+        export_runner: ExportRunner = run_full_export,
+    ) -> None:
         super().__init__(parent)
         self.setObjectName("exportMode")
         self.setMinimumSize(960, 560)
         self._workspace_service: WorkspaceService | None = None
         self._targets: list[TargetConfig] = []
         self._last_plan: ExportPreflightPlan | None = None
+        self._export_runner = export_runner
+        self._export_thread: QThread | None = None
+        self._export_worker: ExportWorker | None = None
 
         self.summary = ExportSummaryWidget()
         self.preflight_button = QPushButton("Preflight")
@@ -43,6 +57,7 @@ class ExportMode(QWidget):
         self.export_button.setProperty("primaryAction", True)
         self.export_button.setEnabled(False)
         self.export_button.setToolTip("Chay Preflight va xu ly loi blocking truoc khi export.")
+        self.export_button.clicked.connect(self.run_export)
 
         self.status_label = QLabel("Chua chay preflight.")
         self.status_label.setObjectName("exportStatus")
@@ -81,6 +96,8 @@ class ExportMode(QWidget):
         self._workspace_service = workspace_service
         self._targets = list(targets or [])
         self.status_label.setText("San sang chay preflight.")
+        self.export_button.setEnabled(False)
+        self._last_plan = None
 
     def run_preflight(self) -> None:
         if self._workspace_service is None:
@@ -98,17 +115,88 @@ class ExportMode(QWidget):
         self.summary.set_summary(plan.summary)
         self.plan_model.set_rows(plan.rows)
         self.plan_table.resizeColumnsToContents()
-        self.export_button.setEnabled(False)
-        if plan.summary.error_count:
+        can_export = preflight_allows_auto_export(plan)
+        self.export_button.setEnabled(can_export)
+        if plan.summary.error_count and not can_export:
             self.export_button.setToolTip("Export bi chan vi preflight con loi blocking.")
             self.status_label.setText(
                 "Preflight bi chan. Double click row co issue de quay lai sua."
             )
-        else:
-            self.export_button.setToolTip("Final export se duoc mo o cac story tiep theo.")
+        elif plan.summary.error_count:
+            self.export_button.setToolTip("Export se tao anh final con thieu truoc khi xuat.")
             self.status_label.setText(
-                "Preflight khong co loi blocking; final export chua implement."
+                "Preflight chi thieu anh final; bam Export de render va xuat PPTX/TXT."
             )
+        else:
+            self.export_button.setToolTip("Xuat PPTX/TXT va ghi export log.")
+            self.status_label.setText("Preflight khong co loi blocking; san sang export.")
+
+    def run_export(self) -> None:
+        if self._workspace_service is None:
+            self.status_label.setText("Chua co workspace de export.")
+            return
+        if self._export_thread is not None:
+            return
+        if self._last_plan is None:
+            self.run_preflight()
+        if self._last_plan is None or not preflight_allows_auto_export(self._last_plan):
+            self.status_label.setText("Export bi chan vi preflight con loi blocking.")
+            return
+
+        self.preflight_button.setEnabled(False)
+        self.export_button.setEnabled(False)
+        self.status_label.setText("Dang tao anh final va export PPTX/TXT...")
+        thread = QThread(self)
+        worker = ExportWorker(
+            self._workspace_service,
+            list(self._targets),
+            output_stem="report",
+            runner=self._export_runner,
+        )
+        worker.moveToThread(thread)
+        self._export_thread = thread
+        self._export_worker = worker
+        thread.started.connect(worker.run)
+        worker.finished.connect(self._finish_export)
+        worker.finished.connect(thread.quit)
+        worker.finished.connect(worker.deleteLater)
+        thread.finished.connect(thread.deleteLater)
+        thread.finished.connect(self._clear_export_worker)
+        thread.start()
+
+    @Slot(object)
+    def _finish_export(self, result: FullExportResult) -> None:
+        self._last_plan = result.preflight_plan
+        self.summary.set_summary(result.preflight_plan.summary)
+        self.plan_model.set_rows(result.preflight_plan.rows)
+        self.plan_table.resizeColumnsToContents()
+        self.preflight_button.setEnabled(True)
+        self.export_button.setEnabled(preflight_allows_auto_export(result.preflight_plan))
+        if result.ok and result.log_result is not None:
+            summary = result.log_result.summary
+            self.status_label.setText(
+                "Export xong: "
+                f"{summary.slide_count} slide, {summary.txt_line_count} dong TXT. "
+                f"Log: {summary.log_path}."
+            )
+            self.export_button.setToolTip("Co the export lai neu workspace thay doi.")
+            return
+
+        issue_count = len(result.issues)
+        self.status_label.setText(f"Export chua hoan tat: {issue_count} issue.")
+        self.export_button.setToolTip("Kiem tra issue trong bang Preflight roi thu lai.")
+
+    def _clear_export_worker(self) -> None:
+        self._export_thread = None
+        self._export_worker = None
+
+    def closeEvent(self, event) -> None:  # noqa: ANN001, N802
+        if self._export_worker is not None:
+            self._export_worker.cancel()
+        if self._export_thread is not None and self._export_thread.isRunning():
+            self._export_thread.quit()
+            self._export_thread.wait(2000)
+        super().closeEvent(event)
 
     def _jump_from_index(self, index) -> None:  # noqa: ANN001
         row = self.plan_model.row_at(index.row())

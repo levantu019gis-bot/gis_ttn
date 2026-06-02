@@ -198,7 +198,7 @@ def test_export_final_render_skips_current_render_without_calling_renderer(
     assert first.rows[0].status == ExportFinalRenderStatus.RENDERED
 
     def unexpected_render(spec: RenderSpec, is_cancelled=None) -> RasterRenderResult:
-        raise AssertionError("renderer should not be called for a current final PNG")
+        raise AssertionError("renderer should not be called for a current final image")
 
     second = ensure_final_renders_for_export(service, [target], render=unexpected_render)
 
@@ -237,7 +237,7 @@ def test_export_final_render_failure_returns_issue_without_success_artifact(
         severity=IssueSeverity.ERROR,
         scope=IssueScope.RENDER,
         composition_id="alpha__20260525",
-        message="Khong tao duoc PNG final.",
+        message="Khong tao duoc anh final.",
         remediation="Kiem tra du lieu raster roi render lai.",
     )
 

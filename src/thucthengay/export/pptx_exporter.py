@@ -293,7 +293,7 @@ def _try_resolved_render_path(
         return None
     return _issue(
         "export.final_render_missing",
-        "Composition chua co PNG final render de dua vao PPTX.",
+        "Composition chua co anh final render de dua vao PPTX.",
         "Chay render final cho composition nay truoc khi export PPTX.",
         composition=composition,
     )

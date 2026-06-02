@@ -228,7 +228,7 @@ class WorkspaceService:
         final_render_path: str,
         render_log_path: str,
     ) -> Composition:
-        """Persist workspace-relative final PNG and render-log references."""
+        """Persist workspace-relative final image and render-log references."""
         final_render_path = _validate_render_artifact_path(final_render_path)
         render_log_path = _validate_render_artifact_path(render_log_path)
         composition = self.read_composition(composition_id)

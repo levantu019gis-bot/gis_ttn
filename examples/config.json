@@ -49,7 +49,7 @@
             "required": true
           }
         ],
-        "txt_line_template": "{target_alias} {capture_date} {capture_time}"
+        "txt_line_template": "{target_alias} {capture_date} {time_label}"
       },
       "metadata": {
         "geojson_type": "Feature",
@@ -133,7 +133,7 @@
             "required": true
           }
         ],
-        "txt_line_template": "{target_alias} {capture_date} {capture_time}"
+        "txt_line_template": "{target_alias} {capture_date} {time_label}"
       },
       "metadata": {
         "geojson_type": "Feature",
@@ -217,7 +217,7 @@
             "required": true
           }
         ],
-        "txt_line_template": "{target_alias} {capture_date} {capture_time}"
+        "txt_line_template": "{target_alias} {capture_date} {time_label}"
       },
       "metadata": {
         "geojson_type": "Feature",
@@ -301,7 +301,7 @@
             "required": true
           }
         ],
-        "txt_line_template": "{target_alias} {capture_date} {capture_time}"
+        "txt_line_template": "{target_alias} {capture_date} {time_label}"
       },
       "metadata": {
         "geojson_type": "Feature",
@@ -401,7 +401,7 @@
             "required": true
           }
         ],
-        "txt_line_template": "{target_alias} {capture_date} {capture_time}"
+        "txt_line_template": "{target_alias} {capture_date} {time_label}"
       },
       "metadata": {
         "geojson_type": "Feature",
@@ -485,7 +485,7 @@
             "required": true
           }
         ],
-        "txt_line_template": "{target_alias} {capture_date} {capture_time}"
+        "txt_line_template": "{target_alias} {capture_date} {time_label}"
       },
       "metadata": {
         "geojson_type": "Feature",
@@ -577,7 +577,7 @@
             "required": true
           }
         ],
-        "txt_line_template": "{target_alias} {capture_date} {capture_time}"
+        "txt_line_template": "{target_alias} {capture_date} {time_label}"
       },
       "metadata": {
         "geojson_type": "Feature",
@@ -665,7 +665,7 @@
             "required": true
           }
         ],
-        "txt_line_template": "{target_alias} {capture_date} {capture_time}"
+        "txt_line_template": "{target_alias} {capture_date} {time_label}"
       },
       "metadata": {
         "geojson_type": "Feature",
@@ -769,7 +769,7 @@
             "required": true
           }
         ],
-        "txt_line_template": "{target_alias} {capture_date} {capture_time}"
+        "txt_line_template": "{target_alias} {capture_date} {time_label}"
       },
       "metadata": {
         "geojson_type": "Feature",
@@ -853,7 +853,7 @@
             "required": true
           }
         ],
-        "txt_line_template": "{target_alias} {capture_date} {capture_time}"
+        "txt_line_template": "{target_alias} {capture_date} {time_label}"
       },
       "metadata": {
         "geojson_type": "Feature",
@@ -937,7 +937,7 @@
             "required": true
           }
         ],
-        "txt_line_template": "{target_alias} {capture_date} {capture_time}"
+        "txt_line_template": "{target_alias} {capture_date} {time_label}"
       },
       "metadata": {
         "geojson_type": "Feature",
@@ -1021,7 +1021,7 @@
             "required": true
           }
         ],
-        "txt_line_template": "{target_alias} {capture_date} {capture_time}"
+        "txt_line_template": "{target_alias} {capture_date} {time_label}"
       },
       "metadata": {
         "geojson_type": "Feature",
@@ -1105,7 +1105,7 @@
             "required": true
           }
         ],
-        "txt_line_template": "{target_alias} {capture_date} {capture_time}"
+        "txt_line_template": "{target_alias} {capture_date} {time_label}"
       },
       "metadata": {
         "geojson_type": "Feature",
@@ -1193,7 +1193,7 @@
             "required": true
           }
         ],
-        "txt_line_template": "{target_alias} {capture_date} {capture_time}"
+        "txt_line_template": "{target_alias} {capture_date} {time_label}"
       },
       "metadata": {
         "geojson_type": "Feature",
@@ -1277,7 +1277,7 @@
             "required": true
           }
         ],
-        "txt_line_template": "{target_alias} {capture_date} {capture_time}"
+        "txt_line_template": "{target_alias} {capture_date} {time_label}"
       },
       "metadata": {
         "geojson_type": "Feature",
@@ -1361,7 +1361,7 @@
             "required": true
           }
         ],
-        "txt_line_template": "{target_alias} {capture_date} {capture_time}"
+        "txt_line_template": "{target_alias} {capture_date} {time_label}"
       },
       "metadata": {
         "geojson_type": "Feature",
@@ -1453,7 +1453,7 @@
             "required": true
           }
         ],
-        "txt_line_template": "{target_alias} {capture_date} {capture_time}"
+        "txt_line_template": "{target_alias} {capture_date} {time_label}"
       },
       "metadata": {
         "geojson_type": "Feature",
@@ -1553,7 +1553,7 @@
             "required": true
           }
         ],
-        "txt_line_template": "{target_alias} {capture_date} {capture_time}"
+        "txt_line_template": "{target_alias} {capture_date} {time_label}"
       },
       "metadata": {
         "geojson_type": "Feature",
@@ -1645,7 +1645,7 @@
             "required": true
           }
         ],
-        "txt_line_template": "{target_alias} {capture_date} {capture_time}"
+        "txt_line_template": "{target_alias} {capture_date} {time_label}"
       },
       "metadata": {
         "geojson_type": "Feature",
@@ -1741,7 +1741,7 @@
             "required": true
           }
         ],
-        "txt_line_template": "{target_alias} {capture_date} {capture_time}"
+        "txt_line_template": "{target_alias} {capture_date} {time_label}"
       },
       "metadata": {
         "geojson_type": "Feature",
@@ -1837,7 +1837,7 @@
             "required": true
           }
         ],
-        "txt_line_template": "{target_alias} {capture_date} {capture_time}"
+        "txt_line_template": "{target_alias} {capture_date} {time_label}"
       },
       "metadata": {
         "geojson_type": "Feature",
@@ -1929,7 +1929,7 @@
             "required": true
           }
         ],
-        "txt_line_template": "{target_alias} {capture_date} {capture_time}"
+        "txt_line_template": "{target_alias} {capture_date} {time_label}"
       },
       "metadata": {
         "geojson_type": "Feature",
@@ -2021,7 +2021,7 @@
             "required": true
           }
         ],
-        "txt_line_template": "{target_alias} {capture_date} {capture_time}"
+        "txt_line_template": "{target_alias} {capture_date} {time_label}"
       },
       "metadata": {
         "geojson_type": "Feature",
@@ -2125,7 +2125,7 @@
             "required": true
           }
         ],
-        "txt_line_template": "{target_alias} {capture_date} {capture_time}"
+        "txt_line_template": "{target_alias} {capture_date} {time_label}"
       },
       "metadata": {
         "geojson_type": "Feature",
@@ -2241,7 +2241,7 @@
             "required": true
           }
         ],
-        "txt_line_template": "{target_alias} {capture_date} {capture_time}"
+        "txt_line_template": "{target_alias} {capture_date} {time_label}"
       },
       "metadata": {
         "geojson_type": "Feature",
@@ -2341,7 +2341,7 @@
             "required": true
           }
         ],
-        "txt_line_template": "{target_alias} {capture_date} {capture_time}"
+        "txt_line_template": "{target_alias} {capture_date} {time_label}"
       },
       "metadata": {
         "geojson_type": "Feature",
@@ -2441,7 +2441,7 @@
             "required": true
           }
         ],
-        "txt_line_template": "{target_alias} {capture_date} {capture_time}"
+        "txt_line_template": "{target_alias} {capture_date} {time_label}"
       },
       "metadata": {
         "geojson_type": "Feature",
@@ -2593,7 +2593,7 @@
             "required": true
           }
         ],
-        "txt_line_template": "{target_alias} {capture_date} {capture_time}"
+        "txt_line_template": "{target_alias} {capture_date} {time_label}"
       },
       "metadata": {
         "geojson_type": "Feature",
@@ -2689,7 +2689,7 @@
             "required": true
           }
         ],
-        "txt_line_template": "{target_alias} {capture_date} {capture_time}"
+        "txt_line_template": "{target_alias} {capture_date} {time_label}"
       },
       "metadata": {
         "geojson_type": "Feature",
@@ -2777,7 +2777,7 @@
             "required": true
           }
         ],
-        "txt_line_template": "{target_alias} {capture_date} {capture_time}"
+        "txt_line_template": "{target_alias} {capture_date} {time_label}"
       },
       "metadata": {
         "geojson_type": "Feature",
@@ -2873,7 +2873,7 @@
             "required": true
           }
         ],
-        "txt_line_template": "{target_alias} {capture_date} {capture_time}"
+        "txt_line_template": "{target_alias} {capture_date} {time_label}"
       },
       "metadata": {
         "geojson_type": "Feature",
@@ -2961,7 +2961,7 @@
             "required": true
           }
         ],
-        "txt_line_template": "{target_alias} {capture_date} {capture_time}"
+        "txt_line_template": "{target_alias} {capture_date} {time_label}"
       },
       "metadata": {
         "geojson_type": "Feature",
@@ -3057,7 +3057,7 @@
             "required": true
           }
         ],
-        "txt_line_template": "{target_alias} {capture_date} {capture_time}"
+        "txt_line_template": "{target_alias} {capture_date} {time_label}"
       },
       "metadata": {
         "geojson_type": "Feature",
@@ -3149,7 +3149,7 @@
             "required": true
           }
         ],
-        "txt_line_template": "{target_alias} {capture_date} {capture_time}"
+        "txt_line_template": "{target_alias} {capture_date} {time_label}"
       },
       "metadata": {
         "geojson_type": "Feature",
@@ -3241,7 +3241,7 @@
             "required": true
           }
         ],
-        "txt_line_template": "{target_alias} {capture_date} {capture_time}"
+        "txt_line_template": "{target_alias} {capture_date} {time_label}"
       },
       "metadata": {
         "geojson_type": "Feature",
@@ -3337,7 +3337,7 @@
             "required": true
           }
         ],
-        "txt_line_template": "{target_alias} {capture_date} {capture_time}"
+        "txt_line_template": "{target_alias} {capture_date} {time_label}"
       },
       "metadata": {
         "geojson_type": "Feature",
@@ -3425,7 +3425,7 @@
             "required": true
           }
         ],
-        "txt_line_template": "{target_alias} {capture_date} {capture_time}"
+        "txt_line_template": "{target_alias} {capture_date} {time_label}"
       },
       "metadata": {
         "geojson_type": "Feature",
@@ -3565,7 +3565,7 @@
             "required": true
           }
         ],
-        "txt_line_template": "{target_alias} {capture_date} {capture_time}"
+        "txt_line_template": "{target_alias} {capture_date} {time_label}"
       },
       "metadata": {
         "geojson_type": "Feature",
@@ -3665,7 +3665,7 @@
             "required": true
           }
         ],
-        "txt_line_template": "{target_alias} {capture_date} {capture_time}"
+        "txt_line_template": "{target_alias} {capture_date} {time_label}"
       },
       "metadata": {
         "geojson_type": "Feature",
@@ -3753,7 +3753,7 @@
             "required": true
           }
         ],
-        "txt_line_template": "{target_alias} {capture_date} {capture_time}"
+        "txt_line_template": "{target_alias} {capture_date} {time_label}"
       },
       "metadata": {
         "geojson_type": "Feature",
@@ -3841,7 +3841,7 @@
             "required": true
           }
         ],
-        "txt_line_template": "{target_alias} {capture_date} {capture_time}"
+        "txt_line_template": "{target_alias} {capture_date} {time_label}"
       },
       "metadata": {
         "geojson_type": "Feature",
@@ -3933,7 +3933,7 @@
             "required": true
           }
         ],
-        "txt_line_template": "{target_alias} {capture_date} {capture_time}"
+        "txt_line_template": "{target_alias} {capture_date} {time_label}"
       },
       "metadata": {
         "geojson_type": "Feature",
@@ -4025,7 +4025,7 @@
             "required": true
           }
         ],
-        "txt_line_template": "{target_alias} {capture_date} {capture_time}"
+        "txt_line_template": "{target_alias} {capture_date} {time_label}"
       },
       "metadata": {
         "geojson_type": "Feature",
@@ -4121,7 +4121,7 @@
             "required": true
           }
         ],
-        "txt_line_template": "{target_alias} {capture_date} {capture_time}"
+        "txt_line_template": "{target_alias} {capture_date} {time_label}"
       },
       "metadata": {
         "geojson_type": "Feature",
@@ -4205,7 +4205,7 @@
             "required": true
           }
         ],
-        "txt_line_template": "{target_alias} {capture_date} {capture_time}"
+        "txt_line_template": "{target_alias} {capture_date} {time_label}"
       },
       "metadata": {
         "geojson_type": "Feature",
@@ -4293,7 +4293,7 @@
             "required": true
           }
         ],
-        "txt_line_template": "{target_alias} {capture_date} {capture_time}"
+        "txt_line_template": "{target_alias} {capture_date} {time_label}"
       },
       "metadata": {
         "geojson_type": "Feature",
@@ -4397,7 +4397,7 @@
             "required": true
           }
         ],
-        "txt_line_template": "{target_alias} {capture_date} {capture_time}"
+        "txt_line_template": "{target_alias} {capture_date} {time_label}"
       },
       "metadata": {
         "geojson_type": "Feature",
@@ -4485,7 +4485,7 @@
             "required": true
           }
         ],
-        "txt_line_template": "{target_alias} {capture_date} {capture_time}"
+        "txt_line_template": "{target_alias} {capture_date} {time_label}"
       },
       "metadata": {
         "geojson_type": "Feature",
@@ -4573,7 +4573,7 @@
             "required": true
           }
         ],
-        "txt_line_template": "{target_alias} {capture_date} {capture_time}"
+        "txt_line_template": "{target_alias} {capture_date} {time_label}"
       },
       "metadata": {
         "geojson_type": "Feature",
@@ -4661,7 +4661,7 @@
             "required": true
           }
         ],
-        "txt_line_template": "{target_alias} {capture_date} {capture_time}"
+        "txt_line_template": "{target_alias} {capture_date} {time_label}"
       },
       "metadata": {
         "geojson_type": "Feature",
@@ -4749,7 +4749,7 @@
             "required": true
           }
         ],
-        "txt_line_template": "{target_alias} {capture_date} {capture_time}"
+        "txt_line_template": "{target_alias} {capture_date} {time_label}"
       },
       "metadata": {
         "geojson_type": "Feature",
@@ -4841,7 +4841,7 @@
             "required": true
           }
         ],
-        "txt_line_template": "{target_alias} {capture_date} {capture_time}"
+        "txt_line_template": "{target_alias} {capture_date} {time_label}"
       },
       "metadata": {
         "geojson_type": "Feature",
@@ -4937,7 +4937,7 @@
             "required": true
           }
         ],
-        "txt_line_template": "{target_alias} {capture_date} {capture_time}"
+        "txt_line_template": "{target_alias} {capture_date} {time_label}"
       },
       "metadata": {
         "geojson_type": "Feature",
@@ -5033,7 +5033,7 @@
             "required": true
           }
         ],
-        "txt_line_template": "{target_alias} {capture_date} {capture_time}"
+        "txt_line_template": "{target_alias} {capture_date} {time_label}"
       },
       "metadata": {
         "geojson_type": "Feature",
@@ -5121,7 +5121,7 @@
             "required": true
           }
         ],
-        "txt_line_template": "{target_alias} {capture_date} {capture_time}"
+        "txt_line_template": "{target_alias} {capture_date} {time_label}"
       },
       "metadata": {
         "geojson_type": "Feature",
@@ -5209,7 +5209,7 @@
             "required": true
           }
         ],
-        "txt_line_template": "{target_alias} {capture_date} {capture_time}"
+        "txt_line_template": "{target_alias} {capture_date} {time_label}"
       },
       "metadata": {
         "geojson_type": "Feature",
@@ -5293,7 +5293,7 @@
             "required": true
           }
         ],
-        "txt_line_template": "{target_alias} {capture_date} {capture_time}"
+        "txt_line_template": "{target_alias} {capture_date} {time_label}"
       },
       "metadata": {
         "geojson_type": "Feature",
@@ -5393,7 +5393,7 @@
             "required": true
           }
         ],
-        "txt_line_template": "{target_alias} {capture_date} {capture_time}"
+        "txt_line_template": "{target_alias} {capture_date} {time_label}"
       },
       "metadata": {
         "geojson_type": "Feature",
@@ -5477,7 +5477,7 @@
             "required": true
           }
         ],
-        "txt_line_template": "{target_alias} {capture_date} {capture_time}"
+        "txt_line_template": "{target_alias} {capture_date} {time_label}"
       },
       "metadata": {
         "geojson_type": "Feature",
@@ -5561,7 +5561,7 @@
             "required": true
           }
         ],
-        "txt_line_template": "{target_alias} {capture_date} {capture_time}"
+        "txt_line_template": "{target_alias} {capture_date} {time_label}"
       },
       "metadata": {
         "geojson_type": "Feature",
@@ -5649,7 +5649,7 @@
             "required": true
           }
         ],
-        "txt_line_template": "{target_alias} {capture_date} {capture_time}"
+        "txt_line_template": "{target_alias} {capture_date} {time_label}"
       },
       "metadata": {
         "geojson_type": "Feature",
@@ -5733,7 +5733,7 @@
             "required": true
           }
         ],
-        "txt_line_template": "{target_alias} {capture_date} {capture_time}"
+        "txt_line_template": "{target_alias} {capture_date} {time_label}"
       },
       "metadata": {
         "geojson_type": "Feature",
@@ -5821,7 +5821,7 @@
             "required": true
           }
         ],
-        "txt_line_template": "{target_alias} {capture_date} {capture_time}"
+        "txt_line_template": "{target_alias} {capture_date} {time_label}"
       },
       "metadata": {
         "geojson_type": "Feature",
@@ -5909,7 +5909,7 @@
             "required": true
           }
         ],
-        "txt_line_template": "{target_alias} {capture_date} {capture_time}"
+        "txt_line_template": "{target_alias} {capture_date} {time_label}"
       },
       "metadata": {
         "geojson_type": "Feature",
@@ -5993,7 +5993,7 @@
             "required": true
           }
         ],
-        "txt_line_template": "{target_alias} {capture_date} {capture_time}"
+        "txt_line_template": "{target_alias} {capture_date} {time_label}"
       },
       "metadata": {
         "geojson_type": "Feature",
@@ -6077,7 +6077,7 @@
             "required": true
           }
         ],
-        "txt_line_template": "{target_alias} {capture_date} {capture_time}"
+        "txt_line_template": "{target_alias} {capture_date} {time_label}"
       },
       "metadata": {
         "geojson_type": "Feature",
@@ -6161,7 +6161,7 @@
             "required": true
           }
         ],
-        "txt_line_template": "{target_alias} {capture_date} {capture_time}"
+        "txt_line_template": "{target_alias} {capture_date} {time_label}"
       },
       "metadata": {
         "geojson_type": "Feature",
@@ -6245,7 +6245,7 @@
             "required": true
           }
         ],
-        "txt_line_template": "{target_alias} {capture_date} {capture_time}"
+        "txt_line_template": "{target_alias} {capture_date} {time_label}"
       },
       "metadata": {
         "geojson_type": "Feature",
@@ -6329,7 +6329,7 @@
             "required": true
           }
         ],
-        "txt_line_template": "{target_alias} {capture_date} {capture_time}"
+        "txt_line_template": "{target_alias} {capture_date} {time_label}"
       },
       "metadata": {
         "geojson_type": "Feature",
@@ -6413,7 +6413,7 @@
             "required": true
           }
         ],
-        "txt_line_template": "{target_alias} {capture_date} {capture_time}"
+        "txt_line_template": "{target_alias} {capture_date} {time_label}"
       },
       "metadata": {
         "geojson_type": "Feature",

@@ -56,7 +56,7 @@ def _success_render(spec: RenderSpec, is_cancelled=None) -> RasterRenderResult:
     return RasterRenderResult(canvas=canvas, painted_layer_ids=("L1", "L2"))
 
 
-def test_final_render_writes_png_and_success_log(tmp_path: Path) -> None:
+def test_final_render_writes_jpeg_and_success_log(tmp_path: Path) -> None:
     timestamp = datetime(2026, 5, 26, 8, 30, tzinfo=UTC)
     spec = _spec(width=120, height=68)
 
@@ -74,8 +74,10 @@ def test_final_render_writes_png_and_success_log(tmp_path: Path) -> None:
     assert result.height == 68
     assert result.render_spec_hash == render_spec_hash(spec)
 
-    png_path = tmp_path / result.output_path
-    with Image.open(png_path) as image:
+    assert result.output_path.endswith(".jpg")
+    jpeg_path = tmp_path / result.output_path
+    with Image.open(jpeg_path) as image:
+        assert image.format == "JPEG"
         assert image.size == (120, 68)
         assert image.mode == "RGB"
         dpi = image.info["dpi"]
@@ -102,7 +104,7 @@ def test_final_render_failure_writes_failure_log_without_success_output(
         severity=IssueSeverity.ERROR,
         scope=IssueScope.RENDER,
         composition_id="target_001__20260525",
-        message="Khong tao duoc PNG final.",
+        message="Khong tao duoc anh final.",
         remediation="Kiem tra layer va thu render lai.",
     )
 
@@ -113,14 +115,14 @@ def test_final_render_failure_writes_failure_log_without_success_output(
 
     assert result.status == FinalRenderStatus.FAILURE
     assert result.output_path is None
-    assert result.failure_reason == "Khong tao duoc PNG final."
-    assert list((tmp_path / "renders").glob("*.png")) == []
+    assert result.failure_reason == "Khong tao duoc anh final."
+    assert list((tmp_path / "renders").glob("*.jpg")) == []
 
     log = json.loads((tmp_path / result.log_path).read_text(encoding="utf-8"))
     entry = log["entries"][-1]
     assert entry["status"] == "failure"
     assert entry["composition_id"] == "target_001__20260525"
-    assert entry["failure_reason"] == "Khong tao duoc PNG final."
+    assert entry["failure_reason"] == "Khong tao duoc anh final."
     assert entry["output_path"] is None
 
 
@@ -136,8 +138,8 @@ def test_final_render_rejects_canvas_size_mismatch(tmp_path: Path) -> None:
 
     assert result.status == FinalRenderStatus.FAILURE
     assert result.output_path is None
-    assert list((tmp_path / "renders").glob("*.png")) == []
-    assert result.issues[0].issue_id == "render.final_png.failed"
+    assert list((tmp_path / "renders").glob("*.jpg")) == []
+    assert result.issues[0].issue_id == "render.final_image.failed"
     assert "dimensions" in result.issues[0].remediation
 
 
