@@ -28,3 +28,4 @@ dependencies:
   - ruff>=0.4
   - uv
   - hatchling
+  - pyinstaller>=6.0

@@ -63,6 +63,25 @@ uv run python -m thucthengay
 The current scaffold keeps tests independent from project data, network access, GeoTIFF files,
 PowerPoint templates, and a Qt event loop.
 
+## Package Windows executable
+
+Build the `.exe` on Windows from an Anaconda/Miniconda PowerShell prompt. PyInstaller cannot
+cross-compile a Windows executable from Linux.
+
+```powershell
+conda env update -n ttn-env -f environment.yml
+.\scripts\build_windows_exe.ps1
+```
+
+The default output is `dist\ThucTheNgay\ThucTheNgay.exe`. This one-folder layout is the most stable
+mode for the PySide6/GDAL/rasterio stack. To request a single executable file instead, run:
+
+```powershell
+.\scripts\build_windows_exe.ps1 -Mode onefile
+```
+
+The script runs `ThucTheNgay.exe --smoke` after packaging unless `-SkipSmoke` is passed.
+
 ## GDAL-compatible install path
 
 `rasterio` is the configured raster/GDAL access layer for the MVP package. On most supported
