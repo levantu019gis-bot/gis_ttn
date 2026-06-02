@@ -4,6 +4,27 @@
     "grid": {
       "label_format": "dms_full",
       "style": {
+        "supported_label_formats": [
+          "dms_full",
+          "dms_short"
+        ],
+        "epsilon": 1e-10,
+        "max_frame_ticks_per_axis": 2000,
+        "reference_width": 3306,
+        "reference_height": 2340,
+        "reference_outer_frame": [
+          244,
+          144,
+          3272,
+          2286
+        ],
+        "reference_frame_gap": 42,
+        "surround_outer_stroke_width": 6,
+        "surround_inner_stroke_width": 4,
+        "surround_tick_length": 14,
+        "surround_tick_stroke_width": 4,
+        "reference_label_font_size": 72,
+        "default_label_font": "fonts/arial-bold/Arial Bold/Arial Bold.ttf",
         "frame_color": "#000000",
         "label_color": "#000000",
         "label_font_size": 24,

@@ -7,7 +7,7 @@ intentionally does not draw an internal grid mesh across the raster area.
 from __future__ import annotations
 
 import math
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -19,19 +19,21 @@ from thucthengay.models.issue import Issue, IssueScope, IssueSeverity
 from thucthengay.render.raster import RenderError
 from thucthengay.render.spec import GeoWindow, RenderSpec
 
-_SUPPORTED_LABEL_FORMATS = {"dms_full", "dms_short"}
-_EPSILON = 1e-10
-_MAX_FRAME_TICKS_PER_AXIS = 2000
-_REFERENCE_WIDTH = 3306
-_REFERENCE_HEIGHT = 2340
-_REFERENCE_OUTER_FRAME = (244, 144, 3272, 2286)
-_REFERENCE_FRAME_GAP = 42
-_SURROUND_OUTER_STROKE_WIDTH = 6
-_SURROUND_INNER_STROKE_WIDTH = 4
-_SURROUND_TICK_LENGTH = 14
-_SURROUND_TICK_STROKE_WIDTH = 4
-_REFERENCE_LABEL_FONT_SIZE = 72
-_DEFAULT_LABEL_FONT = Path("fonts/arial-bold/Arial Bold/Arial Bold.ttf")
+_FALLBACK_FRAME_SETTINGS: dict[str, object] = {
+    "supported_label_formats": ("dms_full", "dms_short"),
+    "epsilon": 1e-10,
+    "max_frame_ticks_per_axis": 2000,
+    "reference_width": 3306,
+    "reference_height": 2340,
+    "reference_outer_frame": (244, 144, 3272, 2286),
+    "reference_frame_gap": 42,
+    "surround_outer_stroke_width": 6,
+    "surround_inner_stroke_width": 4,
+    "surround_tick_length": 14,
+    "surround_tick_stroke_width": 4,
+    "reference_label_font_size": 72,
+    "default_label_font": "fonts/arial-bold/Arial Bold/Arial Bold.ttf",
+}
 
 
 @dataclass(frozen=True)
@@ -84,7 +86,11 @@ class FrameStyle:
     label_padding: int = 3
 
 
-def build_map_surround_layout(width: int, height: int) -> MapSurroundLayout:
+def build_map_surround_layout(
+    width: int,
+    height: int,
+    style: Mapping[str, object] | None = None,
+) -> MapSurroundLayout:
     """Build a ``123.jpg``-style map surround layout for a full output canvas."""
     if width <= 1 or height <= 1:
         return MapSurroundLayout(
@@ -92,8 +98,8 @@ def build_map_surround_layout(width: int, height: int) -> MapSurroundLayout:
             inner_map=PixelRect(0, 0, max(1, width), max(1, height)),
         )
 
-    outer = _scale_reference_rect(_REFERENCE_OUTER_FRAME, width, height)
-    inner = _inner_from_outer_frame(outer)
+    outer = _scale_reference_rect(_reference_outer_frame(style), width, height, style)
+    inner = _inner_from_outer_frame(outer, style)
     inner = PixelRect(
         left=max(outer.left + 1, min(inner.left, outer.right - 2)),
         top=max(outer.top + 1, min(inner.top, outer.bottom - 2)),
@@ -105,8 +111,11 @@ def build_map_surround_layout(width: int, height: int) -> MapSurroundLayout:
     return MapSurroundLayout(outer_frame=outer, inner_map=inner)
 
 
-def _inner_from_outer_frame(outer: PixelRect) -> PixelRect:
-    inset = _SURROUND_OUTER_STROKE_WIDTH + _REFERENCE_FRAME_GAP
+def _inner_from_outer_frame(
+    outer: PixelRect,
+    style: Mapping[str, object] | None = None,
+) -> PixelRect:
+    inset = _surround_outer_stroke_width(style) + _reference_frame_gap(style)
     return PixelRect(
         left=outer.left + inset,
         top=outer.top + inset,
@@ -115,13 +124,17 @@ def _inner_from_outer_frame(outer: PixelRect) -> PixelRect:
     )
 
 
-def fit_rect_to_aspect(rect: PixelRect, aspect: float) -> PixelRect:
+def fit_rect_to_aspect(
+    rect: PixelRect,
+    aspect: float,
+    style: Mapping[str, object] | None = None,
+) -> PixelRect:
     """Return the largest centered sub-rect preserving ``aspect``."""
     if rect.width <= 0 or rect.height <= 0 or not math.isfinite(aspect) or aspect <= 0:
         return rect
 
     rect_aspect = rect.width / rect.height
-    if abs(rect_aspect - aspect) <= _EPSILON:
+    if abs(rect_aspect - aspect) <= _epsilon(style):
         return rect
     if rect_aspect > aspect:
         width = max(1, int(round(rect.height * aspect)))
@@ -134,14 +147,19 @@ def fit_rect_to_aspect(rect: PixelRect, aspect: float) -> PixelRect:
 
 
 def _scale_reference_rect(
-    rect: tuple[int, int, int, int], width: int, height: int
+    rect: tuple[int, int, int, int],
+    width: int,
+    height: int,
+    style: Mapping[str, object] | None = None,
 ) -> PixelRect:
     left, top, right, bottom = rect
+    reference_width = _reference_width(style)
+    reference_height = _reference_height(style)
     scaled = PixelRect(
-        left=int(round(width * left / _REFERENCE_WIDTH)),
-        top=int(round(height * top / _REFERENCE_HEIGHT)),
-        right=int(round(width * right / _REFERENCE_WIDTH)),
-        bottom=int(round(height * bottom / _REFERENCE_HEIGHT)),
+        left=int(round(width * left / reference_width)),
+        top=int(round(height * top / reference_height)),
+        right=int(round(width * right / reference_width)),
+        bottom=int(round(height * bottom / reference_height)),
     )
     return PixelRect(
         left=max(0, min(width - 1, scaled.left)),
@@ -155,15 +173,16 @@ def _scale_reference_value(
     value: int,
     width: int,
     height: int,
+    style: Mapping[str, object] | None = None,
     *,
     min_value: int = 1,
 ) -> int:
-    scale = min(width / _REFERENCE_WIDTH, height / _REFERENCE_HEIGHT)
+    scale = min(width / _reference_width(style), height / _reference_height(style))
     return max(min_value, int(round(value * scale)))
 
 
 def _styled_dimension(
-    style: dict[str, object],
+    style: Mapping[str, object],
     key: str,
     reference_value: int,
     width: int,
@@ -173,12 +192,12 @@ def _styled_dimension(
 ) -> int:
     if key in style:
         return _positive_int(style.get(key), fallback=min_value, min_value=min_value)
-    return _scale_reference_value(reference_value, width, height, min_value=min_value)
+    return _scale_reference_value(reference_value, width, height, style, min_value=min_value)
 
 
-def _label_font(size: int) -> ImageFont.ImageFont:
+def _label_font(size: int, style: Mapping[str, object] | None = None) -> ImageFont.ImageFont:
     try:
-        font_path = Path(__file__).resolve().parents[3] / _DEFAULT_LABEL_FONT
+        font_path = Path(__file__).resolve().parents[3] / _default_label_font(style)
         return ImageFont.truetype(font_path, size=size)
     except OSError:
         return ImageFont.load_default()
@@ -221,6 +240,97 @@ def _positive_int(value: object, *, fallback: int, min_value: int = 1) -> int:
     except (TypeError, ValueError):
         return fallback
     return parsed if parsed >= min_value else fallback
+
+
+def _positive_float(value: object, *, fallback: float, min_value: float = 0.0) -> float:
+    try:
+        parsed = float(value)
+    except (TypeError, ValueError):
+        return fallback
+    return parsed if math.isfinite(parsed) and parsed >= min_value else fallback
+
+
+def _frame_setting(style: Mapping[str, object] | None, key: str) -> object:
+    if style is not None and key in style:
+        return style[key]
+    return _FALLBACK_FRAME_SETTINGS[key]
+
+
+def _supported_label_formats(style: Mapping[str, object] | None) -> frozenset[str]:
+    fallback = _FALLBACK_FRAME_SETTINGS["supported_label_formats"]
+    assert isinstance(fallback, tuple)
+    implemented = frozenset(fallback)
+    value = _frame_setting(style, "supported_label_formats")
+    if not isinstance(value, (list, tuple, set, frozenset)):
+        value = fallback
+    formats = frozenset(
+        item.strip() for item in value if isinstance(item, str) and item.strip()
+    ) & implemented
+    if formats:
+        return formats
+    return implemented
+
+
+def _epsilon(style: Mapping[str, object] | None) -> float:
+    return _positive_float(_frame_setting(style, "epsilon"), fallback=1e-10)
+
+
+def _max_frame_ticks_per_axis(style: Mapping[str, object] | None) -> int:
+    return _positive_int(_frame_setting(style, "max_frame_ticks_per_axis"), fallback=2000)
+
+
+def _reference_width(style: Mapping[str, object] | None) -> int:
+    return _positive_int(_frame_setting(style, "reference_width"), fallback=3306)
+
+
+def _reference_height(style: Mapping[str, object] | None) -> int:
+    return _positive_int(_frame_setting(style, "reference_height"), fallback=2340)
+
+
+def _reference_outer_frame(style: Mapping[str, object] | None) -> tuple[int, int, int, int]:
+    value = _frame_setting(style, "reference_outer_frame")
+    fallback = _FALLBACK_FRAME_SETTINGS["reference_outer_frame"]
+    assert isinstance(fallback, tuple)
+    if not isinstance(value, (list, tuple)) or len(value) != 4:
+        return fallback
+    try:
+        left, top, right, bottom = (int(item) for item in value)
+    except (TypeError, ValueError):
+        return fallback
+    if right <= left or bottom <= top:
+        return fallback
+    return left, top, right, bottom
+
+
+def _reference_frame_gap(style: Mapping[str, object] | None) -> int:
+    return _positive_int(_frame_setting(style, "reference_frame_gap"), fallback=42, min_value=0)
+
+
+def _surround_outer_stroke_width(style: Mapping[str, object] | None) -> int:
+    return _positive_int(_frame_setting(style, "surround_outer_stroke_width"), fallback=6)
+
+
+def _surround_inner_stroke_width(style: Mapping[str, object] | None) -> int:
+    return _positive_int(_frame_setting(style, "surround_inner_stroke_width"), fallback=4)
+
+
+def _surround_tick_length(style: Mapping[str, object] | None) -> int:
+    return _positive_int(_frame_setting(style, "surround_tick_length"), fallback=14)
+
+
+def _surround_tick_stroke_width(style: Mapping[str, object] | None) -> int:
+    return _positive_int(_frame_setting(style, "surround_tick_stroke_width"), fallback=4)
+
+
+def _reference_label_font_size(style: Mapping[str, object] | None) -> int:
+    return _positive_int(_frame_setting(style, "reference_label_font_size"), fallback=72)
+
+
+def _default_label_font(style: Mapping[str, object] | None) -> Path:
+    value = _frame_setting(style, "default_label_font")
+    if isinstance(value, str) and value.strip():
+        return Path(value.strip())
+    return Path("fonts/arial-bold/Arial Bold/Arial Bold.ttf")
 
 
 def _frame_style(grid: GridConfig) -> FrameStyle:
@@ -283,12 +393,14 @@ def _frame_issue(
 
 def _validate_label_format(spec: RenderSpec) -> str:
     label_format = "dms_full" if spec.grid.label_format is None else spec.grid.label_format.strip()
-    if label_format not in _SUPPORTED_LABEL_FORMATS:
+    supported_formats = _supported_label_formats(spec.grid.style)
+    if label_format not in supported_formats:
+        supported_text = " hoac ".join(f"'{item}'" for item in sorted(supported_formats))
         raise _frame_issue(
             spec,
             "render.frame.label_format_invalid",
             "Dinh dang nhan coordinate frame khong duoc ho tro.",
-            "Dung label_format la 'dms_full' hoac 'dms_short' truoc khi render.",
+            f"Dung label_format la {supported_text} truoc khi render.",
         )
     return label_format
 
@@ -296,26 +408,28 @@ def _validate_label_format(spec: RenderSpec) -> str:
 def _tick_values(
     min_value: float, max_value: float, interval: float, spec: RenderSpec
 ) -> list[float]:
-    first = math.ceil((min_value - _EPSILON) / interval) * interval
-    if first > max_value + _EPSILON:
+    epsilon = _epsilon(spec.grid.style)
+    first = math.ceil((min_value - epsilon) / interval) * interval
+    if first > max_value + epsilon:
         return []
 
-    tick_count = math.floor((max_value - first + _EPSILON) / interval) + 1
-    if tick_count > _MAX_FRAME_TICKS_PER_AXIS:
+    tick_count = math.floor((max_value - first + epsilon) / interval) + 1
+    max_ticks = _max_frame_ticks_per_axis(spec.grid.style)
+    if tick_count > max_ticks:
         raise _frame_issue(
             spec,
             "render.frame.interval_too_dense",
             "Khoang coordinate frame qua day de render an toan.",
             (
                 "Tang grid.interval de so tick tren moi truc khong vuot "
-                f"{_MAX_FRAME_TICKS_PER_AXIS}."
+                f"{max_ticks}."
             ),
         )
 
     values: list[float] = []
     current = first
     for _ in range(tick_count):
-        if current >= min_value - _EPSILON:
+        if current >= min_value - epsilon:
             values.append(round(current, 10))
         current += interval
     return values
@@ -411,13 +525,14 @@ def _fit_label_font_size(
     requested_size: int,
     max_label_height: int,
     labels: tuple[str, ...],
+    style: Mapping[str, object] | None = None,
 ) -> int:
     if max_label_height <= 0:
         return requested_size
 
     min_size = min(4, requested_size)
     for size in range(requested_size, min_size - 1, -1):
-        font = _label_font(size)
+        font = _label_font(size, style)
         if all(_text_size(draw, label, font=font)[1] <= max_label_height for label in labels):
             return size
     return min_size
@@ -501,14 +616,15 @@ def draw_map_surround_frame(
     interval = _interval_degrees(spec)
     label_format = _validate_label_format(spec)
     style = _frame_style(spec.grid)
-    layout = layout or build_map_surround_layout(width, height)
+    frame_style = spec.grid.style
+    layout = layout or build_map_surround_layout(width, height, frame_style)
     outer = layout.outer_frame
     inner = layout.inner_map
     map_view = layout.map_view
     label_font_size = _styled_dimension(
-        spec.grid.style,
+        frame_style,
         "label_font_size",
-        _REFERENCE_LABEL_FONT_SIZE,
+        _reference_label_font_size(frame_style),
         width,
         height,
         min_value=8,
@@ -527,20 +643,21 @@ def draw_map_surround_frame(
         max_label_height=min(vertical_label_band - 2, horizontal_label_band - 4)
         - 2 * label_padding,
         labels=(sample_lon_label, sample_lat_label),
+        style=frame_style,
     )
-    font = _label_font(label_font_size)
+    font = _label_font(label_font_size, frame_style)
     _lon_label_w, lon_label_h = _text_size(draw, sample_lon_label, font=font)
     _lat_label_w, lat_label_h = _text_size(draw, sample_lat_label, font=font)
 
     draw.rectangle(
         (outer.left, outer.top, outer.right - 1, outer.bottom - 1),
         outline=style.frame_color,
-        width=_SURROUND_OUTER_STROKE_WIDTH,
+        width=_surround_outer_stroke_width(frame_style),
     )
     draw.rectangle(
         (inner.left, inner.top, inner.right - 1, inner.bottom - 1),
         outline=style.frame_color,
-        width=_SURROUND_INNER_STROKE_WIDTH,
+        width=_surround_inner_stroke_width(frame_style),
     )
 
     top_label_y = max(outer.top + label_padding, (outer.top + inner.top) // 2)
@@ -555,9 +672,9 @@ def draw_map_surround_frame(
         x = _lon_to_rect_x(spec.geo_window, map_view, lon)
         if inner.top > outer.top:
             draw.line(
-                (x, max(outer.top, inner.top - _SURROUND_TICK_LENGTH), x, inner.top),
+                (x, max(outer.top, inner.top - _surround_tick_length(frame_style)), x, inner.top),
                 fill=style.frame_color,
-                width=_SURROUND_TICK_STROKE_WIDTH,
+                width=_surround_tick_stroke_width(frame_style),
             )
         if outer.bottom > inner.bottom:
             draw.line(
@@ -565,10 +682,13 @@ def draw_map_surround_frame(
                     x,
                     inner.bottom - 1,
                     x,
-                    min(outer.bottom - 1, inner.bottom - 1 + _SURROUND_TICK_LENGTH),
+                    min(
+                        outer.bottom - 1,
+                        inner.bottom - 1 + _surround_tick_length(frame_style),
+                    ),
                 ),
                 fill=style.frame_color,
-                width=_SURROUND_TICK_STROKE_WIDTH,
+                width=_surround_tick_stroke_width(frame_style),
             )
         if not draw_lon_labels:
             continue
@@ -618,20 +738,28 @@ def draw_map_surround_frame(
         y = _lat_to_rect_y(spec.geo_window, map_view, lat)
         if inner.left > outer.left:
             draw.line(
-                (max(outer.left, inner.left - _SURROUND_TICK_LENGTH), y, inner.left, y),
+                (
+                    max(outer.left, inner.left - _surround_tick_length(frame_style)),
+                    y,
+                    inner.left,
+                    y,
+                ),
                 fill=style.frame_color,
-                width=_SURROUND_TICK_STROKE_WIDTH,
+                width=_surround_tick_stroke_width(frame_style),
             )
         if outer.right > inner.right:
             draw.line(
                 (
                     inner.right - 1,
                     y,
-                    min(outer.right - 1, inner.right - 1 + _SURROUND_TICK_LENGTH),
+                    min(
+                        outer.right - 1,
+                        inner.right - 1 + _surround_tick_length(frame_style),
+                    ),
                     y,
                 ),
                 fill=style.frame_color,
-                width=_SURROUND_TICK_STROKE_WIDTH,
+                width=_surround_tick_stroke_width(frame_style),
             )
         if not draw_lat_labels:
             continue

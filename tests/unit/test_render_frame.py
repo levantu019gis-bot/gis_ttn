@@ -111,6 +111,19 @@ class TestCoordinateFrame:
 
         assert exc.value.issues[0].issue_id == "render.frame.label_format_invalid"
 
+    def test_supported_label_formats_can_be_configured_from_grid_style(self) -> None:
+        canvas = np.zeros((80, 120, 3), dtype=np.uint8)
+        spec = _spec(
+            label_format="dms_full",
+            grid_style={"supported_label_formats": ["dms_short"]},
+        )
+
+        with pytest.raises(RenderError) as exc:
+            draw_coordinate_frame(canvas, spec)
+
+        assert exc.value.issues[0].issue_id == "render.frame.label_format_invalid"
+        assert "'dms_short'" in exc.value.issues[0].remediation
+
     def test_too_dense_interval_raises_structured_issue(self) -> None:
         canvas = np.zeros((80, 120, 3), dtype=np.uint8)
         interval = GridInterval.model_construct(degrees=0, minutes=0, seconds=0.001)
@@ -119,6 +132,21 @@ class TestCoordinateFrame:
             draw_coordinate_frame(canvas, _spec(interval=interval))
 
         assert exc.value.issues[0].issue_id == "render.frame.interval_too_dense"
+
+    def test_max_tick_limit_can_be_configured_from_grid_style(self) -> None:
+        canvas = np.zeros((80, 120, 3), dtype=np.uint8)
+
+        with pytest.raises(RenderError) as exc:
+            draw_coordinate_frame(
+                canvas,
+                _spec(
+                    interval=GridInterval(minutes=30),
+                    grid_style={"max_frame_ticks_per_axis": 1},
+                ),
+            )
+
+        assert exc.value.issues[0].issue_id == "render.frame.interval_too_dense"
+        assert "1." in exc.value.issues[0].remediation
 
     def test_edge_only_ticks_still_draw_labels_inside_canvas(self) -> None:
         canvas = np.zeros((80, 120, 3), dtype=np.uint8)
@@ -146,12 +174,28 @@ class TestMapSurroundFrame:
     def test_reference_layout_matches_template_sample_geometry(self) -> None:
         layout = build_map_surround_layout(3306, 2340)
 
-        assert layout.outer_frame == PixelRect(left=244, top=165, right=3272, bottom=2307)
-        assert layout.inner_map == PixelRect(left=292, top=213, right=3224, bottom=2259)
+        assert layout.outer_frame == PixelRect(left=244, top=144, right=3272, bottom=2286)
+        assert layout.inner_map == PixelRect(left=292, top=192, right=3224, bottom=2238)
         assert layout.inner_map.left - (layout.outer_frame.left + 6) == 42
         assert layout.inner_map.top - (layout.outer_frame.top + 6) == 42
         assert layout.outer_frame.right - 6 - layout.inner_map.right == 42
         assert layout.outer_frame.bottom - 6 - layout.inner_map.bottom == 42
+
+    def test_layout_uses_configured_reference_style_values(self) -> None:
+        layout = build_map_surround_layout(
+            100,
+            100,
+            {
+                "reference_width": 100,
+                "reference_height": 100,
+                "reference_outer_frame": [10, 20, 90, 80],
+                "reference_frame_gap": 5,
+                "surround_outer_stroke_width": 2,
+            },
+        )
+
+        assert layout.outer_frame == PixelRect(left=10, top=20, right=90, bottom=80)
+        assert layout.inner_map == PixelRect(left=17, top=27, right=83, bottom=73)
 
     def test_layout_keeps_frame_gap_absolute_at_preview_size(self) -> None:
         layout = build_map_surround_layout(640, 453)
@@ -254,6 +298,34 @@ class TestMapSurroundFrame:
         assert tuple(canvas[lat_tick_y, layout.inner_map.right + 13].tolist()) == (0, 0, 0)
         assert tuple(canvas[lat_tick_y, layout.inner_map.right + 14].tolist()) == (255, 255, 255)
 
+    def test_map_surround_tick_length_can_be_configured_from_grid_style(self) -> None:
+        spec = _spec(
+            width=240,
+            height=200,
+            interval=GridInterval(minutes=30),
+            grid_style={
+                "surround_tick_length": 6,
+                "surround_tick_stroke_width": 2,
+            },
+        )
+        layout = MapSurroundLayout(
+            outer_frame=PixelRect(left=10, top=10, right=230, bottom=190),
+            inner_map=PixelRect(left=70, top=70, right=170, bottom=130),
+        )
+        canvas = np.zeros((spec.output_height, spec.output_width, 3), dtype=np.uint8)
+        canvas[:, :] = (255, 255, 255)
+        canvas[
+            layout.inner_map.top : layout.inner_map.bottom,
+            layout.inner_map.left : layout.inner_map.right,
+            :,
+        ] = (17, 34, 51)
+
+        draw_map_surround_frame(canvas, spec, layout)
+
+        lon_tick_x = layout.inner_map.center_x
+        assert tuple(canvas[layout.inner_map.top - 6, lon_tick_x].tolist()) == (0, 0, 0)
+        assert tuple(canvas[layout.inner_map.top - 7, lon_tick_x].tolist()) == (255, 255, 255)
+
     def test_draws_horizontal_degree_labels_when_frame_band_can_fit_text(self) -> None:
         spec = _spec(
             width=640,
@@ -334,14 +406,14 @@ class TestMapSurroundFrame:
         draw_map_surround_frame(canvas, spec, layout)
 
         assert np.array_equal(
-            canvas[165:171, 500:1000],
+            canvas[144:150, 500:1000],
             np.full((6, 500, 3), np.array([0, 0, 0], dtype=np.uint8)),
         )
         assert np.array_equal(
-            canvas[213:217, 500:1000],
+            canvas[192:196, 500:1000],
             np.full((4, 500, 3), np.array([0, 0, 0], dtype=np.uint8)),
         )
-        assert tuple(canvas[217, 296].tolist()) == (17, 34, 51)
+        assert tuple(canvas[196, 296].tolist()) == (17, 34, 51)
 
     def test_reference_label_height_matches_template_sample(self) -> None:
         spec = _spec(width=3306, height=2340, interval=GridInterval(minutes=30))

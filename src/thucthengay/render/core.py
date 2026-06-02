@@ -196,7 +196,11 @@ def render_map(
     if output_pixels > MAX_RENDER_PIXELS:
         raise RenderError([_too_large_issue(spec)])
 
-    base_layout = build_map_surround_layout(spec.output_width, spec.output_height)
+    base_layout = build_map_surround_layout(
+        spec.output_width,
+        spec.output_height,
+        spec.grid.style,
+    )
     inner = base_layout.inner_map
     render_spec = _spec_for_inner_map(spec, inner)
     layout = MapSurroundLayout(

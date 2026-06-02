@@ -20,7 +20,7 @@
       "metadata_status": "valid",
       "order": 0,
       "source_path": "/home/ongtu/Working/3.ThucTheNgay/examples/20260526/PSScene_20260526_041530_33_24fb_cloud_0.tif",
-      "visible": false
+      "visible": true
     },
     {
       "cache_path": "cache/DaCay/20260526/PSScene_20260526_041528_49_24fb_cloud_0__74ab78beaf7c.tif",
@@ -32,7 +32,7 @@
       "metadata_status": "valid",
       "order": 1,
       "source_path": "/home/ongtu/Working/3.ThucTheNgay/examples/20260526/PSScene_20260526_041528_49_24fb_cloud_0.tif",
-      "visible": false
+      "visible": true
     },
     {
       "cache_path": "cache/DaCay/20260526/PSScene_20260526_033749_43_2515_cloud_0__2ebb6ac59677.tif",
@@ -56,7 +56,7 @@
       "metadata_status": "valid",
       "order": 3,
       "source_path": "/home/ongtu/Working/3.ThucTheNgay/examples/20260526/PSScene_20260526_033747_32_2515_cloud_0.tif",
-      "visible": false
+      "visible": true
     }
   ],
   "needs_revalidation": true,
@@ -73,8 +73,8 @@
   },
   "view": {
     "center": [
-      112.26952944,
-      16.97896384
+      112.2693916021012,
+      16.978867952752235
     ],
     "rotation": 0,
     "scale": 5000
