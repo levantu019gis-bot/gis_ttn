@@ -7,6 +7,7 @@ intentionally does not draw an internal grid mesh across the raster area.
 from __future__ import annotations
 
 import math
+from collections.abc import Callable
 from dataclasses import dataclass
 
 import numpy as np
@@ -20,6 +21,49 @@ from thucthengay.render.spec import GeoWindow, RenderSpec
 _SUPPORTED_LABEL_FORMATS = {"dms_full", "dms_short"}
 _EPSILON = 1e-10
 _MAX_FRAME_TICKS_PER_AXIS = 2000
+_REFERENCE_WIDTH = 3306
+_REFERENCE_HEIGHT = 2340
+_REFERENCE_OUTER_FRAME = (244, 165, 3272, 2307)
+_REFERENCE_INNER_MAP = (292, 213, 3224, 2259)
+
+
+@dataclass(frozen=True)
+class PixelRect:
+    """Exclusive pixel rectangle used by map surround layout."""
+
+    left: int
+    top: int
+    right: int
+    bottom: int
+
+    @property
+    def width(self) -> int:
+        return self.right - self.left
+
+    @property
+    def height(self) -> int:
+        return self.bottom - self.top
+
+    @property
+    def center_x(self) -> int:
+        return self.left + self.width // 2
+
+    @property
+    def center_y(self) -> int:
+        return self.top + self.height // 2
+
+
+@dataclass(frozen=True)
+class MapSurroundLayout:
+    """Pixel layout for the full map image and its inset raster panel."""
+
+    outer_frame: PixelRect
+    inner_map: PixelRect
+    geo_map: PixelRect | None = None
+
+    @property
+    def map_view(self) -> PixelRect:
+        return self.geo_map or self.inner_map
 
 
 @dataclass(frozen=True)
@@ -31,6 +75,63 @@ class FrameStyle:
     label_halo_color: tuple[int, int, int] = (255, 255, 255)
     tick_length: int = 6
     label_padding: int = 3
+
+
+def build_map_surround_layout(width: int, height: int) -> MapSurroundLayout:
+    """Build a ``123.jpg``-style map surround layout for a full output canvas."""
+    if width <= 1 or height <= 1:
+        return MapSurroundLayout(
+            outer_frame=PixelRect(0, 0, max(1, width), max(1, height)),
+            inner_map=PixelRect(0, 0, max(1, width), max(1, height)),
+        )
+
+    outer = _scale_reference_rect(_REFERENCE_OUTER_FRAME, width, height)
+    inner = _scale_reference_rect(_REFERENCE_INNER_MAP, width, height)
+    inner = PixelRect(
+        left=max(outer.left + 1, min(inner.left, outer.right - 2)),
+        top=max(outer.top + 1, min(inner.top, outer.bottom - 2)),
+        right=min(outer.right - 1, max(inner.right, outer.left + 2)),
+        bottom=min(outer.bottom - 1, max(inner.bottom, outer.top + 2)),
+    )
+    if inner.width <= 0 or inner.height <= 0:
+        inner = PixelRect(outer.left, outer.top, outer.right, outer.bottom)
+    return MapSurroundLayout(outer_frame=outer, inner_map=inner)
+
+
+def fit_rect_to_aspect(rect: PixelRect, aspect: float) -> PixelRect:
+    """Return the largest centered sub-rect preserving ``aspect``."""
+    if rect.width <= 0 or rect.height <= 0 or not math.isfinite(aspect) or aspect <= 0:
+        return rect
+
+    rect_aspect = rect.width / rect.height
+    if abs(rect_aspect - aspect) <= _EPSILON:
+        return rect
+    if rect_aspect > aspect:
+        width = max(1, int(round(rect.height * aspect)))
+        left = rect.left + (rect.width - width) // 2
+        return PixelRect(left=left, top=rect.top, right=left + width, bottom=rect.bottom)
+
+    height = max(1, int(round(rect.width / aspect)))
+    top = rect.top + (rect.height - height) // 2
+    return PixelRect(left=rect.left, top=top, right=rect.right, bottom=top + height)
+
+
+def _scale_reference_rect(
+    rect: tuple[int, int, int, int], width: int, height: int
+) -> PixelRect:
+    left, top, right, bottom = rect
+    scaled = PixelRect(
+        left=int(round(width * left / _REFERENCE_WIDTH)),
+        top=int(round(height * top / _REFERENCE_HEIGHT)),
+        right=int(round(width * right / _REFERENCE_WIDTH)),
+        bottom=int(round(height * bottom / _REFERENCE_HEIGHT)),
+    )
+    return PixelRect(
+        left=max(0, min(width - 1, scaled.left)),
+        top=max(0, min(height - 1, scaled.top)),
+        right=max(1, min(width, scaled.right)),
+        bottom=max(1, min(height, scaled.bottom)),
+    )
 
 
 def _issue(
@@ -179,6 +280,16 @@ def _lat_to_y(window: GeoWindow, height: int, lat: float) -> int:
     return max(0, min(height - 1, int(round(ratio * (height - 1)))))
 
 
+def _lon_to_rect_x(window: GeoWindow, rect: PixelRect, lon: float) -> int:
+    ratio = (lon - window.min_lon) / (window.max_lon - window.min_lon)
+    return max(rect.left, min(rect.right - 1, int(round(rect.left + ratio * (rect.width - 1)))))
+
+
+def _lat_to_rect_y(window: GeoWindow, rect: PixelRect, lat: float) -> int:
+    ratio = (window.max_lat - lat) / (window.max_lat - window.min_lat)
+    return max(rect.top, min(rect.bottom - 1, int(round(rect.top + ratio * (rect.height - 1)))))
+
+
 def _format_dms(value: float, *, axis: str, label_format: str) -> str:
     hemisphere = ("E" if value >= 0 else "W") if axis == "lon" else ("N" if value >= 0 else "S")
     absolute = abs(value)
@@ -228,6 +339,215 @@ def _clamped_text_origin(
     max_x = max(0, width - text_w - 1)
     max_y = max(0, height - text_h - 1)
     return max(0, min(desired[0], max_x)), max(0, min(desired[1], max_y))
+
+
+def _text_size(
+    draw: ImageDraw.ImageDraw, text: str, *, font: ImageFont.ImageFont
+) -> tuple[int, int]:
+    bbox = draw.textbbox((0, 0), text, font=font)
+    return bbox[2] - bbox[0], bbox[3] - bbox[1]
+
+
+def _centered_text_origin(
+    draw: ImageDraw.ImageDraw,
+    text: str,
+    center: tuple[int, int],
+    *,
+    font: ImageFont.ImageFont,
+    width: int,
+    height: int,
+) -> tuple[int, int]:
+    text_w, text_h = _text_size(draw, text, font=font)
+    x = center[0] - text_w // 2
+    y = center[1] - text_h // 2
+    return _clamped_text_origin(draw, text, (x, y), font=font, width=width, height=height)
+
+
+def _draw_rotated_text_with_halo(
+    image: Image.Image,
+    center: tuple[int, int],
+    text: str,
+    *,
+    font: ImageFont.ImageFont,
+    fill: tuple[int, int, int],
+    halo: tuple[int, int, int],
+    angle: int,
+) -> None:
+    bbox = ImageDraw.Draw(Image.new("RGB", (1, 1))).textbbox((0, 0), text, font=font)
+    text_w = bbox[2] - bbox[0]
+    text_h = bbox[3] - bbox[1]
+    layer = Image.new("RGBA", (text_w + 4, text_h + 4), (255, 255, 255, 0))
+    layer_draw = ImageDraw.Draw(layer)
+    _draw_text_with_halo(layer_draw, (2, 2), text, font=font, fill=fill, halo=halo)
+    rotated = layer.rotate(angle, expand=True)
+    x = max(0, min(image.width - rotated.width, center[0] - rotated.width // 2))
+    y = max(0, min(image.height - rotated.height, center[1] - rotated.height // 2))
+    image.paste(rotated.convert("RGB"), (x, y), rotated)
+
+
+def _cancelled_render_error(spec: RenderSpec) -> RenderError:
+    return _frame_issue(
+        spec,
+        "render.cancelled",
+        "Render da bi huy.",
+        "Thuc hien lai render khi khong con thao tac moi hon dang cho.",
+    )
+
+
+def draw_map_surround_frame(
+    canvas: np.ndarray,
+    spec: RenderSpec,
+    layout: MapSurroundLayout | None = None,
+    is_cancelled: Callable[[], bool] | None = None,
+) -> np.ndarray:
+    """Draw a 123.jpg-style outer frame, inner map frame, ticks, and labels."""
+    if canvas.ndim != 3 or canvas.shape[2] != 3:
+        raise RenderError(
+            [
+                _issue(
+                    "render.frame.canvas_invalid",
+                    "Canvas render khong dung dinh dang RGB.",
+                    "Render frame can canvas numpy co shape (height, width, 3).",
+                    composition_id=spec.composition_id,
+                    target_id=spec.target_id,
+                )
+            ]
+        )
+
+    height, width = canvas.shape[:2]
+    if width <= 1 or height <= 1:
+        raise _frame_issue(
+            spec,
+            "render.frame.canvas_too_small",
+            "Canvas render qua nho de ve coordinate frame.",
+            "Tang output_width/output_height truoc khi render.",
+        )
+
+    interval = _interval_degrees(spec)
+    label_format = _validate_label_format(spec)
+    style = _frame_style(spec.grid)
+    layout = layout or build_map_surround_layout(width, height)
+    outer = layout.outer_frame
+    inner = layout.inner_map
+    map_view = layout.map_view
+
+    image = Image.fromarray(canvas, mode="RGB")
+    draw = ImageDraw.Draw(image)
+    font = ImageFont.load_default()
+    sample_lon_label = _format_dms(spec.geo_window.min_lon, axis="lon", label_format=label_format)
+    sample_lat_label = _format_dms(spec.geo_window.min_lat, axis="lat", label_format=label_format)
+    _lon_label_w, lon_label_h = _text_size(draw, sample_lon_label, font=font)
+    _lat_label_w, lat_label_h = _text_size(draw, sample_lat_label, font=font)
+
+    draw.rectangle(
+        (outer.left, outer.top, outer.right - 1, outer.bottom - 1),
+        outline=style.frame_color,
+        width=1,
+    )
+    draw.rectangle(
+        (inner.left, inner.top, inner.right - 1, inner.bottom - 1),
+        outline=style.frame_color,
+        width=1,
+    )
+
+    tick_len = min(style.tick_length, max(1, min(map_view.width, map_view.height) // 4))
+    top_label_y = max(outer.top + style.label_padding, (outer.top + inner.top) // 2)
+    bottom_label_y = min(
+        outer.bottom - 1 - style.label_padding,
+        (inner.bottom + outer.bottom - 1) // 2,
+    )
+    draw_lon_labels = min(inner.top - outer.top, outer.bottom - inner.bottom) > (
+        lon_label_h + 2 * style.label_padding
+    )
+    for lon in _tick_values(spec.geo_window.min_lon, spec.geo_window.max_lon, interval, spec):
+        if is_cancelled is not None and is_cancelled():
+            raise _cancelled_render_error(spec)
+        x = _lon_to_rect_x(spec.geo_window, map_view, lon)
+        draw.line((x, outer.top, x, min(inner.top, outer.top + tick_len)), fill=style.frame_color)
+        draw.line(
+            (x, max(inner.bottom - 1, outer.bottom - 1 - tick_len), x, outer.bottom - 1),
+            fill=style.frame_color,
+        )
+        if not draw_lon_labels:
+            continue
+        label = _format_dms(lon, axis="lon", label_format=label_format)
+        top_origin = _centered_text_origin(
+            draw,
+            label,
+            (x, top_label_y),
+            font=font,
+            width=width,
+            height=height,
+        )
+        bottom_origin = _centered_text_origin(
+            draw,
+            label,
+            (x, bottom_label_y),
+            font=font,
+            width=width,
+            height=height,
+        )
+        _draw_text_with_halo(
+            draw,
+            top_origin,
+            label,
+            font=font,
+            fill=style.label_color,
+            halo=style.label_halo_color,
+        )
+        _draw_text_with_halo(
+            draw,
+            bottom_origin,
+            label,
+            font=font,
+            fill=style.label_color,
+            halo=style.label_halo_color,
+        )
+
+    left_label_x = max(outer.left + style.label_padding, (outer.left + inner.left) // 2)
+    right_label_x = min(
+        outer.right - 1 - style.label_padding,
+        (inner.right + outer.right - 1) // 2,
+    )
+    draw_lat_labels = min(inner.left - outer.left, outer.right - inner.right) > (
+        lat_label_h + 2 * style.label_padding
+    )
+    for lat in _tick_values(spec.geo_window.min_lat, spec.geo_window.max_lat, interval, spec):
+        if is_cancelled is not None and is_cancelled():
+            raise _cancelled_render_error(spec)
+        y = _lat_to_rect_y(spec.geo_window, map_view, lat)
+        draw.line(
+            (outer.left, y, min(inner.left, outer.left + tick_len), y),
+            fill=style.frame_color,
+        )
+        draw.line(
+            (max(inner.right - 1, outer.right - 1 - tick_len), y, outer.right - 1, y),
+            fill=style.frame_color,
+        )
+        if not draw_lat_labels:
+            continue
+        label = _format_dms(lat, axis="lat", label_format=label_format)
+        _draw_rotated_text_with_halo(
+            image,
+            (left_label_x, y),
+            label,
+            font=font,
+            fill=style.label_color,
+            halo=style.label_halo_color,
+            angle=90,
+        )
+        _draw_rotated_text_with_halo(
+            image,
+            (right_label_x, y),
+            label,
+            font=font,
+            fill=style.label_color,
+            halo=style.label_halo_color,
+            angle=90,
+        )
+
+    np.copyto(canvas, np.asarray(image, dtype=np.uint8))
+    return canvas
 
 
 def draw_coordinate_frame(canvas: np.ndarray, spec: RenderSpec) -> np.ndarray:

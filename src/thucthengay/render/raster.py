@@ -305,6 +305,37 @@ def render_raster_layers(
     )
 
 
+def render_raster_layers_to_size(
+    spec: RenderSpec,
+    *,
+    output_width: int,
+    output_height: int,
+    dataset_opener: DatasetOpener = rasterio.open,
+    is_cancelled: CancelCallback | None = None,
+) -> RasterRenderResult:
+    """Composite raster layers into an alternate output size using the same geo window."""
+    if output_width <= 0 or output_height <= 0:
+        issue = _render_issue(
+            "render.output.size_invalid",
+            "Kích thước raster render không hợp lệ.",
+            "Cung cấp output_width và output_height lớn hơn 0.",
+            composition_id=spec.composition_id,
+            target_id=spec.target_id,
+        )
+        raise RenderError([issue])
+    sized_spec = spec.model_copy(
+        update={
+            "output_width": output_width,
+            "output_height": output_height,
+        }
+    )
+    return render_raster_layers_result(
+        sized_spec,
+        dataset_opener=dataset_opener,
+        is_cancelled=is_cancelled,
+    )
+
+
 def render_raster_layers_result(
     spec: RenderSpec,
     *,

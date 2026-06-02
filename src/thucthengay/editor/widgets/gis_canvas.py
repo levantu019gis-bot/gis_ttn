@@ -286,8 +286,9 @@ class GisCanvasWidget(QGraphicsView):
 
         frame = self._frame_rect()
         self._draw_layers(frame)
-        self._draw_frame(frame)
-        self._draw_state_text(width)
+        if self._rendered_pixmap is None:
+            self._draw_frame(frame)
+            self._draw_state_text(width)
 
     def _frame_rect(self) -> QRectF:
         width = max(self.viewport().width(), 640)

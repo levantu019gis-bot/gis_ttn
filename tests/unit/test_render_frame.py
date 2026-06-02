@@ -9,10 +9,14 @@ from thucthengay.models.config import GridConfig, GridInterval
 from thucthengay.models.template import MapFrame
 from thucthengay.render import (
     GeoWindow,
+    PixelRect,
     RenderBackground,
     RenderError,
     RenderSpec,
+    build_map_surround_layout,
     draw_coordinate_frame,
+    draw_map_surround_frame,
+    fit_rect_to_aspect,
 )
 
 
@@ -133,3 +137,73 @@ class TestCoordinateFormatting:
         draw_coordinate_frame(canvas, _spec(label_format="dms_short"))
 
         assert tuple(canvas[0, 60].tolist()) != (1, 2, 3)
+
+
+class TestMapSurroundFrame:
+    def test_reference_layout_matches_template_sample_geometry(self) -> None:
+        layout = build_map_surround_layout(3306, 2340)
+
+        assert layout.outer_frame == PixelRect(left=244, top=165, right=3272, bottom=2307)
+        assert layout.inner_map == PixelRect(left=292, top=213, right=3224, bottom=2259)
+
+    def test_fit_rect_to_aspect_preserves_geographic_view_shape(self) -> None:
+        layout = build_map_surround_layout(330, 234)
+        fitted = fit_rect_to_aspect(layout.inner_map, 16 / 9)
+
+        assert fitted.left >= layout.inner_map.left
+        assert fitted.right <= layout.inner_map.right
+        assert fitted.top >= layout.inner_map.top
+        assert fitted.bottom <= layout.inner_map.bottom
+        assert abs((fitted.width / fitted.height) - (16 / 9)) < 0.05
+
+    def test_draws_outer_inner_frames_and_keeps_raster_panel_clean(self) -> None:
+        spec = _spec(width=330, height=234, interval=GridInterval(degrees=10))
+        layout = build_map_surround_layout(spec.output_width, spec.output_height)
+        canvas = np.zeros((spec.output_height, spec.output_width, 3), dtype=np.uint8)
+        canvas[:, :] = (255, 255, 255)
+        canvas[
+            layout.inner_map.top : layout.inner_map.bottom,
+            layout.inner_map.left : layout.inner_map.right,
+            :,
+        ] = (17, 34, 51)
+
+        draw_map_surround_frame(canvas, spec, layout)
+
+        assert tuple(canvas[0, 0].tolist()) == (255, 255, 255)
+        assert tuple(canvas[layout.outer_frame.top, layout.outer_frame.left].tolist()) == (0, 0, 0)
+        assert tuple(canvas[layout.inner_map.top, layout.inner_map.left].tolist()) == (0, 0, 0)
+        assert tuple(canvas[layout.inner_map.center_y, layout.inner_map.center_x].tolist()) == (
+            17,
+            34,
+            51,
+        )
+
+    def test_draws_ticks_and_labels_outside_inner_map(self) -> None:
+        spec = _spec(width=330, height=234, interval=GridInterval(minutes=30))
+        layout = build_map_surround_layout(spec.output_width, spec.output_height)
+        canvas = np.zeros((spec.output_height, spec.output_width, 3), dtype=np.uint8)
+        canvas[:, :] = (255, 255, 255)
+        canvas[
+            layout.inner_map.top : layout.inner_map.bottom,
+            layout.inner_map.left : layout.inner_map.right,
+            :,
+        ] = (17, 34, 51)
+
+        draw_map_surround_frame(canvas, spec, layout)
+
+        assert tuple(canvas[layout.inner_map.center_y, layout.inner_map.center_x].tolist()) == (
+            17,
+            34,
+            51,
+        )
+        top_band = canvas[layout.outer_frame.top : layout.inner_map.top, :, :]
+        assert (top_band != np.array([255, 255, 255], dtype=np.uint8)).any()
+        inner_interior = canvas[
+            layout.inner_map.top + 1 : layout.inner_map.bottom - 1,
+            layout.inner_map.left + 1 : layout.inner_map.right - 1,
+            :,
+        ]
+        assert np.array_equal(
+            inner_interior,
+            np.full_like(inner_interior, np.array([17, 34, 51], dtype=np.uint8)),
+        )

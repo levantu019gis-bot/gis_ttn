@@ -20,8 +20,11 @@ from thucthengay.render import (
     RenderError,
     RenderLayerRef,
     RenderSpec,
-    draw_coordinate_frame,
+    build_map_surround_layout,
+    draw_map_surround_frame,
+    fit_rect_to_aspect,
     render_map,
+    render_raster_layers_to_size,
 )
 
 
@@ -106,11 +109,18 @@ class TestRenderMap:
         layer = RenderLayerRef(layer_id="L1", source_path="L1.tif", cache_path="L1.tif", order=0)
 
         with _opener_for({"L1.tif": memfile}) as opener:
-            result = render_map(_spec(layers=[layer]), dataset_opener=opener)
+            spec = _spec(layers=[layer])
+            result = render_map(spec, dataset_opener=opener)
 
-        assert tuple(result.canvas[24, 8].tolist()) == (80, 90, 100)
-        assert tuple(result.canvas[24, 56].tolist()) == (17, 34, 51)
-        assert tuple(result.canvas[0, 32].tolist()) != (17, 34, 51)
+        layout = build_map_surround_layout(spec.output_width, spec.output_height)
+        geo_map = fit_rect_to_aspect(layout.inner_map, spec.map_frame_aspect)
+        raster_col = geo_map.left + geo_map.width // 4
+        background_col = geo_map.left + geo_map.width * 3 // 4
+        row = geo_map.center_y
+        assert tuple(result.canvas[row, raster_col].tolist()) == (80, 90, 100)
+        assert tuple(result.canvas[row, background_col].tolist()) == (17, 34, 51)
+        assert tuple(result.canvas[0, 0].tolist()) == (255, 255, 255)
+        assert abs((geo_map.width / geo_map.height) - spec.map_frame_aspect) < 0.05
 
     def test_preserves_non_fatal_raster_issues(self) -> None:
         good = _make_memfile(bounds=(106.0, 10.0, 107.0, 11.0), rgb=(40, 50, 60))
@@ -128,10 +138,27 @@ class TestRenderMap:
     def test_mvp_does_not_draw_boundary_north_arrow_or_scale_bar(self) -> None:
         spec = _spec(layers=[], bg_color="#112233", interval=GridInterval(degrees=1))
         result = render_map(spec)
+        layout = build_map_surround_layout(spec.output_width, spec.output_height)
+        geo_map = fit_rect_to_aspect(layout.inner_map, spec.map_frame_aspect)
 
         expected = np.zeros_like(result.canvas)
-        expected[:, :] = (17, 34, 51)
-        draw_coordinate_frame(expected, spec)
+        expected[:, :] = (255, 255, 255)
+        expected[
+            layout.inner_map.top : layout.inner_map.bottom,
+            layout.inner_map.left : layout.inner_map.right,
+            :,
+        ] = (17, 34, 51)
+        expected[
+            geo_map.top : geo_map.bottom,
+            geo_map.left : geo_map.right,
+            :,
+        ] = (17, 34, 51)
+        layout = layout.__class__(
+            outer_frame=layout.outer_frame,
+            inner_map=layout.inner_map,
+            geo_map=geo_map,
+        )
+        draw_map_surround_frame(expected, spec, layout)
 
         assert np.array_equal(result.canvas, expected)
 
@@ -161,3 +188,13 @@ class TestRenderMap:
             )
 
         assert [issue.issue_id for issue in exc.value.issues] == ["render.cancelled"]
+
+    def test_raster_to_size_rejects_invalid_dimensions(self) -> None:
+        with pytest.raises(RenderError) as exc:
+            render_raster_layers_to_size(
+                _spec(layers=[]),
+                output_width=0,
+                output_height=12,
+            )
+
+        assert exc.value.issues[0].issue_id == "render.output.size_invalid"
