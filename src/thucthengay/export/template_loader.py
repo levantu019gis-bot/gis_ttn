@@ -10,6 +10,12 @@ from typing import Any
 from pptx import Presentation
 from pydantic import ValidationError
 
+from thucthengay.export.template_analyzer import (
+    PlaceholderMatch,
+    build_shape_inventory,
+    resolve_placeholder,
+    shape_inventory_payload,
+)
 from thucthengay.models import (
     Issue,
     IssueScope,
@@ -73,16 +79,27 @@ def load_target_template(target: TargetConfig, template_pptx_file: Path) -> Load
 
     slide = presentation.slides[0]
     shapes_by_id = _shapes_by_element_id(slide.shapes)
+    shape_inventory = build_shape_inventory(slide.shapes)
     element_names = {
-        element_id: getattr(shape, "name", "")
-        for element_id, shape in shapes_by_id.items()
+        shape.element_id: shape.name
+        for shape in shape_inventory
     }
-    placeholders = _placeholders_with_diagnostics(target.export.placeholders, element_names)
+    matches = [
+        resolve_placeholder(placeholder, shape_inventory)
+        for placeholder in target.export.placeholders
+    ]
+    _reject_ambiguous_required_matches(matches, target.id)
+    placeholders = _placeholders_with_diagnostics(
+        (match.placeholder for match in matches),
+        element_names,
+    )
     _reject_duplicate_element_ids(placeholders, target.id)
     map_placeholder = _required_map_placeholder(placeholders, target.id)
 
     for placeholder in placeholders:
-        if placeholder.required and placeholder.element_id not in shapes_by_id:
+        if placeholder.required and (
+            placeholder.element_id is None or placeholder.element_id not in shapes_by_id
+        ):
             raise TemplateLoadError(
                 "target.template_element_missing",
                 (
@@ -95,6 +112,15 @@ def load_target_template(target: TargetConfig, template_pptx_file: Path) -> Load
                 ),
             )
 
+    if map_placeholder.element_id is None:
+        raise TemplateLoadError(
+            "target.template_map_element_missing",
+            f"Target `{target.id}` chua resolve duoc map image placeholder bat buoc.",
+            (
+                "Dat ten shape map trong PPTX la `ttn:map_image`, hoac bo sung "
+                "`export.placeholders[].selector`, hoac cap nhat element_id dung."
+            ),
+        )
     map_shape = shapes_by_id[map_placeholder.element_id]
     try:
         map_frame = MapFrame(
@@ -119,6 +145,11 @@ def load_target_template(target: TargetConfig, template_pptx_file: Path) -> Load
     metadata: dict[str, Any] = {
         "source": "template_pptx_file",
         "element_names": {str(key): value for key, value in element_names.items()},
+        "shape_inventory": shape_inventory_payload(shape_inventory),
+        "placeholder_resolution": [
+            _placeholder_resolution_metadata(match)
+            for match in matches
+        ],
     }
     map_shape_metadata = _picture_shape_metadata(map_shape)
     if map_shape_metadata is not None:
@@ -216,11 +247,39 @@ def _placeholders_with_diagnostics(
         placeholder.model_copy(
             update={
                 "diagnostic_name": placeholder.diagnostic_name
-                or element_names.get(placeholder.element_id)
+                or (
+                    element_names.get(placeholder.element_id)
+                    if placeholder.element_id is not None
+                    else None
+                )
             }
         )
         for placeholder in placeholders
     ]
+
+
+def _reject_ambiguous_required_matches(
+    matches: Iterable[PlaceholderMatch],
+    target_id: str,
+) -> None:
+    for match in matches:
+        if not match.ambiguous or not match.placeholder.required:
+            continue
+        candidates = ", ".join(
+            f"{candidate.element_id}:{candidate.name or candidate.text or candidate.shape_type}"
+            for candidate in match.candidates
+        )
+        raise TemplateLoadError(
+            "target.template_element_ambiguous",
+            (
+                f"PPTX template cua target `{target_id}` co nhieu shape khop "
+                f"placeholder `{match.placeholder.field}` bang `{match.method}`: {candidates}."
+            ),
+            (
+                "Dat ten/alt text cua shape can replace thanh duy nhat, vi du "
+                "`ttn:map_image`, `ttn:title`, `ttn:time`, `ttn:comment`."
+            ),
+        )
 
 
 def _reject_duplicate_element_ids(
@@ -229,6 +288,8 @@ def _reject_duplicate_element_ids(
 ) -> None:
     seen: dict[int, str] = {}
     for placeholder in placeholders:
+        if placeholder.element_id is None:
+            continue
         prior_field = seen.get(placeholder.element_id)
         if prior_field is not None:
             raise TemplateLoadError(
@@ -284,3 +345,16 @@ def _compatibility_signature(presentation: Presentation) -> str:
     layouts_count = len(presentation.slide_layouts)
     master_xml = masters.xml if masters is not None else ""
     return f"masters={master_count};layouts={layouts_count};master_ids={master_xml}"
+
+
+def _placeholder_resolution_metadata(match: PlaceholderMatch) -> dict[str, Any]:
+    shape = match.shape
+    return {
+        "field": match.placeholder.field,
+        "kind": match.placeholder.kind,
+        "method": match.method,
+        "configured_element_id": match.configured_element_id,
+        "resolved_element_id": shape.element_id if shape is not None else None,
+        "diagnostic_name": shape.name if shape is not None else match.placeholder.diagnostic_name,
+        "candidate_ids": [candidate.element_id for candidate in match.candidates],
+    }

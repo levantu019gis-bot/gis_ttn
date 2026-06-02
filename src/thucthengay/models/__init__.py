@@ -57,6 +57,7 @@ from thucthengay.models.template import (
     PlaceholderType,
     TemplateMetadata,
     TemplatePlaceholder,
+    TemplatePlaceholderSelector,
 )
 from thucthengay.models.workspace import WorkspaceManifest
 
@@ -111,6 +112,7 @@ __all__ = [
     "TargetExportConfig",
     "TemplateMetadata",
     "TemplatePlaceholder",
+    "TemplatePlaceholderSelector",
     "ValidationSummary",
     "ViewState",
     "WorkspaceManifest",

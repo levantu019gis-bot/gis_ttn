@@ -5,7 +5,7 @@ from __future__ import annotations
 from enum import StrEnum
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field, model_validator
 
 
 class PlaceholderType(StrEnum):
@@ -27,15 +27,38 @@ class MapFrame(BaseModel):
     height: float = Field(gt=0)
 
 
+class TemplatePlaceholderSelector(BaseModel):
+    """Stable PPTX shape selector used to repair volatile element ids."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    name: str | None = None
+    title: str | None = None
+    descr: str | None = None
+    alt_text: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("alt_text", "description"),
+    )
+    text: str | None = None
+
+    @model_validator(mode="after")
+    def selector_must_have_signal(self) -> TemplatePlaceholderSelector:
+        if any((self.name, self.title, self.descr, self.alt_text, self.text)):
+            return self
+        msg = "selector must contain at least one matching signal"
+        raise ValueError(msg)
+
+
 class TemplatePlaceholder(BaseModel):
-    """Element-id placeholder in a target-specific PPTX template."""
+    """Placeholder mapping in a target-specific PPTX template."""
 
     model_config = ConfigDict(extra="forbid")
 
     field: str
-    element_id: int = Field(gt=0)
+    element_id: int | None = Field(default=None, gt=0)
     kind: PlaceholderType
     value: str | None = None
+    selector: TemplatePlaceholderSelector | None = None
     diagnostic_name: str | None = None
     required: bool = True
 

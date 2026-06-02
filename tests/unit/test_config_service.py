@@ -112,6 +112,36 @@ def write_export_contract_template_pptx(path: Path) -> tuple[int, int]:
     return int(map_shape.shape_id), int(text_shape.shape_id)
 
 
+def write_named_export_contract_template_pptx(path: Path) -> tuple[int, int, int, int]:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    presentation = Presentation()
+    slide = presentation.slides.add_slide(presentation.slide_layouts[6])
+    map_shape = slide.shapes.add_shape(
+        MSO_SHAPE.RECTANGLE,
+        Inches(0.5),
+        Inches(0.75),
+        Inches(4),
+        Inches(3),
+    )
+    map_shape.name = "ttn:map_image"
+    title_shape = slide.shapes.add_textbox(Inches(5), Inches(0.75), Inches(4), Inches(0.5))
+    title_shape.name = "ttn:title"
+    title_shape.text = "NAME, TIME"
+    time_shape = slide.shapes.add_textbox(Inches(5), Inches(1.25), Inches(4), Inches(0.5))
+    time_shape.name = "ttn:time"
+    time_shape.text = "time"
+    comment_shape = slide.shapes.add_textbox(Inches(5), Inches(1.75), Inches(4), Inches(0.5))
+    comment_shape.name = "ttn:comment"
+    comment_shape.text = "comment"
+    presentation.save(path)
+    return (
+        int(map_shape.shape_id),
+        int(title_shape.shape_id),
+        int(time_shape.shape_id),
+        int(comment_shape.shape_id),
+    )
+
+
 def test_load_project_config_filters_enabled_targets_and_resolves_paths(tmp_path: Path) -> None:
     id_b = prepare_target_files(tmp_path, "target_b")
     id_a = prepare_target_files(tmp_path, "target_a")
@@ -201,6 +231,75 @@ def test_load_project_config_accepts_export_contract_from_real_config_shape(
     assert result.template_metadata["target_a"].placeholders[1].value == (
         "Hien trang {target_title} ngay {capture_date}"
     )
+
+
+def test_load_project_config_repairs_stale_placeholder_ids_from_shape_names(
+    tmp_path: Path,
+) -> None:
+    (tmp_path / "targets").mkdir(parents=True)
+    (tmp_path / "targets" / "target_a.geojson").write_text("{}", encoding="utf-8")
+    map_id, title_id, time_id, comment_id = write_named_export_contract_template_pptx(
+        tmp_path / "templates" / "target_a.pptx"
+    )
+    target = target_config("target_a", 1, map_element_id=999)
+    target["export"]["placeholders"] = [  # type: ignore[index]
+        {"field": "map_image", "kind": "map_image", "element_id": 999},
+        {
+            "field": "title",
+            "element_id": 998,
+            "value": "Hien trang {target_title} ngay {capture_date}",
+        },
+        {"field": "time", "element_id": 997},
+        {"field": "comment", "element_id": 996, "value": "No comment"},
+    ]
+    write_json(tmp_path / "config.json", {"targets": [target]})
+
+    result = load_project_config(tmp_path / "config.json")
+
+    assert result.ok is True
+    metadata = result.template_metadata["target_a"]
+    assert [placeholder.element_id for placeholder in metadata.placeholders] == [
+        map_id,
+        title_id,
+        time_id,
+        comment_id,
+    ]
+    resolution = metadata.metadata["placeholder_resolution"]
+    assert [item["configured_element_id"] for item in resolution] == [999, 998, 997, 996]
+    assert [item["resolved_element_id"] for item in resolution] == [
+        map_id,
+        title_id,
+        time_id,
+        comment_id,
+    ]
+    assert {item["method"] for item in resolution} == {"field_name"}
+
+
+def test_load_project_config_resolves_selector_only_placeholder(
+    tmp_path: Path,
+) -> None:
+    (tmp_path / "targets").mkdir(parents=True)
+    (tmp_path / "targets" / "target_a.geojson").write_text("{}", encoding="utf-8")
+    map_id, *_ = write_named_export_contract_template_pptx(
+        tmp_path / "templates" / "target_a.pptx"
+    )
+    target = target_config("target_a", 1, map_element_id=1)
+    target["export"]["placeholders"] = [  # type: ignore[index]
+        {
+            "field": "map_image",
+            "kind": "map_image",
+            "selector": {"name": "ttn:map_image"},
+        }
+    ]
+    write_json(tmp_path / "config.json", {"targets": [target]})
+
+    result = load_project_config(tmp_path / "config.json")
+
+    assert result.ok is True
+    placeholder = result.template_metadata["target_a"].placeholders[0]
+    assert placeholder.element_id == map_id
+    assert placeholder.selector is not None
+    assert placeholder.selector.name == "ttn:map_image"
 
 
 def test_load_project_config_applies_shared_defaults_with_target_overrides(
@@ -426,6 +525,27 @@ def test_required_element_id_must_exist_in_template(tmp_path: Path) -> None:
 
     assert result.ok is False
     assert {issue.issue_id for issue in result.issues} == {"target.template_element_missing"}
+
+
+def test_ambiguous_placeholder_selector_is_blocking(tmp_path: Path) -> None:
+    (tmp_path / "targets").mkdir(parents=True)
+    (tmp_path / "targets" / "target_a.geojson").write_text("{}", encoding="utf-8")
+    path = tmp_path / "templates" / "target_a.pptx"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    presentation = Presentation()
+    slide = presentation.slides.add_slide(presentation.slide_layouts[6])
+    first = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, Inches(1), Inches(1), Inches(2), Inches(2))
+    second = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, Inches(4), Inches(1), Inches(2), Inches(2))
+    first.name = "ttn:map_image"
+    second.name = "ttn:map_image"
+    presentation.save(path)
+    target = target_config("target_a", 1, map_element_id=999)
+    write_json(tmp_path / "config.json", {"targets": [target]})
+
+    result = load_project_config(tmp_path / "config.json")
+
+    assert result.ok is False
+    assert {issue.issue_id for issue in result.issues} == {"target.template_element_ambiguous"}
 
 
 def test_invalid_map_frame_returns_structured_template_issue(tmp_path: Path) -> None:

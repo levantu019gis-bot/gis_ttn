@@ -25,6 +25,7 @@ from thucthengay.models import (
     TargetConfig,
     TemplateMetadata,
     TemplatePlaceholder,
+    TemplatePlaceholderSelector,
     ValidationSummary,
     ViewState,
     WorkspaceManifest,
@@ -173,6 +174,29 @@ def test_template_metadata_requires_template_path_and_map_frame() -> None:
     assert dumped["placeholders"][0]["kind"] == "map_image"
     assert dumped["placeholders"][0]["element_id"] == 2
     assert dumped["metadata"]["selected_slide"]["shapes"][0]["text"]["text"] == "NAME, TIME"
+
+
+def test_template_placeholder_supports_selector_only_mapping() -> None:
+    placeholder = TemplatePlaceholder.model_validate(
+        {
+            "field": "map_image",
+            "kind": "map_image",
+            "selector": {"name": "ttn:map_image"},
+        }
+    )
+
+    dumped = placeholder.model_dump(mode="json")
+
+    assert placeholder.element_id is None
+    assert placeholder.selector == TemplatePlaceholderSelector(name="ttn:map_image")
+    assert dumped["selector"]["name"] == "ttn:map_image"
+
+
+def test_template_placeholder_selector_requires_matching_signal() -> None:
+    with pytest.raises(ValidationError) as exc_info:
+        TemplatePlaceholderSelector.model_validate({})
+
+    assert () in {tuple(error["loc"]) for error in exc_info.value.errors()}
 
 
 def test_template_metadata_missing_required_field_has_field_location() -> None:

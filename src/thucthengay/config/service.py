@@ -335,7 +335,10 @@ def _remediation_for_field_path(field_path: str) -> str:
     if "template_pptx_file" in field_path:
         return "Khai báo `export.template_pptx_file` trỏ tới PPTX template một slide của target."
     if "placeholders" in field_path:
-        return "Khai báo `export.placeholders` với `element_id` là shape id trong PPTX template."
+        return (
+            "Khai báo `export.placeholders` với `element_id` hoặc `selector`; "
+            "ưu tiên đặt tên shape PPTX dạng `ttn:<field>`."
+        )
     return "Kiểm tra giá trị và kiểu dữ liệu của trường này trong config JSON."
 
 

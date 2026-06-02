@@ -112,7 +112,7 @@ def _template_map_placeholder_image_size(template: TemplateMetadata) -> tuple[in
     map_placeholder_ids = {
         str(placeholder.element_id)
         for placeholder in template.placeholders
-        if placeholder.kind == "map_image"
+        if placeholder.kind == "map_image" and placeholder.element_id is not None
     }
     if not map_placeholder_ids:
         return None

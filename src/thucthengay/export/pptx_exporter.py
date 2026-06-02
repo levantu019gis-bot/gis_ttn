@@ -79,6 +79,8 @@ def export_combined_pptx(
         slide = copy_only_slide(source, destination)
         render_path = _resolved_render_path(workspace_service, composition)
         for placeholder in template.placeholders:
+            if placeholder.element_id is None:
+                continue
             if placeholder.kind == PlaceholderType.MAP_IMAGE:
                 replace_shape_with_picture(slide, placeholder.element_id, render_path)
             elif placeholder.kind == PlaceholderType.TEXT:
@@ -178,6 +180,23 @@ def _template_placeholder_issues(
         ]
     issues: list[Issue] = []
     for placeholder in template.placeholders:
+        if placeholder.element_id is None:
+            if placeholder.required:
+                issues.append(
+                    _issue(
+                        "export.pptx_placeholder_element_missing",
+                        (
+                            "PPTX placeholder bat buoc chua duoc resolve thanh element id "
+                            f"cho field `{placeholder.field}`."
+                        ),
+                        (
+                            "Tai lai config de resolver doc PPTX template, hoac bo sung "
+                            "`selector`/`element_id` hop le cho placeholder."
+                        ),
+                        composition=composition,
+                    )
+                )
+            continue
         source_shape = find_shape_by_element_id(source.slides[0], placeholder.element_id)
         if source_shape is None:
             if placeholder.required:
