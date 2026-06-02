@@ -1,9 +1,9 @@
-"""Shared TXT export placeholder resolution."""
+"""Shared export text placeholder resolution."""
 
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import time
+from datetime import date, datetime, time
 from string import Formatter
 from typing import Any
 
@@ -11,13 +11,29 @@ from thucthengay.models import Composition, MetadataStatus, TargetConfig
 
 SUPPORTED_TXT_FIELDS = {
     "capture_date",
+    "capture_time",
     "composition_id",
     "slide_number",
     "target_alias",
     "target_id",
     "target_name",
     "target_title",
+    "time",
     "time_label",
+    "title",
+}
+SUPPORTED_TEXT_FIELDS = {
+    "capture_date",
+    "capture_time",
+    "composition_id",
+    "slide_number",
+    "target_alias",
+    "target_id",
+    "target_name",
+    "target_title",
+    "time",
+    "time_label",
+    "title",
 }
 
 
@@ -50,7 +66,30 @@ def resolve_txt_line(
     slide_number: int,
 ) -> TxtLineResolution:
     """Render one TXT line, supporting optional placeholders as ``{field?}``."""
-    values = txt_values(composition, target, slide_number)
+    return resolve_export_text(
+        template,
+        composition,
+        target,
+        slide_number=slide_number,
+        supported_fields=SUPPORTED_TXT_FIELDS,
+        unknown_issue_id="export.txt_placeholder_unknown",
+        unresolved_issue_id="export.txt_placeholder_unresolved",
+    )
+
+
+def resolve_export_text(
+    template: str,
+    composition: Composition,
+    target: TargetConfig,
+    *,
+    slide_number: int,
+    supported_fields: set[str] | None = None,
+    unknown_issue_id: str = "export.text_placeholder_unknown",
+    unresolved_issue_id: str = "export.text_placeholder_unresolved",
+) -> TxtLineResolution:
+    """Render one export text value from composition/target placeholders."""
+    values = export_text_values(composition, target, slide_number)
+    allowed_fields = supported_fields or SUPPORTED_TEXT_FIELDS
     parts: list[str] = []
     problems: list[TxtPlaceholderProblem] = []
     for literal, field_name, format_spec, conversion in Formatter().parse(template):
@@ -59,11 +98,11 @@ def resolve_txt_line(
             continue
         field, optional = _parse_field(field_name)
         value = values.get(field)
-        if field not in SUPPORTED_TXT_FIELDS:
+        if field not in allowed_fields:
             problems.append(
                 TxtPlaceholderProblem(
                     field=field,
-                    issue_id="export.txt_placeholder_unknown",
+                    issue_id=unknown_issue_id,
                     optional=optional,
                 )
             )
@@ -72,13 +111,16 @@ def resolve_txt_line(
             if optional:
                 parts.append("")
                 continue
+            is_txt_time_problem = (
+                field in {"time", "time_label"} and unknown_issue_id.startswith("export.txt")
+            )
             problems.append(
                 TxtPlaceholderProblem(
                     field=field,
                     issue_id=(
                         "export.txt_time_label_unresolved"
-                        if field == "time_label"
-                        else "export.txt_placeholder_unresolved"
+                        if is_txt_time_problem
+                        else unresolved_issue_id
                     ),
                     optional=False,
                 )
@@ -94,19 +136,46 @@ def txt_values(
     slide_number: int,
 ) -> dict[str, Any]:
     """Return supported TXT placeholder values for one export row."""
+    return export_text_values(composition, target, slide_number)
+
+
+def export_text_values(
+    composition: Composition,
+    target: TargetConfig,
+    slide_number: int,
+) -> dict[str, Any]:
+    """Return supported PPTX/TXT placeholder values for one export row."""
+    capture_time = selected_capture_time(composition)
     return {
-        "capture_date": composition.capture_date.isoformat(),
+        "capture_date": format_capture_date(composition.capture_date, target.export.date_format),
+        "capture_time": _format_time(capture_time) if capture_time is not None else "",
         "composition_id": composition.composition_id,
         "slide_number": slide_number,
         "target_alias": target.alias or "",
         "target_id": target.id,
         "target_name": target.name,
         "target_title": target.title or target.name,
-        "time_label": time_label(composition),
+        "time": time_label(composition, target=target),
+        "time_label": time_label(composition, target=target),
+        "title": target.title or target.name,
     }
 
 
-def time_label(composition: Composition) -> str:
+def time_label(composition: Composition, *, target: TargetConfig | None = None) -> str:
+    """Return the earliest visible valid layer capture time."""
+    selected = selected_capture_time(composition)
+    if selected is None:
+        return ""
+    if target is not None:
+        return format_capture_datetime(
+            composition.capture_date,
+            selected,
+            target.export.time_format,
+        )
+    return _format_time(selected)
+
+
+def selected_capture_time(composition: Composition) -> time | None:
     """Return the earliest visible valid layer capture time."""
     visible_times = [
         layer.capture_time
@@ -116,8 +185,19 @@ def time_label(composition: Composition) -> str:
         and layer.capture_time is not None
     ]
     if not visible_times:
-        return ""
-    return _format_time(min(visible_times))
+        return None
+    return min(visible_times)
+
+
+def format_capture_date(value: date, date_format: str) -> str:
+    """Format a capture date using config tokens such as ``dd.MM.yy``."""
+    return value.strftime(_to_strftime_format(date_format))
+
+
+def format_capture_datetime(capture_date: date, capture_time: time, time_format: str) -> str:
+    """Format capture date/time using config tokens such as ``HH.mm/dd.MM.yy``."""
+    combined = datetime.combine(capture_date, capture_time)
+    return combined.strftime(_to_strftime_format(time_format))
 
 
 def _parse_field(field_name: str) -> tuple[str, bool]:
@@ -141,3 +221,19 @@ def _format_value(value: Any, format_spec: str, conversion: str | None) -> str:
 
 def _format_time(value: time) -> str:
     return value.strftime("%H:%M:%S")
+
+
+def _to_strftime_format(value: str) -> str:
+    replacements = (
+        ("yyyy", "%Y"),
+        ("yy", "%y"),
+        ("dd", "%d"),
+        ("MM", "%m"),
+        ("HH", "%H"),
+        ("mm", "%M"),
+        ("ss", "%S"),
+    )
+    result = value
+    for token, replacement in replacements:
+        result = result.replace(token, replacement)
+    return result

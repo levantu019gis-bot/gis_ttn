@@ -6,8 +6,9 @@ from pathlib import Path
 import numpy as np
 from PIL import Image
 from pptx import Presentation
+from pptx.dml.color import RGBColor
 from pptx.enum.shapes import MSO_SHAPE
-from pptx.util import Inches
+from pptx.util import Inches, Pt
 
 from thucthengay.export import ensure_final_renders_for_export, export_combined_pptx
 from thucthengay.models import (
@@ -49,9 +50,34 @@ def _write_template(path: Path, *, title: str = "Template") -> tuple[int, int]:
         Inches(0.5),
     )
     text_shape.text = title
+    text_run = text_shape.text_frame.paragraphs[0].runs[0]
+    text_run.font.bold = True
+    text_run.font.size = Pt(24)
+    text_run.font.color.rgb = RGBColor(20, 90, 160)
     slide.shapes.add_picture(str(logo_path), Inches(9), Inches(0.25), width=Inches(0.4))
     presentation.save(path)
     return int(map_shape.shape_id), int(text_shape.shape_id)
+
+
+def _write_contract_template(path: Path) -> tuple[int, int, int]:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    presentation = Presentation()
+    presentation.slide_width = Inches(10)
+    presentation.slide_height = Inches(5.625)
+    slide = presentation.slides.add_slide(presentation.slide_layouts[6])
+    map_shape = slide.shapes.add_shape(
+        MSO_SHAPE.RECTANGLE,
+        Inches(0.5),
+        Inches(0.75),
+        Inches(4),
+        Inches(3),
+    )
+    title_shape = slide.shapes.add_textbox(Inches(5), Inches(0.75), Inches(4), Inches(0.5))
+    title_shape.text = "title"
+    time_shape = slide.shapes.add_textbox(Inches(5), Inches(1.25), Inches(4), Inches(0.5))
+    time_shape.text = "time"
+    presentation.save(path)
+    return int(map_shape.shape_id), int(title_shape.shape_id), int(time_shape.shape_id)
 
 
 def _target(
@@ -169,8 +195,79 @@ def test_export_combined_pptx_vertical_slice_replaces_map_and_text(tmp_path: Pat
     assert len(presentation.slides) == 1
     slide = presentation.slides[0]
     assert any(shape.shape_type == 13 for shape in slide.shapes)
+    assert slide.shapes[0].shape_type == 13
+    assert slide.shapes[1].text == "Alpha Title"
+    exported_run = slide.shapes[1].text_frame.paragraphs[0].runs[0]
+    assert exported_run.font.bold is True
+    assert exported_run.font.size == Pt(24)
+    assert exported_run.font.color.rgb == RGBColor(20, 90, 160)
     slide_text = "\n".join(shape.text for shape in slide.shapes if hasattr(shape, "text"))
     assert "Alpha Title" in slide_text
+
+
+def test_export_combined_pptx_preserves_all_caps_template_text(tmp_path: Path) -> None:
+    map_id, text_id = _write_template(tmp_path / "templates" / "alpha.pptx", title="TITLE")
+    target = _target(tmp_path / "templates" / "alpha.pptx", map_id, text_id)
+    service = _workspace(tmp_path, _composition("alpha__20260525"))
+    ensure_final_renders_for_export(service, [target], render=_success_render)
+
+    output_path = service.paths.exports / "report.pptx"
+    result = export_combined_pptx(service, [target], output_path=output_path)
+
+    assert result.ok is True
+    presentation = Presentation(str(output_path))
+    assert presentation.slides[0].shapes[1].text == "ALPHA TITLE"
+
+
+def test_export_combined_pptx_uses_config_placeholder_values_and_formats(
+    tmp_path: Path,
+) -> None:
+    map_id, title_id, time_id = _write_contract_template(tmp_path / "templates" / "alpha.pptx")
+    raw_placeholders = [
+        {"field": "map_image", "element_id": str(map_id)},
+        {
+            "field": "title",
+            "element_id": str(title_id),
+            "value": "Hien trang {target_title} ngay {capture_date}",
+        },
+        {"field": "time", "element_id": str(time_id)},
+    ]
+    target = TargetConfig(
+        id="alpha",
+        name="Alpha Name",
+        title="Alpha Title",
+        geojson_file="targets/alpha.geojson",
+        coordinate=[106.7, 10.8],
+        scale=50000,
+        grid=GridConfig(interval=GridInterval(minutes=1)),
+        export={
+            "template_pptx_file": str(tmp_path / "templates" / "alpha.pptx"),
+            "template_txt_value": "Tai {target_title} luc {time_label}",
+            "date_format": "dd.MM.yy",
+            "time_format": "HH.mm/dd.MM.yy",
+            "placeholders": raw_placeholders,
+        },
+    )
+    target.metadata["template_metadata"] = TemplateMetadata(
+        template_pptx=str(tmp_path / "templates" / "alpha.pptx"),
+        slide_index=0,
+        map_frame=MapFrame(x=36, y=54, width=288, height=216),
+        placeholders=target.export.placeholders,
+    ).model_dump(mode="json")
+    service = _workspace(tmp_path, _composition("alpha__20260525"))
+    ensure_final_renders_for_export(service, [target], render=_success_render)
+
+    output_path = service.paths.exports / "contract.pptx"
+    result = export_combined_pptx(service, [target], output_path=output_path)
+
+    assert result.ok is True
+    presentation = Presentation(str(output_path))
+    slide_text = "\n".join(
+        shape.text for shape in presentation.slides[0].shapes if hasattr(shape, "text")
+    )
+    assert "Hien trang Alpha Title ngay 25.05.26" in slide_text
+    assert "08.30/25.05.26" in slide_text
+    assert any(shape.shape_type == 13 for shape in presentation.slides[0].shapes)
 
 
 def test_export_combined_pptx_orders_slides_by_review_order(tmp_path: Path) -> None:

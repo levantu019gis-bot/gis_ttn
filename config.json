@@ -43,23 +43,25 @@
         "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "date_format": "dd.MM.yy",
         "time_format": "HH.mm/dd.MM.yy",
+        "map_background_color": "#000000",
         "placeholders": [
           {
             "field": "map_image",
-            "element_id": "1026"
+            "element_id": "65"
           },
           {
             "field": "title",
-            "element_id": "7",
+            "element_id": "66",
             "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
           },
           {
             "field": "time",
-            "element_id": "14"
+            "element_id": "67"
           },
           {
-            "field": "title",
-            "element_id": "2"
+            "field": "comment",
+            "element_id": "68",
+            "value": "Không ghi nhận hoạt động tôn tạo, xây dựng công trình."
           }
         ]
       },
@@ -139,23 +141,25 @@
         "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "date_format": "dd.MM.yy",
         "time_format": "HH.mm/dd.MM.yy",
+        "map_background_color": "#000000",
         "placeholders": [
           {
             "field": "map_image",
-            "element_id": "1026"
+            "element_id": "65"
           },
           {
             "field": "title",
-            "element_id": "7",
+            "element_id": "66",
             "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
           },
           {
             "field": "time",
-            "element_id": "14"
+            "element_id": "67"
           },
           {
-            "field": "title",
-            "element_id": "2"
+            "field": "comment",
+            "element_id": "68",
+            "value": "Không ghi nhận hoạt động tôn tạo, xây dựng công trình."
           }
         ]
       },
@@ -235,23 +239,25 @@
         "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "date_format": "dd.MM.yy",
         "time_format": "HH.mm/dd.MM.yy",
+        "map_background_color": "#000000",
         "placeholders": [
           {
             "field": "map_image",
-            "element_id": "1026"
+            "element_id": "65"
           },
           {
             "field": "title",
-            "element_id": "7",
+            "element_id": "66",
             "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
           },
           {
             "field": "time",
-            "element_id": "14"
+            "element_id": "67"
           },
           {
-            "field": "title",
-            "element_id": "2"
+            "field": "comment",
+            "element_id": "68",
+            "value": "Không ghi nhận hoạt động tôn tạo, xây dựng công trình."
           }
         ]
       },
@@ -331,23 +337,25 @@
         "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "date_format": "dd.MM.yy",
         "time_format": "HH.mm/dd.MM.yy",
+        "map_background_color": "#000000",
         "placeholders": [
           {
             "field": "map_image",
-            "element_id": "1026"
+            "element_id": "65"
           },
           {
             "field": "title",
-            "element_id": "7",
+            "element_id": "66",
             "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
           },
           {
             "field": "time",
-            "element_id": "14"
+            "element_id": "67"
           },
           {
-            "field": "title",
-            "element_id": "2"
+            "field": "comment",
+            "element_id": "68",
+            "value": "Không ghi nhận hoạt động tôn tạo, xây dựng công trình."
           }
         ]
       },
@@ -443,23 +451,25 @@
         "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "date_format": "dd.MM.yy",
         "time_format": "HH.mm/dd.MM.yy",
+        "map_background_color": "#000000",
         "placeholders": [
           {
             "field": "map_image",
-            "element_id": "1026"
+            "element_id": "65"
           },
           {
             "field": "title",
-            "element_id": "7",
+            "element_id": "66",
             "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
           },
           {
             "field": "time",
-            "element_id": "14"
+            "element_id": "67"
           },
           {
-            "field": "title",
-            "element_id": "2"
+            "field": "comment",
+            "element_id": "68",
+            "value": "Không ghi nhận hoạt động tôn tạo, xây dựng công trình."
           }
         ]
       },
@@ -539,23 +549,25 @@
         "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "date_format": "dd.MM.yy",
         "time_format": "HH.mm/dd.MM.yy",
+        "map_background_color": "#000000",
         "placeholders": [
           {
             "field": "map_image",
-            "element_id": "1026"
+            "element_id": "65"
           },
           {
             "field": "title",
-            "element_id": "7",
+            "element_id": "66",
             "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
           },
           {
             "field": "time",
-            "element_id": "14"
+            "element_id": "67"
           },
           {
-            "field": "title",
-            "element_id": "2"
+            "field": "comment",
+            "element_id": "68",
+            "value": "Không ghi nhận hoạt động tôn tạo, xây dựng công trình."
           }
         ]
       },
@@ -643,23 +655,25 @@
         "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "date_format": "dd.MM.yy",
         "time_format": "HH.mm/dd.MM.yy",
+        "map_background_color": "#000000",
         "placeholders": [
           {
             "field": "map_image",
-            "element_id": "1026"
+            "element_id": "65"
           },
           {
             "field": "title",
-            "element_id": "7",
+            "element_id": "66",
             "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
           },
           {
             "field": "time",
-            "element_id": "14"
+            "element_id": "67"
           },
           {
-            "field": "title",
-            "element_id": "2"
+            "field": "comment",
+            "element_id": "68",
+            "value": "Không ghi nhận hoạt động tôn tạo, xây dựng công trình."
           }
         ]
       },
@@ -743,23 +757,25 @@
         "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "date_format": "dd.MM.yy",
         "time_format": "HH.mm/dd.MM.yy",
+        "map_background_color": "#000000",
         "placeholders": [
           {
             "field": "map_image",
-            "element_id": "1026"
+            "element_id": "65"
           },
           {
             "field": "title",
-            "element_id": "7",
+            "element_id": "66",
             "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
           },
           {
             "field": "time",
-            "element_id": "14"
+            "element_id": "67"
           },
           {
-            "field": "title",
-            "element_id": "2"
+            "field": "comment",
+            "element_id": "68",
+            "value": "Không ghi nhận hoạt động tôn tạo, xây dựng công trình."
           }
         ]
       },
@@ -859,23 +875,25 @@
         "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "date_format": "dd.MM.yy",
         "time_format": "HH.mm/dd.MM.yy",
+        "map_background_color": "#000000",
         "placeholders": [
           {
             "field": "map_image",
-            "element_id": "1026"
+            "element_id": "65"
           },
           {
             "field": "title",
-            "element_id": "7",
+            "element_id": "66",
             "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
           },
           {
             "field": "time",
-            "element_id": "14"
+            "element_id": "67"
           },
           {
-            "field": "title",
-            "element_id": "2"
+            "field": "comment",
+            "element_id": "68",
+            "value": "Không ghi nhận hoạt động tôn tạo, xây dựng công trình."
           }
         ]
       },
@@ -955,23 +973,25 @@
         "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "date_format": "dd.MM.yy",
         "time_format": "HH.mm/dd.MM.yy",
+        "map_background_color": "#000000",
         "placeholders": [
           {
             "field": "map_image",
-            "element_id": "1026"
+            "element_id": "65"
           },
           {
             "field": "title",
-            "element_id": "7",
+            "element_id": "66",
             "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
           },
           {
             "field": "time",
-            "element_id": "14"
+            "element_id": "67"
           },
           {
-            "field": "title",
-            "element_id": "2"
+            "field": "comment",
+            "element_id": "68",
+            "value": "Không ghi nhận hoạt động tôn tạo, xây dựng công trình."
           }
         ]
       },
@@ -1051,23 +1071,25 @@
         "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "date_format": "dd.MM.yy",
         "time_format": "HH.mm/dd.MM.yy",
+        "map_background_color": "#000000",
         "placeholders": [
           {
             "field": "map_image",
-            "element_id": "1026"
+            "element_id": "65"
           },
           {
             "field": "title",
-            "element_id": "7",
+            "element_id": "66",
             "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
           },
           {
             "field": "time",
-            "element_id": "14"
+            "element_id": "67"
           },
           {
-            "field": "title",
-            "element_id": "2"
+            "field": "comment",
+            "element_id": "68",
+            "value": "Không ghi nhận hoạt động tôn tạo, xây dựng công trình."
           }
         ]
       },
@@ -1147,23 +1169,25 @@
         "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "date_format": "dd.MM.yy",
         "time_format": "HH.mm/dd.MM.yy",
+        "map_background_color": "#000000",
         "placeholders": [
           {
             "field": "map_image",
-            "element_id": "1026"
+            "element_id": "65"
           },
           {
             "field": "title",
-            "element_id": "7",
+            "element_id": "66",
             "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
           },
           {
             "field": "time",
-            "element_id": "14"
+            "element_id": "67"
           },
           {
-            "field": "title",
-            "element_id": "2"
+            "field": "comment",
+            "element_id": "68",
+            "value": "Không ghi nhận hoạt động tôn tạo, xây dựng công trình."
           }
         ]
       },
@@ -1243,23 +1267,25 @@
         "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "date_format": "dd.MM.yy",
         "time_format": "HH.mm/dd.MM.yy",
+        "map_background_color": "#000000",
         "placeholders": [
           {
             "field": "map_image",
-            "element_id": "1026"
+            "element_id": "65"
           },
           {
             "field": "title",
-            "element_id": "7",
+            "element_id": "66",
             "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
           },
           {
             "field": "time",
-            "element_id": "14"
+            "element_id": "67"
           },
           {
-            "field": "title",
-            "element_id": "2"
+            "field": "comment",
+            "element_id": "68",
+            "value": "Không ghi nhận hoạt động tôn tạo, xây dựng công trình."
           }
         ]
       },
@@ -1343,23 +1369,25 @@
         "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "date_format": "dd.MM.yy",
         "time_format": "HH.mm/dd.MM.yy",
+        "map_background_color": "#000000",
         "placeholders": [
           {
             "field": "map_image",
-            "element_id": "1026"
+            "element_id": "65"
           },
           {
             "field": "title",
-            "element_id": "7",
+            "element_id": "66",
             "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
           },
           {
             "field": "time",
-            "element_id": "14"
+            "element_id": "67"
           },
           {
-            "field": "title",
-            "element_id": "2"
+            "field": "comment",
+            "element_id": "68",
+            "value": "Không ghi nhận hoạt động tôn tạo, xây dựng công trình."
           }
         ]
       },
@@ -1439,23 +1467,25 @@
         "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "date_format": "dd.MM.yy",
         "time_format": "HH.mm/dd.MM.yy",
+        "map_background_color": "#000000",
         "placeholders": [
           {
             "field": "map_image",
-            "element_id": "1026"
+            "element_id": "65"
           },
           {
             "field": "title",
-            "element_id": "7",
+            "element_id": "66",
             "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
           },
           {
             "field": "time",
-            "element_id": "14"
+            "element_id": "67"
           },
           {
-            "field": "title",
-            "element_id": "2"
+            "field": "comment",
+            "element_id": "68",
+            "value": "Không ghi nhận hoạt động tôn tạo, xây dựng công trình."
           }
         ]
       },
@@ -1535,23 +1565,25 @@
         "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "date_format": "dd.MM.yy",
         "time_format": "HH.mm/dd.MM.yy",
+        "map_background_color": "#000000",
         "placeholders": [
           {
             "field": "map_image",
-            "element_id": "1026"
+            "element_id": "65"
           },
           {
             "field": "title",
-            "element_id": "7",
+            "element_id": "66",
             "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
           },
           {
             "field": "time",
-            "element_id": "14"
+            "element_id": "67"
           },
           {
-            "field": "title",
-            "element_id": "2"
+            "field": "comment",
+            "element_id": "68",
+            "value": "Không ghi nhận hoạt động tôn tạo, xây dựng công trình."
           }
         ]
       },
@@ -1639,23 +1671,25 @@
         "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "date_format": "dd.MM.yy",
         "time_format": "HH.mm/dd.MM.yy",
+        "map_background_color": "#000000",
         "placeholders": [
           {
             "field": "map_image",
-            "element_id": "1026"
+            "element_id": "65"
           },
           {
             "field": "title",
-            "element_id": "7",
+            "element_id": "66",
             "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
           },
           {
             "field": "time",
-            "element_id": "14"
+            "element_id": "67"
           },
           {
-            "field": "title",
-            "element_id": "2"
+            "field": "comment",
+            "element_id": "68",
+            "value": "Không ghi nhận hoạt động tôn tạo, xây dựng công trình."
           }
         ]
       },
@@ -1751,23 +1785,25 @@
         "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "date_format": "dd.MM.yy",
         "time_format": "HH.mm/dd.MM.yy",
+        "map_background_color": "#000000",
         "placeholders": [
           {
             "field": "map_image",
-            "element_id": "1026"
+            "element_id": "65"
           },
           {
             "field": "title",
-            "element_id": "7",
+            "element_id": "66",
             "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
           },
           {
             "field": "time",
-            "element_id": "14"
+            "element_id": "67"
           },
           {
-            "field": "title",
-            "element_id": "2"
+            "field": "comment",
+            "element_id": "68",
+            "value": "Không ghi nhận hoạt động tôn tạo, xây dựng công trình."
           }
         ]
       },
@@ -1855,23 +1891,25 @@
         "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "date_format": "dd.MM.yy",
         "time_format": "HH.mm/dd.MM.yy",
+        "map_background_color": "#000000",
         "placeholders": [
           {
             "field": "map_image",
-            "element_id": "1026"
+            "element_id": "65"
           },
           {
             "field": "title",
-            "element_id": "7",
+            "element_id": "66",
             "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
           },
           {
             "field": "time",
-            "element_id": "14"
+            "element_id": "67"
           },
           {
-            "field": "title",
-            "element_id": "2"
+            "field": "comment",
+            "element_id": "68",
+            "value": "Không ghi nhận hoạt động tôn tạo, xây dựng công trình."
           }
         ]
       },
@@ -1963,23 +2001,25 @@
         "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "date_format": "dd.MM.yy",
         "time_format": "HH.mm/dd.MM.yy",
+        "map_background_color": "#000000",
         "placeholders": [
           {
             "field": "map_image",
-            "element_id": "1026"
+            "element_id": "65"
           },
           {
             "field": "title",
-            "element_id": "7",
+            "element_id": "66",
             "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
           },
           {
             "field": "time",
-            "element_id": "14"
+            "element_id": "67"
           },
           {
-            "field": "title",
-            "element_id": "2"
+            "field": "comment",
+            "element_id": "68",
+            "value": "Không ghi nhận hoạt động tôn tạo, xây dựng công trình."
           }
         ]
       },
@@ -2071,23 +2111,25 @@
         "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "date_format": "dd.MM.yy",
         "time_format": "HH.mm/dd.MM.yy",
+        "map_background_color": "#000000",
         "placeholders": [
           {
             "field": "map_image",
-            "element_id": "1026"
+            "element_id": "65"
           },
           {
             "field": "title",
-            "element_id": "7",
+            "element_id": "66",
             "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
           },
           {
             "field": "time",
-            "element_id": "14"
+            "element_id": "67"
           },
           {
-            "field": "title",
-            "element_id": "2"
+            "field": "comment",
+            "element_id": "68",
+            "value": "Không ghi nhận hoạt động tôn tạo, xây dựng công trình."
           }
         ]
       },
@@ -2175,23 +2217,25 @@
         "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "date_format": "dd.MM.yy",
         "time_format": "HH.mm/dd.MM.yy",
+        "map_background_color": "#000000",
         "placeholders": [
           {
             "field": "map_image",
-            "element_id": "1026"
+            "element_id": "65"
           },
           {
             "field": "title",
-            "element_id": "7",
+            "element_id": "66",
             "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
           },
           {
             "field": "time",
-            "element_id": "14"
+            "element_id": "67"
           },
           {
-            "field": "title",
-            "element_id": "2"
+            "field": "comment",
+            "element_id": "68",
+            "value": "Không ghi nhận hoạt động tôn tạo, xây dựng công trình."
           }
         ]
       },
@@ -2279,23 +2323,25 @@
         "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "date_format": "dd.MM.yy",
         "time_format": "HH.mm/dd.MM.yy",
+        "map_background_color": "#000000",
         "placeholders": [
           {
             "field": "map_image",
-            "element_id": "1026"
+            "element_id": "65"
           },
           {
             "field": "title",
-            "element_id": "7",
+            "element_id": "66",
             "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
           },
           {
             "field": "time",
-            "element_id": "14"
+            "element_id": "67"
           },
           {
-            "field": "title",
-            "element_id": "2"
+            "field": "comment",
+            "element_id": "68",
+            "value": "Không ghi nhận hoạt động tôn tạo, xây dựng công trình."
           }
         ]
       },
@@ -2395,23 +2441,25 @@
         "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "date_format": "dd.MM.yy",
         "time_format": "HH.mm/dd.MM.yy",
+        "map_background_color": "#000000",
         "placeholders": [
           {
             "field": "map_image",
-            "element_id": "1026"
+            "element_id": "65"
           },
           {
             "field": "title",
-            "element_id": "7",
+            "element_id": "66",
             "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
           },
           {
             "field": "time",
-            "element_id": "14"
+            "element_id": "67"
           },
           {
-            "field": "title",
-            "element_id": "2"
+            "field": "comment",
+            "element_id": "68",
+            "value": "Không ghi nhận hoạt động tôn tạo, xây dựng công trình."
           }
         ]
       },
@@ -2523,23 +2571,25 @@
         "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "date_format": "dd.MM.yy",
         "time_format": "HH.mm/dd.MM.yy",
+        "map_background_color": "#000000",
         "placeholders": [
           {
             "field": "map_image",
-            "element_id": "1026"
+            "element_id": "65"
           },
           {
             "field": "title",
-            "element_id": "7",
+            "element_id": "66",
             "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
           },
           {
             "field": "time",
-            "element_id": "14"
+            "element_id": "67"
           },
           {
-            "field": "title",
-            "element_id": "2"
+            "field": "comment",
+            "element_id": "68",
+            "value": "Không ghi nhận hoạt động tôn tạo, xây dựng công trình."
           }
         ]
       },
@@ -2635,23 +2685,25 @@
         "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "date_format": "dd.MM.yy",
         "time_format": "HH.mm/dd.MM.yy",
+        "map_background_color": "#000000",
         "placeholders": [
           {
             "field": "map_image",
-            "element_id": "1026"
+            "element_id": "65"
           },
           {
             "field": "title",
-            "element_id": "7",
+            "element_id": "66",
             "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
           },
           {
             "field": "time",
-            "element_id": "14"
+            "element_id": "67"
           },
           {
-            "field": "title",
-            "element_id": "2"
+            "field": "comment",
+            "element_id": "68",
+            "value": "Không ghi nhận hoạt động tôn tạo, xây dựng công trình."
           }
         ]
       },
@@ -2747,23 +2799,25 @@
         "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "date_format": "dd.MM.yy",
         "time_format": "HH.mm/dd.MM.yy",
+        "map_background_color": "#000000",
         "placeholders": [
           {
             "field": "map_image",
-            "element_id": "1026"
+            "element_id": "65"
           },
           {
             "field": "title",
-            "element_id": "7",
+            "element_id": "66",
             "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
           },
           {
             "field": "time",
-            "element_id": "14"
+            "element_id": "67"
           },
           {
-            "field": "title",
-            "element_id": "2"
+            "field": "comment",
+            "element_id": "68",
+            "value": "Không ghi nhận hoạt động tôn tạo, xây dựng công trình."
           }
         ]
       },
@@ -2911,23 +2965,25 @@
         "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "date_format": "dd.MM.yy",
         "time_format": "HH.mm/dd.MM.yy",
+        "map_background_color": "#000000",
         "placeholders": [
           {
             "field": "map_image",
-            "element_id": "1026"
+            "element_id": "65"
           },
           {
             "field": "title",
-            "element_id": "7",
+            "element_id": "66",
             "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
           },
           {
             "field": "time",
-            "element_id": "14"
+            "element_id": "67"
           },
           {
-            "field": "title",
-            "element_id": "2"
+            "field": "comment",
+            "element_id": "68",
+            "value": "Không ghi nhận hoạt động tôn tạo, xây dựng công trình."
           }
         ]
       },
@@ -3019,23 +3075,25 @@
         "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "date_format": "dd.MM.yy",
         "time_format": "HH.mm/dd.MM.yy",
+        "map_background_color": "#000000",
         "placeholders": [
           {
             "field": "map_image",
-            "element_id": "1026"
+            "element_id": "65"
           },
           {
             "field": "title",
-            "element_id": "7",
+            "element_id": "66",
             "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
           },
           {
             "field": "time",
-            "element_id": "14"
+            "element_id": "67"
           },
           {
-            "field": "title",
-            "element_id": "2"
+            "field": "comment",
+            "element_id": "68",
+            "value": "Không ghi nhận hoạt động tôn tạo, xây dựng công trình."
           }
         ]
       },
@@ -3119,23 +3177,25 @@
         "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "date_format": "dd.MM.yy",
         "time_format": "HH.mm/dd.MM.yy",
+        "map_background_color": "#000000",
         "placeholders": [
           {
             "field": "map_image",
-            "element_id": "1026"
+            "element_id": "65"
           },
           {
             "field": "title",
-            "element_id": "7",
+            "element_id": "66",
             "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
           },
           {
             "field": "time",
-            "element_id": "14"
+            "element_id": "67"
           },
           {
-            "field": "title",
-            "element_id": "2"
+            "field": "comment",
+            "element_id": "68",
+            "value": "Không ghi nhận hoạt động tôn tạo, xây dựng công trình."
           }
         ]
       },
@@ -3227,23 +3287,25 @@
         "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "date_format": "dd.MM.yy",
         "time_format": "HH.mm/dd.MM.yy",
+        "map_background_color": "#000000",
         "placeholders": [
           {
             "field": "map_image",
-            "element_id": "1026"
+            "element_id": "65"
           },
           {
             "field": "title",
-            "element_id": "7",
+            "element_id": "66",
             "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
           },
           {
             "field": "time",
-            "element_id": "14"
+            "element_id": "67"
           },
           {
-            "field": "title",
-            "element_id": "2"
+            "field": "comment",
+            "element_id": "68",
+            "value": "Không ghi nhận hoạt động tôn tạo, xây dựng công trình."
           }
         ]
       },
@@ -3327,23 +3389,25 @@
         "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "date_format": "dd.MM.yy",
         "time_format": "HH.mm/dd.MM.yy",
+        "map_background_color": "#000000",
         "placeholders": [
           {
             "field": "map_image",
-            "element_id": "1026"
+            "element_id": "65"
           },
           {
             "field": "title",
-            "element_id": "7",
+            "element_id": "66",
             "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
           },
           {
             "field": "time",
-            "element_id": "14"
+            "element_id": "67"
           },
           {
-            "field": "title",
-            "element_id": "2"
+            "field": "comment",
+            "element_id": "68",
+            "value": "Không ghi nhận hoạt động tôn tạo, xây dựng công trình."
           }
         ]
       },
@@ -3435,23 +3499,25 @@
         "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "date_format": "dd.MM.yy",
         "time_format": "HH.mm/dd.MM.yy",
+        "map_background_color": "#000000",
         "placeholders": [
           {
             "field": "map_image",
-            "element_id": "1026"
+            "element_id": "65"
           },
           {
             "field": "title",
-            "element_id": "7",
+            "element_id": "66",
             "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
           },
           {
             "field": "time",
-            "element_id": "14"
+            "element_id": "67"
           },
           {
-            "field": "title",
-            "element_id": "2"
+            "field": "comment",
+            "element_id": "68",
+            "value": "Không ghi nhận hoạt động tôn tạo, xây dựng công trình."
           }
         ]
       },
@@ -3539,23 +3605,25 @@
         "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "date_format": "dd.MM.yy",
         "time_format": "HH.mm/dd.MM.yy",
+        "map_background_color": "#000000",
         "placeholders": [
           {
             "field": "map_image",
-            "element_id": "1026"
+            "element_id": "65"
           },
           {
             "field": "title",
-            "element_id": "7",
+            "element_id": "66",
             "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
           },
           {
             "field": "time",
-            "element_id": "14"
+            "element_id": "67"
           },
           {
-            "field": "title",
-            "element_id": "2"
+            "field": "comment",
+            "element_id": "68",
+            "value": "Không ghi nhận hoạt động tôn tạo, xây dựng công trình."
           }
         ]
       },
@@ -3643,23 +3711,25 @@
         "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "date_format": "dd.MM.yy",
         "time_format": "HH.mm/dd.MM.yy",
+        "map_background_color": "#000000",
         "placeholders": [
           {
             "field": "map_image",
-            "element_id": "1026"
+            "element_id": "65"
           },
           {
             "field": "title",
-            "element_id": "7",
+            "element_id": "66",
             "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
           },
           {
             "field": "time",
-            "element_id": "14"
+            "element_id": "67"
           },
           {
-            "field": "title",
-            "element_id": "2"
+            "field": "comment",
+            "element_id": "68",
+            "value": "Không ghi nhận hoạt động tôn tạo, xây dựng công trình."
           }
         ]
       },
@@ -3751,23 +3821,25 @@
         "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "date_format": "dd.MM.yy",
         "time_format": "HH.mm/dd.MM.yy",
+        "map_background_color": "#000000",
         "placeholders": [
           {
             "field": "map_image",
-            "element_id": "1026"
+            "element_id": "65"
           },
           {
             "field": "title",
-            "element_id": "7",
+            "element_id": "66",
             "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
           },
           {
             "field": "time",
-            "element_id": "14"
+            "element_id": "67"
           },
           {
-            "field": "title",
-            "element_id": "2"
+            "field": "comment",
+            "element_id": "68",
+            "value": "Không ghi nhận hoạt động tôn tạo, xây dựng công trình."
           }
         ]
       },
@@ -3851,23 +3923,25 @@
         "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "date_format": "dd.MM.yy",
         "time_format": "HH.mm/dd.MM.yy",
+        "map_background_color": "#000000",
         "placeholders": [
           {
             "field": "map_image",
-            "element_id": "1026"
+            "element_id": "65"
           },
           {
             "field": "title",
-            "element_id": "7",
+            "element_id": "66",
             "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
           },
           {
             "field": "time",
-            "element_id": "14"
+            "element_id": "67"
           },
           {
-            "field": "title",
-            "element_id": "2"
+            "field": "comment",
+            "element_id": "68",
+            "value": "Không ghi nhận hoạt động tôn tạo, xây dựng công trình."
           }
         ]
       },
@@ -4003,23 +4077,25 @@
         "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "date_format": "dd.MM.yy",
         "time_format": "HH.mm/dd.MM.yy",
+        "map_background_color": "#000000",
         "placeholders": [
           {
             "field": "map_image",
-            "element_id": "1026"
+            "element_id": "65"
           },
           {
             "field": "title",
-            "element_id": "7",
+            "element_id": "66",
             "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
           },
           {
             "field": "time",
-            "element_id": "14"
+            "element_id": "67"
           },
           {
-            "field": "title",
-            "element_id": "2"
+            "field": "comment",
+            "element_id": "68",
+            "value": "Không ghi nhận hoạt động tôn tạo, xây dựng công trình."
           }
         ]
       },
@@ -4115,23 +4191,25 @@
         "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "date_format": "dd.MM.yy",
         "time_format": "HH.mm/dd.MM.yy",
+        "map_background_color": "#000000",
         "placeholders": [
           {
             "field": "map_image",
-            "element_id": "1026"
+            "element_id": "65"
           },
           {
             "field": "title",
-            "element_id": "7",
+            "element_id": "66",
             "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
           },
           {
             "field": "time",
-            "element_id": "14"
+            "element_id": "67"
           },
           {
-            "field": "title",
-            "element_id": "2"
+            "field": "comment",
+            "element_id": "68",
+            "value": "Không ghi nhận hoạt động tôn tạo, xây dựng công trình."
           }
         ]
       },
@@ -4215,23 +4293,25 @@
         "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "date_format": "dd.MM.yy",
         "time_format": "HH.mm/dd.MM.yy",
+        "map_background_color": "#000000",
         "placeholders": [
           {
             "field": "map_image",
-            "element_id": "1026"
+            "element_id": "65"
           },
           {
             "field": "title",
-            "element_id": "7",
+            "element_id": "66",
             "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
           },
           {
             "field": "time",
-            "element_id": "14"
+            "element_id": "67"
           },
           {
-            "field": "title",
-            "element_id": "2"
+            "field": "comment",
+            "element_id": "68",
+            "value": "Không ghi nhận hoạt động tôn tạo, xây dựng công trình."
           }
         ]
       },
@@ -4315,23 +4395,25 @@
         "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "date_format": "dd.MM.yy",
         "time_format": "HH.mm/dd.MM.yy",
+        "map_background_color": "#000000",
         "placeholders": [
           {
             "field": "map_image",
-            "element_id": "1026"
+            "element_id": "65"
           },
           {
             "field": "title",
-            "element_id": "7",
+            "element_id": "66",
             "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
           },
           {
             "field": "time",
-            "element_id": "14"
+            "element_id": "67"
           },
           {
-            "field": "title",
-            "element_id": "2"
+            "field": "comment",
+            "element_id": "68",
+            "value": "Không ghi nhận hoạt động tôn tạo, xây dựng công trình."
           }
         ]
       },
@@ -4419,23 +4501,25 @@
         "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "date_format": "dd.MM.yy",
         "time_format": "HH.mm/dd.MM.yy",
+        "map_background_color": "#000000",
         "placeholders": [
           {
             "field": "map_image",
-            "element_id": "1026"
+            "element_id": "65"
           },
           {
             "field": "title",
-            "element_id": "7",
+            "element_id": "66",
             "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
           },
           {
             "field": "time",
-            "element_id": "14"
+            "element_id": "67"
           },
           {
-            "field": "title",
-            "element_id": "2"
+            "field": "comment",
+            "element_id": "68",
+            "value": "Không ghi nhận hoạt động tôn tạo, xây dựng công trình."
           }
         ]
       },
@@ -4523,23 +4607,25 @@
         "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "date_format": "dd.MM.yy",
         "time_format": "HH.mm/dd.MM.yy",
+        "map_background_color": "#000000",
         "placeholders": [
           {
             "field": "map_image",
-            "element_id": "1026"
+            "element_id": "65"
           },
           {
             "field": "title",
-            "element_id": "7",
+            "element_id": "66",
             "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
           },
           {
             "field": "time",
-            "element_id": "14"
+            "element_id": "67"
           },
           {
-            "field": "title",
-            "element_id": "2"
+            "field": "comment",
+            "element_id": "68",
+            "value": "Không ghi nhận hoạt động tôn tạo, xây dựng công trình."
           }
         ]
       },
@@ -4631,23 +4717,25 @@
         "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "date_format": "dd.MM.yy",
         "time_format": "HH.mm/dd.MM.yy",
+        "map_background_color": "#000000",
         "placeholders": [
           {
             "field": "map_image",
-            "element_id": "1026"
+            "element_id": "65"
           },
           {
             "field": "title",
-            "element_id": "7",
+            "element_id": "66",
             "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
           },
           {
             "field": "time",
-            "element_id": "14"
+            "element_id": "67"
           },
           {
-            "field": "title",
-            "element_id": "2"
+            "field": "comment",
+            "element_id": "68",
+            "value": "Không ghi nhận hoạt động tôn tạo, xây dựng công trình."
           }
         ]
       },
@@ -4727,23 +4815,25 @@
         "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "date_format": "dd.MM.yy",
         "time_format": "HH.mm/dd.MM.yy",
+        "map_background_color": "#000000",
         "placeholders": [
           {
             "field": "map_image",
-            "element_id": "1026"
+            "element_id": "65"
           },
           {
             "field": "title",
-            "element_id": "7",
+            "element_id": "66",
             "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
           },
           {
             "field": "time",
-            "element_id": "14"
+            "element_id": "67"
           },
           {
-            "field": "title",
-            "element_id": "2"
+            "field": "comment",
+            "element_id": "68",
+            "value": "Không ghi nhận hoạt động tôn tạo, xây dựng công trình."
           }
         ]
       },
@@ -4827,23 +4917,25 @@
         "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "date_format": "dd.MM.yy",
         "time_format": "HH.mm/dd.MM.yy",
+        "map_background_color": "#000000",
         "placeholders": [
           {
             "field": "map_image",
-            "element_id": "1026"
+            "element_id": "65"
           },
           {
             "field": "title",
-            "element_id": "7",
+            "element_id": "66",
             "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
           },
           {
             "field": "time",
-            "element_id": "14"
+            "element_id": "67"
           },
           {
-            "field": "title",
-            "element_id": "2"
+            "field": "comment",
+            "element_id": "68",
+            "value": "Không ghi nhận hoạt động tôn tạo, xây dựng công trình."
           }
         ]
       },
@@ -4943,23 +5035,25 @@
         "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "date_format": "dd.MM.yy",
         "time_format": "HH.mm/dd.MM.yy",
+        "map_background_color": "#000000",
         "placeholders": [
           {
             "field": "map_image",
-            "element_id": "1026"
+            "element_id": "65"
           },
           {
             "field": "title",
-            "element_id": "7",
+            "element_id": "66",
             "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
           },
           {
             "field": "time",
-            "element_id": "14"
+            "element_id": "67"
           },
           {
-            "field": "title",
-            "element_id": "2"
+            "field": "comment",
+            "element_id": "68",
+            "value": "Không ghi nhận hoạt động tôn tạo, xây dựng công trình."
           }
         ]
       },
@@ -5043,23 +5137,25 @@
         "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "date_format": "dd.MM.yy",
         "time_format": "HH.mm/dd.MM.yy",
+        "map_background_color": "#000000",
         "placeholders": [
           {
             "field": "map_image",
-            "element_id": "1026"
+            "element_id": "65"
           },
           {
             "field": "title",
-            "element_id": "7",
+            "element_id": "66",
             "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
           },
           {
             "field": "time",
-            "element_id": "14"
+            "element_id": "67"
           },
           {
-            "field": "title",
-            "element_id": "2"
+            "field": "comment",
+            "element_id": "68",
+            "value": "Không ghi nhận hoạt động tôn tạo, xây dựng công trình."
           }
         ]
       },
@@ -5143,23 +5239,25 @@
         "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "date_format": "dd.MM.yy",
         "time_format": "HH.mm/dd.MM.yy",
+        "map_background_color": "#000000",
         "placeholders": [
           {
             "field": "map_image",
-            "element_id": "1026"
+            "element_id": "65"
           },
           {
             "field": "title",
-            "element_id": "7",
+            "element_id": "66",
             "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
           },
           {
             "field": "time",
-            "element_id": "14"
+            "element_id": "67"
           },
           {
-            "field": "title",
-            "element_id": "2"
+            "field": "comment",
+            "element_id": "68",
+            "value": "Không ghi nhận hoạt động tôn tạo, xây dựng công trình."
           }
         ]
       },
@@ -5243,23 +5341,25 @@
         "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "date_format": "dd.MM.yy",
         "time_format": "HH.mm/dd.MM.yy",
+        "map_background_color": "#000000",
         "placeholders": [
           {
             "field": "map_image",
-            "element_id": "1026"
+            "element_id": "65"
           },
           {
             "field": "title",
-            "element_id": "7",
+            "element_id": "66",
             "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
           },
           {
             "field": "time",
-            "element_id": "14"
+            "element_id": "67"
           },
           {
-            "field": "title",
-            "element_id": "2"
+            "field": "comment",
+            "element_id": "68",
+            "value": "Không ghi nhận hoạt động tôn tạo, xây dựng công trình."
           }
         ]
       },
@@ -5343,23 +5443,25 @@
         "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "date_format": "dd.MM.yy",
         "time_format": "HH.mm/dd.MM.yy",
+        "map_background_color": "#000000",
         "placeholders": [
           {
             "field": "map_image",
-            "element_id": "1026"
+            "element_id": "65"
           },
           {
             "field": "title",
-            "element_id": "7",
+            "element_id": "66",
             "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
           },
           {
             "field": "time",
-            "element_id": "14"
+            "element_id": "67"
           },
           {
-            "field": "title",
-            "element_id": "2"
+            "field": "comment",
+            "element_id": "68",
+            "value": "Không ghi nhận hoạt động tôn tạo, xây dựng công trình."
           }
         ]
       },
@@ -5447,23 +5549,25 @@
         "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "date_format": "dd.MM.yy",
         "time_format": "HH.mm/dd.MM.yy",
+        "map_background_color": "#000000",
         "placeholders": [
           {
             "field": "map_image",
-            "element_id": "1026"
+            "element_id": "65"
           },
           {
             "field": "title",
-            "element_id": "7",
+            "element_id": "66",
             "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
           },
           {
             "field": "time",
-            "element_id": "14"
+            "element_id": "67"
           },
           {
-            "field": "title",
-            "element_id": "2"
+            "field": "comment",
+            "element_id": "68",
+            "value": "Không ghi nhận hoạt động tôn tạo, xây dựng công trình."
           }
         ]
       },
@@ -5555,23 +5659,25 @@
         "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "date_format": "dd.MM.yy",
         "time_format": "HH.mm/dd.MM.yy",
+        "map_background_color": "#000000",
         "placeholders": [
           {
             "field": "map_image",
-            "element_id": "1026"
+            "element_id": "65"
           },
           {
             "field": "title",
-            "element_id": "7",
+            "element_id": "66",
             "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
           },
           {
             "field": "time",
-            "element_id": "14"
+            "element_id": "67"
           },
           {
-            "field": "title",
-            "element_id": "2"
+            "field": "comment",
+            "element_id": "68",
+            "value": "Không ghi nhận hoạt động tôn tạo, xây dựng công trình."
           }
         ]
       },
@@ -5663,23 +5769,25 @@
         "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "date_format": "dd.MM.yy",
         "time_format": "HH.mm/dd.MM.yy",
+        "map_background_color": "#000000",
         "placeholders": [
           {
             "field": "map_image",
-            "element_id": "1026"
+            "element_id": "65"
           },
           {
             "field": "title",
-            "element_id": "7",
+            "element_id": "66",
             "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
           },
           {
             "field": "time",
-            "element_id": "14"
+            "element_id": "67"
           },
           {
-            "field": "title",
-            "element_id": "2"
+            "field": "comment",
+            "element_id": "68",
+            "value": "Không ghi nhận hoạt động tôn tạo, xây dựng công trình."
           }
         ]
       },
@@ -5763,23 +5871,25 @@
         "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "date_format": "dd.MM.yy",
         "time_format": "HH.mm/dd.MM.yy",
+        "map_background_color": "#000000",
         "placeholders": [
           {
             "field": "map_image",
-            "element_id": "1026"
+            "element_id": "65"
           },
           {
             "field": "title",
-            "element_id": "7",
+            "element_id": "66",
             "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
           },
           {
             "field": "time",
-            "element_id": "14"
+            "element_id": "67"
           },
           {
-            "field": "title",
-            "element_id": "2"
+            "field": "comment",
+            "element_id": "68",
+            "value": "Không ghi nhận hoạt động tôn tạo, xây dựng công trình."
           }
         ]
       },
@@ -5863,23 +5973,25 @@
         "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "date_format": "dd.MM.yy",
         "time_format": "HH.mm/dd.MM.yy",
+        "map_background_color": "#000000",
         "placeholders": [
           {
             "field": "map_image",
-            "element_id": "1026"
+            "element_id": "65"
           },
           {
             "field": "title",
-            "element_id": "7",
+            "element_id": "66",
             "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
           },
           {
             "field": "time",
-            "element_id": "14"
+            "element_id": "67"
           },
           {
-            "field": "title",
-            "element_id": "2"
+            "field": "comment",
+            "element_id": "68",
+            "value": "Không ghi nhận hoạt động tôn tạo, xây dựng công trình."
           }
         ]
       },
@@ -5959,23 +6071,25 @@
         "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "date_format": "dd.MM.yy",
         "time_format": "HH.mm/dd.MM.yy",
+        "map_background_color": "#000000",
         "placeholders": [
           {
             "field": "map_image",
-            "element_id": "1026"
+            "element_id": "65"
           },
           {
             "field": "title",
-            "element_id": "7",
+            "element_id": "66",
             "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
           },
           {
             "field": "time",
-            "element_id": "14"
+            "element_id": "67"
           },
           {
-            "field": "title",
-            "element_id": "2"
+            "field": "comment",
+            "element_id": "68",
+            "value": "Không ghi nhận hoạt động tôn tạo, xây dựng công trình."
           }
         ]
       },
@@ -6071,23 +6185,25 @@
         "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "date_format": "dd.MM.yy",
         "time_format": "HH.mm/dd.MM.yy",
+        "map_background_color": "#000000",
         "placeholders": [
           {
             "field": "map_image",
-            "element_id": "1026"
+            "element_id": "65"
           },
           {
             "field": "title",
-            "element_id": "7",
+            "element_id": "66",
             "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
           },
           {
             "field": "time",
-            "element_id": "14"
+            "element_id": "67"
           },
           {
-            "field": "title",
-            "element_id": "2"
+            "field": "comment",
+            "element_id": "68",
+            "value": "Không ghi nhận hoạt động tôn tạo, xây dựng công trình."
           }
         ]
       },
@@ -6167,23 +6283,25 @@
         "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "date_format": "dd.MM.yy",
         "time_format": "HH.mm/dd.MM.yy",
+        "map_background_color": "#000000",
         "placeholders": [
           {
             "field": "map_image",
-            "element_id": "1026"
+            "element_id": "65"
           },
           {
             "field": "title",
-            "element_id": "7",
+            "element_id": "66",
             "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
           },
           {
             "field": "time",
-            "element_id": "14"
+            "element_id": "67"
           },
           {
-            "field": "title",
-            "element_id": "2"
+            "field": "comment",
+            "element_id": "68",
+            "value": "Không ghi nhận hoạt động tôn tạo, xây dựng công trình."
           }
         ]
       },
@@ -6263,23 +6381,25 @@
         "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "date_format": "dd.MM.yy",
         "time_format": "HH.mm/dd.MM.yy",
+        "map_background_color": "#000000",
         "placeholders": [
           {
             "field": "map_image",
-            "element_id": "1026"
+            "element_id": "65"
           },
           {
             "field": "title",
-            "element_id": "7",
+            "element_id": "66",
             "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
           },
           {
             "field": "time",
-            "element_id": "14"
+            "element_id": "67"
           },
           {
-            "field": "title",
-            "element_id": "2"
+            "field": "comment",
+            "element_id": "68",
+            "value": "Không ghi nhận hoạt động tôn tạo, xây dựng công trình."
           }
         ]
       },
@@ -6363,23 +6483,25 @@
         "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "date_format": "dd.MM.yy",
         "time_format": "HH.mm/dd.MM.yy",
+        "map_background_color": "#000000",
         "placeholders": [
           {
             "field": "map_image",
-            "element_id": "1026"
+            "element_id": "65"
           },
           {
             "field": "title",
-            "element_id": "7",
+            "element_id": "66",
             "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
           },
           {
             "field": "time",
-            "element_id": "14"
+            "element_id": "67"
           },
           {
-            "field": "title",
-            "element_id": "2"
+            "field": "comment",
+            "element_id": "68",
+            "value": "Không ghi nhận hoạt động tôn tạo, xây dựng công trình."
           }
         ]
       },
@@ -6459,23 +6581,25 @@
         "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "date_format": "dd.MM.yy",
         "time_format": "HH.mm/dd.MM.yy",
+        "map_background_color": "#000000",
         "placeholders": [
           {
             "field": "map_image",
-            "element_id": "1026"
+            "element_id": "65"
           },
           {
             "field": "title",
-            "element_id": "7",
+            "element_id": "66",
             "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
           },
           {
             "field": "time",
-            "element_id": "14"
+            "element_id": "67"
           },
           {
-            "field": "title",
-            "element_id": "2"
+            "field": "comment",
+            "element_id": "68",
+            "value": "Không ghi nhận hoạt động tôn tạo, xây dựng công trình."
           }
         ]
       },
@@ -6559,23 +6683,25 @@
         "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "date_format": "dd.MM.yy",
         "time_format": "HH.mm/dd.MM.yy",
+        "map_background_color": "#000000",
         "placeholders": [
           {
             "field": "map_image",
-            "element_id": "1026"
+            "element_id": "65"
           },
           {
             "field": "title",
-            "element_id": "7",
+            "element_id": "66",
             "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
           },
           {
             "field": "time",
-            "element_id": "14"
+            "element_id": "67"
           },
           {
-            "field": "title",
-            "element_id": "2"
+            "field": "comment",
+            "element_id": "68",
+            "value": "Không ghi nhận hoạt động tôn tạo, xây dựng công trình."
           }
         ]
       },
@@ -6659,23 +6785,25 @@
         "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "date_format": "dd.MM.yy",
         "time_format": "HH.mm/dd.MM.yy",
+        "map_background_color": "#000000",
         "placeholders": [
           {
             "field": "map_image",
-            "element_id": "1026"
+            "element_id": "65"
           },
           {
             "field": "title",
-            "element_id": "7",
+            "element_id": "66",
             "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
           },
           {
             "field": "time",
-            "element_id": "14"
+            "element_id": "67"
           },
           {
-            "field": "title",
-            "element_id": "2"
+            "field": "comment",
+            "element_id": "68",
+            "value": "Không ghi nhận hoạt động tôn tạo, xây dựng công trình."
           }
         ]
       },
@@ -6755,23 +6883,25 @@
         "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "date_format": "dd.MM.yy",
         "time_format": "HH.mm/dd.MM.yy",
+        "map_background_color": "#000000",
         "placeholders": [
           {
             "field": "map_image",
-            "element_id": "1026"
+            "element_id": "65"
           },
           {
             "field": "title",
-            "element_id": "7",
+            "element_id": "66",
             "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
           },
           {
             "field": "time",
-            "element_id": "14"
+            "element_id": "67"
           },
           {
-            "field": "title",
-            "element_id": "2"
+            "field": "comment",
+            "element_id": "68",
+            "value": "Không ghi nhận hoạt động tôn tạo, xây dựng công trình."
           }
         ]
       },
@@ -6823,9 +6953,9 @@
       "id": "DaoaiTaTay",
       "enabled": true,
       "sort_order": 66,
-      "name": "Đá oại Ta Tây",
-      "alias": "Đá oại Ta Tây",
-      "title": "Đá oại Ta Tây",
+      "name": "Đá Loại Ta Tây",
+      "alias": "Đá Loại Ta Tây",
+      "title": "Đá Loại Ta Tây",
       "geojson_file": "webapp_geojson/output_geojson/DaoaiTaTay.geojson",
       "coordinate": [
         114.35436623112864,
@@ -6851,23 +6981,25 @@
         "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "date_format": "dd.MM.yy",
         "time_format": "HH.mm/dd.MM.yy",
+        "map_background_color": "#000000",
         "placeholders": [
           {
             "field": "map_image",
-            "element_id": "1026"
+            "element_id": "65"
           },
           {
             "field": "title",
-            "element_id": "7",
+            "element_id": "66",
             "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
           },
           {
             "field": "time",
-            "element_id": "14"
+            "element_id": "67"
           },
           {
-            "field": "title",
-            "element_id": "2"
+            "field": "comment",
+            "element_id": "68",
+            "value": "Không ghi nhận hoạt động tôn tạo, xây dựng công trình."
           }
         ]
       },
@@ -6947,23 +7079,25 @@
         "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "date_format": "dd.MM.yy",
         "time_format": "HH.mm/dd.MM.yy",
+        "map_background_color": "#000000",
         "placeholders": [
           {
             "field": "map_image",
-            "element_id": "1026"
+            "element_id": "65"
           },
           {
             "field": "title",
-            "element_id": "7",
+            "element_id": "66",
             "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
           },
           {
             "field": "time",
-            "element_id": "14"
+            "element_id": "67"
           },
           {
-            "field": "title",
-            "element_id": "2"
+            "field": "comment",
+            "element_id": "68",
+            "value": "Không ghi nhận hoạt động tôn tạo, xây dựng công trình."
           }
         ]
       },
@@ -7043,23 +7177,25 @@
         "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "date_format": "dd.MM.yy",
         "time_format": "HH.mm/dd.MM.yy",
+        "map_background_color": "#000000",
         "placeholders": [
           {
             "field": "map_image",
-            "element_id": "1026"
+            "element_id": "65"
           },
           {
             "field": "title",
-            "element_id": "7",
+            "element_id": "66",
             "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
           },
           {
             "field": "time",
-            "element_id": "14"
+            "element_id": "67"
           },
           {
-            "field": "title",
-            "element_id": "2"
+            "field": "comment",
+            "element_id": "68",
+            "value": "Không ghi nhận hoạt động tôn tạo, xây dựng công trình."
           }
         ]
       },
@@ -7139,23 +7275,25 @@
         "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "date_format": "dd.MM.yy",
         "time_format": "HH.mm/dd.MM.yy",
+        "map_background_color": "#000000",
         "placeholders": [
           {
             "field": "map_image",
-            "element_id": "1026"
+            "element_id": "65"
           },
           {
             "field": "title",
-            "element_id": "7",
+            "element_id": "66",
             "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
           },
           {
             "field": "time",
-            "element_id": "14"
+            "element_id": "67"
           },
           {
-            "field": "title",
-            "element_id": "2"
+            "field": "comment",
+            "element_id": "68",
+            "value": "Không ghi nhận hoạt động tôn tạo, xây dựng công trình."
           }
         ]
       },
@@ -7235,23 +7373,25 @@
         "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "date_format": "dd.MM.yy",
         "time_format": "HH.mm/dd.MM.yy",
+        "map_background_color": "#000000",
         "placeholders": [
           {
             "field": "map_image",
-            "element_id": "1026"
+            "element_id": "65"
           },
           {
             "field": "title",
-            "element_id": "7",
+            "element_id": "66",
             "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
           },
           {
             "field": "time",
-            "element_id": "14"
+            "element_id": "67"
           },
           {
-            "field": "title",
-            "element_id": "2"
+            "field": "comment",
+            "element_id": "68",
+            "value": "Không ghi nhận hoạt động tôn tạo, xây dựng công trình."
           }
         ]
       },

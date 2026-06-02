@@ -3,10 +3,10 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from PIL import Image
 from pptx import Presentation
 from pptx.enum.shapes import MSO_SHAPE
 from pptx.util import Inches
-from PIL import Image
 
 from thucthengay.config import load_project_config
 from thucthengay.export.final_render import final_render_output_size
@@ -95,6 +95,22 @@ def write_picture_template_pptx(path: Path, image_path: Path) -> int:
     return int(shape.shape_id)
 
 
+def write_export_contract_template_pptx(path: Path) -> tuple[int, int]:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    presentation = Presentation()
+    slide = presentation.slides.add_slide(presentation.slide_layouts[6])
+    map_shape = slide.shapes.add_shape(
+        MSO_SHAPE.RECTANGLE,
+        Inches(0.5),
+        Inches(0.75),
+        Inches(4),
+        Inches(3),
+    )
+    text_shape = slide.shapes.add_textbox(Inches(5), Inches(0.75), Inches(4), Inches(0.5))
+    presentation.save(path)
+    return int(map_shape.shape_id), int(text_shape.shape_id)
+
+
 def test_load_project_config_filters_enabled_targets_and_resolves_paths(tmp_path: Path) -> None:
     id_b = prepare_target_files(tmp_path, "target_b")
     id_a = prepare_target_files(tmp_path, "target_a")
@@ -122,6 +138,67 @@ def test_load_project_config_filters_enabled_targets_and_resolves_paths(tmp_path
     assert result.template_metadata["target_a"].map_frame.width == 288
     assert result.enabled_targets[0].metadata["template_metadata"]["template_pptx"] == str(
         (tmp_path / "templates" / "target_a.pptx").resolve()
+    )
+
+
+def test_load_project_config_accepts_export_contract_from_real_config_shape(
+    tmp_path: Path,
+) -> None:
+    (tmp_path / "targets").mkdir(parents=True)
+    (tmp_path / "targets" / "target_a.geojson").write_text("{}", encoding="utf-8")
+    map_id, title_id = write_export_contract_template_pptx(
+        tmp_path / "templates" / "target_a.pptx"
+    )
+    write_json(
+        tmp_path / "config.json",
+        {
+            "targets": [
+                {
+                    "id": "target_a",
+                    "enabled": True,
+                    "sort_order": 1,
+                    "name": "Target A",
+                    "title": "Target A",
+                    "geojson_file": "targets/target_a.geojson",
+                    "coordinate": [106.7, 10.8],
+                    "scale": 50000,
+                    "grid": {"interval": {"minutes": 1}},
+                    "export": {
+                        "template_pptx_file": "templates/target_a.pptx",
+                        "template_txt_value": "Tai {target_title} luc {time_label}",
+                        "date_format": "dd.MM.yy",
+                        "time_format": "HH.mm/dd.MM.yy",
+                        "map_background_color": "#112233",
+                        "placeholders": [
+                            {"field": "map_image", "element_id": str(map_id)},
+                            {
+                                "field": "title",
+                                "element_id": str(title_id),
+                                "value": "Hien trang {target_title} ngay {capture_date}",
+                            },
+                        ],
+                    },
+                }
+            ]
+        },
+    )
+
+    result = load_project_config(tmp_path / "config.json")
+
+    assert result.ok is True
+    target = result.enabled_targets[0]
+    assert target.export.template_txt_value == "Tai {target_title} luc {time_label}"
+    assert target.export.date_format == "dd.MM.yy"
+    assert target.export.time_format == "HH.mm/dd.MM.yy"
+    assert target.export.map_background_color == "#112233"
+    assert target.export.placeholders[0].kind == "map_image"
+    assert target.export.placeholders[0].element_id == map_id
+    assert target.export.placeholders[1].kind == "text"
+    assert target.export.placeholders[1].value == (
+        "Hien trang {target_title} ngay {capture_date}"
+    )
+    assert result.template_metadata["target_a"].placeholders[1].value == (
+        "Hien trang {target_title} ngay {capture_date}"
     )
 
 

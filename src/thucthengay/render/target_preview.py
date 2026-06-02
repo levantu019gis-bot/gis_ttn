@@ -24,6 +24,7 @@ from thucthengay.render.spec import (
     RenderLayerRef,
     RenderSpec,
     RenderSpecError,
+    target_render_background,
 )
 
 DEFAULT_TARGET_PREVIEW_WIDTH = 420
@@ -270,4 +271,4 @@ def _target_preview_background(target: TargetConfig) -> RenderBackground:
             return RenderBackground(color=color)
         except ValueError:
             pass
-    return RenderBackground()
+    return target_render_background(target)

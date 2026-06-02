@@ -52,6 +52,22 @@ def _target() -> TargetConfig:
     )
 
 
+def _target_with_export_background() -> TargetConfig:
+    return TargetConfig(
+        id="alpha",
+        sort_order=1,
+        name="Alpha",
+        geojson_file="alpha.geojson",
+        coordinate=[106.7, 10.8],
+        scale=50000,
+        grid=GridConfig(interval=GridInterval(minutes=1)),
+        export=TargetExportConfig(
+            template_metadata_file="alpha.template.json",
+            map_background_color="#445566",
+        ),
+    )
+
+
 def _composition(layers: list[ImageLayer]) -> Composition:
     return Composition(
         composition_id="alpha__20260525",
@@ -91,6 +107,25 @@ def test_target_preview_spec_covers_union_of_all_layers_even_when_hidden(
     assert spec.output_width <= 320
     assert spec.output_height <= 180
     assert spec.background.color == "#112233"
+
+
+def test_target_preview_spec_uses_export_map_background_when_metadata_missing(
+    tmp_path: Path,
+) -> None:
+    raster = tmp_path / "first.tif"
+    _write_raster(raster, (106.0, 10.0, 106.5, 10.5), fill=30)
+    composition = _composition(
+        [ImageLayer(layer_id="first", source_path=str(raster), visible=True, order=0)]
+    )
+
+    spec = build_target_preview_spec(
+        composition=composition,
+        target=_target_with_export_background(),
+        output_width=320,
+        output_height=180,
+    )
+
+    assert spec.background.color == "#445566"
 
 
 def test_target_preview_spec_requires_at_least_one_layer() -> None:

@@ -42,7 +42,7 @@ def export_txt_report(
     for line_number, composition in enumerate(included, start=1):
         target = target_map[composition.target_id]
         resolution = resolve_txt_line(
-            target.export.txt_line_template or "",
+            target.export.template_txt_value or "",
             composition,
             target,
             slide_number=line_number,
@@ -121,18 +121,18 @@ def _pre_write_issues(
                     composition=composition,
                 )
             )
-        if not target.export.txt_line_template:
+        if not target.export.template_txt_value:
             issues.append(
                 _issue(
                     "export.txt_template_missing",
-                    "Target chua cau hinh txt_line_template.",
-                    "Bo sung `export.txt_line_template` cho target truoc khi export TXT.",
+                    "Target chua cau hinh template_txt_value.",
+                    "Bo sung `export.template_txt_value` cho target truoc khi export TXT.",
                     composition=composition,
                 )
             )
             continue
         resolution = resolve_txt_line(
-            target.export.txt_line_template,
+            target.export.template_txt_value,
             composition,
             target,
             slide_number=line_number,
@@ -147,7 +147,7 @@ def _pre_write_issues(
 def _problem_issue(issue_id: str, field: str, composition: Composition) -> Issue:
     if issue_id == "export.txt_placeholder_unknown":
         message = f"TXT template dung placeholder chua ho tro: {field}."
-        remediation = "Sua txt_line_template de chi dung cac placeholder da ho tro."
+        remediation = "Sua template_txt_value de chi dung cac placeholder da ho tro."
     elif issue_id == "export.txt_time_label_unresolved":
         message = "TXT template can time_label nhung khong co layer visible hop le co thoi gian."
         remediation = (

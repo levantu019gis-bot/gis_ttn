@@ -3,50 +3,56 @@
   "slide_index": 0,
   "map_frame": {
     "x": 0.0024,
-    "y": 0.0155,
-    "width": 16.5223,
-    "height": 11.6946
+    "y": 0.0154,
+    "width": 16.522,
+    "height": 11.6941
   },
   "placeholders": [
     {
       "field": "map_image",
-      "element_id": 1026,
+      "element_id": 65,
       "kind": "map_image",
+      "value": null,
       "diagnostic_name": "Picture 2",
       "required": true
     },
     {
-      "field": "text_7",
-      "element_id": 7,
+      "field": "text_66",
+      "element_id": 66,
       "kind": "text",
+      "value": null,
       "diagnostic_name": "TextBox 6",
       "required": false
     },
     {
-      "field": "text_14",
-      "element_id": 14,
+      "field": "text_67",
+      "element_id": 67,
       "kind": "text",
+      "value": null,
       "diagnostic_name": "Rectangle 13",
       "required": false
     },
     {
-      "field": "text_2",
-      "element_id": 2,
+      "field": "text_68",
+      "element_id": 68,
       "kind": "text",
+      "value": null,
       "diagnostic_name": "TextBox 1",
       "required": false
     },
     {
-      "field": "text_8",
-      "element_id": 8,
+      "field": "text_70",
+      "element_id": 70,
       "kind": "text",
+      "value": null,
       "diagnostic_name": "TextBox 7",
       "required": false
     },
     {
-      "field": "text_10",
-      "element_id": 10,
+      "field": "text_71",
+      "element_id": 71,
       "kind": "text",
+      "value": null,
       "diagnostic_name": "TextBox 9",
       "required": false
     }
@@ -58,7 +64,7 @@
     },
     "source": {
       "pptx": "target_001.template.pptx",
-      "absolute_pptx": "D:\\TU_KXOA\\5.TTN\\gis_ttn\\examples\\templates\\target_001.template.pptx"
+      "absolute_pptx": "/home/ongtu/Working/3.ThucTheNgay/examples/templates/target_001.template.pptx"
     },
     "presentation": {
       "slide_count": 1,
@@ -72,35 +78,35 @@
       "slide_number": 1,
       "shape_count": 7,
       "relationship_targets": {
-        "rId3": "../media/image2.emf",
-        "rId2": "../media/image1.jpg",
-        "rId1": "../slideLayouts/slideLayout2.xml"
+        "rId1": "../media/image1.jpeg",
+        "rId2": "../media/image2.wmf",
+        "rId3": "../slideLayouts/slideLayout4.xml"
       },
       "shapes": [
         {
-          "id": "1026",
+          "id": "65",
           "name": "Picture 2",
           "shape_type": "PICTURE (13)",
           "shape_type_name": "PICTURE",
           "rotation": 0.0,
           "bbox": {
             "emu": {
-              "x": 2207,
-              "y": 14129,
-              "width": 15108007,
-              "height": 10693508
+              "x": 2160,
+              "y": 14040,
+              "width": 15107760,
+              "height": 10693080
             },
             "inches": {
               "x": 0.0024,
-              "y": 0.0155,
-              "width": 16.5223,
-              "height": 11.6946
+              "y": 0.0154,
+              "width": 16.522,
+              "height": 11.6941
             },
             "normalized": {
-              "x": 0.000146,
-              "y": 0.001322,
-              "width": 0.999565,
-              "height": 1.000456
+              "x": 0.000143,
+              "y": 0.001314,
+              "width": 0.999548,
+              "height": 1.000416
             }
           },
           "placeholder": null,
@@ -116,8 +122,8 @@
             "color": {}
           },
           "picture": {
-            "relationship_id": "rId2",
-            "relationship_target": "../media/image1.jpg",
+            "relationship_id": "rId1",
+            "relationship_target": "../media/image1.jpeg",
             "crop": {
               "crop_left": 0.0,
               "crop_right": 0.0,
@@ -125,8 +131,8 @@
               "crop_bottom": 0.0
             },
             "media": {
-              "relationship_target": "../media/image1.jpg",
-              "resolved_path": "ppt/media/image1.jpg",
+              "relationship_target": "../media/image1.jpeg",
+              "resolved_path": "ppt/media/image1.jpeg",
               "found": true,
               "bytes": 270775,
               "image": {
@@ -139,81 +145,93 @@
           }
         },
         {
-          "id": "7",
+          "id": "66",
           "name": "TextBox 6",
-          "shape_type": "TEXT_BOX (17)",
-          "shape_type_name": "TEXT_BOX",
+          "shape_type": "AUTO_SHAPE (1)",
+          "shape_type_name": "AUTO_SHAPE",
           "rotation": 0.0,
           "bbox": {
             "emu": {
-              "x": 1111372,
-              "y": 243570,
-              "width": 13837322,
-              "height": 448473
+              "x": 1111320,
+              "y": 135720,
+              "width": 13836960,
+              "height": 443880
             },
             "inches": {
               "x": 1.2154,
-              "y": 0.2664,
-              "width": 15.1327,
-              "height": 0.4905
+              "y": 0.1484,
+              "width": 15.1323,
+              "height": 0.4854
             },
             "normalized": {
-              "x": 0.07353,
-              "y": 0.022788,
-              "width": 0.915494,
-              "height": 0.041958
+              "x": 0.073526,
+              "y": 0.012698,
+              "width": 0.915471,
+              "height": 0.041528
             }
           },
           "placeholder": null,
           "text": {
             "has_text_frame": true,
             "text": "NAME, TIME",
-            "word_wrap": true,
+            "word_wrap": null,
             "auto_size": "SHAPE_TO_FIT_TEXT",
-            "vertical_anchor": null,
+            "vertical_anchor": "TOP",
             "margins": {
-              "margin_left": 169815,
-              "margin_right": 169815,
-              "margin_top": 84908,
-              "margin_bottom": 84908
+              "margin_left": 169920,
+              "margin_right": 169920,
+              "margin_top": 84960,
+              "margin_bottom": 84960
             },
             "paragraphs": [
               {
                 "text": "NAME, TIME",
-                "alignment": null,
+                "alignment": "CENTER",
                 "level": 0,
                 "runs": [
                   {
                     "text": "NAME",
                     "font": {
-                      "name": null,
-                      "size": null,
-                      "bold": null,
+                      "name": "Arial",
+                      "size": 228600,
+                      "bold": true,
                       "italic": null,
                       "underline": null,
-                      "color": {}
+                      "color": {
+                        "rgb": "000000",
+                        "theme_color": "NOT_THEME_COLOR",
+                        "brightness": 0
+                      }
                     }
                   },
                   {
                     "text": ", ",
                     "font": {
-                      "name": null,
-                      "size": null,
-                      "bold": null,
+                      "name": "Arial",
+                      "size": 228600,
+                      "bold": true,
                       "italic": null,
                       "underline": null,
-                      "color": {}
+                      "color": {
+                        "rgb": "000000",
+                        "theme_color": "NOT_THEME_COLOR",
+                        "brightness": 0
+                      }
                     }
                   },
                   {
                     "text": "TIME",
                     "font": {
-                      "name": null,
-                      "size": null,
-                      "bold": null,
+                      "name": "Arial",
+                      "size": 228600,
+                      "bold": true,
                       "italic": null,
                       "underline": null,
-                      "color": {}
+                      "color": {
+                        "rgb": "000000",
+                        "theme_color": "NOT_THEME_COLOR",
+                        "brightness": 0
+                      }
                     }
                   }
                 ]
@@ -231,29 +249,29 @@
           "picture": null
         },
         {
-          "id": "14",
+          "id": "67",
           "name": "Rectangle 13",
           "shape_type": "AUTO_SHAPE (1)",
           "shape_type_name": "AUTO_SHAPE",
           "rotation": 0.0,
           "bbox": {
             "emu": {
-              "x": 7753358,
-              "y": 1074142,
-              "width": 553357,
-              "height": 307777
+              "x": 7756200,
+              "y": 966240,
+              "width": 546840,
+              "height": 303120
             },
             "inches": {
-              "x": 8.4792,
-              "y": 1.1747,
-              "width": 0.6052,
-              "height": 0.3366
+              "x": 8.4823,
+              "y": 1.0567,
+              "width": 0.598,
+              "height": 0.3315
             },
             "normalized": {
-              "x": 0.512972,
-              "y": 0.100494,
-              "width": 0.036611,
-              "height": 0.028795
+              "x": 0.51316,
+              "y": 0.090399,
+              "width": 0.03618,
+              "height": 0.028359
             }
           },
           "placeholder": null,
@@ -262,12 +280,12 @@
             "text": "time",
             "word_wrap": false,
             "auto_size": "SHAPE_TO_FIT_TEXT",
-            "vertical_anchor": null,
+            "vertical_anchor": "TOP",
             "margins": {
-              "margin_left": 91440,
-              "margin_right": 91440,
-              "margin_top": 45720,
-              "margin_bottom": 45720
+              "margin_left": 90000,
+              "margin_right": 90000,
+              "margin_top": 45000,
+              "margin_bottom": 45000
             },
             "paragraphs": [
               {
@@ -309,43 +327,43 @@
           "picture": null
         },
         {
-          "id": "2",
+          "id": "68",
           "name": "TextBox 1",
-          "shape_type": "TEXT_BOX (17)",
-          "shape_type_name": "TEXT_BOX",
+          "shape_type": "AUTO_SHAPE (1)",
+          "shape_type_name": "AUTO_SHAPE",
           "rotation": 0.0,
           "bbox": {
             "emu": {
-              "x": 5591242,
-              "y": 9983187,
-              "width": 5334000,
-              "height": 307777
+              "x": 5591160,
+              "y": 9875160,
+              "width": 5333760,
+              "height": 303120
             },
             "inches": {
-              "x": 6.1147,
-              "y": 10.9177,
-              "width": 5.8333,
-              "height": 0.3366
+              "x": 6.1146,
+              "y": 10.7996,
+              "width": 5.8331,
+              "height": 0.3315
             },
             "normalized": {
-              "x": 0.369924,
-              "y": 0.934,
-              "width": 0.352904,
-              "height": 0.028795
+              "x": 0.369918,
+              "y": 0.923893,
+              "width": 0.352888,
+              "height": 0.028359
             }
           },
           "placeholder": null,
           "text": {
             "has_text_frame": true,
             "text": "comment",
-            "word_wrap": true,
+            "word_wrap": null,
             "auto_size": "SHAPE_TO_FIT_TEXT",
-            "vertical_anchor": null,
+            "vertical_anchor": "TOP",
             "margins": {
-              "margin_left": 91440,
-              "margin_right": 91440,
-              "margin_top": 45720,
-              "margin_bottom": 45720
+              "margin_left": 90000,
+              "margin_right": 90000,
+              "margin_top": 45000,
+              "margin_bottom": 45000
             },
             "paragraphs": [
               {
@@ -354,22 +372,7 @@
                 "level": 0,
                 "runs": [
                   {
-                    "text": "c",
-                    "font": {
-                      "name": "Arial",
-                      "size": 177800,
-                      "bold": true,
-                      "italic": null,
-                      "underline": null,
-                      "color": {
-                        "rgb": "FFFF00",
-                        "theme_color": "NOT_THEME_COLOR",
-                        "brightness": 0
-                      }
-                    }
-                  },
-                  {
-                    "text": "omment",
+                    "text": "comment",
                     "font": {
                       "name": "Arial",
                       "size": 177800,
@@ -402,29 +405,29 @@
           "picture": null
         },
         {
-          "id": "9",
+          "id": "69",
           "name": "Picture 8",
           "shape_type": "PICTURE (13)",
           "shape_type_name": "PICTURE",
           "rotation": 0.0,
           "bbox": {
             "emu": {
-              "x": 14242111,
-              "y": 1059061,
-              "width": 296883,
-              "height": 694252
+              "x": 14241960,
+              "y": 1059120,
+              "width": 296640,
+              "height": 693720
             },
             "inches": {
-              "x": 15.5754,
-              "y": 1.1582,
-              "width": 0.3247,
-              "height": 0.7592
+              "x": 15.5752,
+              "y": 1.1583,
+              "width": 0.3244,
+              "height": 0.7587
             },
             "normalized": {
-              "x": 0.942276,
-              "y": 0.099083,
-              "width": 0.019642,
-              "height": 0.064952
+              "x": 0.942266,
+              "y": 0.099088,
+              "width": 0.019626,
+              "height": 0.064903
             }
           },
           "placeholder": null,
@@ -440,8 +443,8 @@
             "color": {}
           },
           "picture": {
-            "relationship_id": "rId3",
-            "relationship_target": "../media/image2.emf",
+            "relationship_id": "rId2",
+            "relationship_target": "../media/image2.wmf",
             "crop": {
               "crop_left": 0.0,
               "crop_right": 0.0,
@@ -449,8 +452,8 @@
               "crop_bottom": 0.0
             },
             "media": {
-              "relationship_target": "../media/image2.emf",
-              "resolved_path": "ppt/media/image2.emf",
+              "relationship_target": "../media/image2.wmf",
+              "resolved_path": "ppt/media/image2.wmf",
               "found": true,
               "bytes": 1248,
               "image": {
@@ -463,29 +466,29 @@
           }
         },
         {
-          "id": "8",
+          "id": "70",
           "name": "TextBox 7",
-          "shape_type": "TEXT_BOX (17)",
-          "shape_type_name": "TEXT_BOX",
+          "shape_type": "AUTO_SHAPE (1)",
+          "shape_type_name": "AUTO_SHAPE",
           "rotation": 0.0,
           "bbox": {
             "emu": {
-              "x": 5423694,
-              "y": 6868319,
-              "width": 1479227,
-              "height": 448474
+              "x": 5423760,
+              "y": 6868440,
+              "width": 1478880,
+              "height": 448200
             },
             "inches": {
-              "x": 5.9314,
-              "y": 7.5113,
-              "width": 1.6177,
-              "height": 0.4905
+              "x": 5.9315,
+              "y": 7.5114,
+              "width": 1.6173,
+              "height": 0.4902
             },
             "normalized": {
-              "x": 0.358838,
-              "y": 0.642581,
-              "width": 0.097868,
-              "height": 0.041958
+              "x": 0.358843,
+              "y": 0.642593,
+              "width": 0.097845,
+              "height": 0.041932
             }
           },
           "placeholder": null,
@@ -493,18 +496,18 @@
             "has_text_frame": true,
             "text": "ABC",
             "word_wrap": false,
-            "auto_size": null,
+            "auto_size": "NONE",
             "vertical_anchor": "MIDDLE",
             "margins": {
-              "margin_left": 79352,
-              "margin_right": 79352,
-              "margin_top": 39676,
-              "margin_bottom": 39676
+              "margin_left": 79200,
+              "margin_right": 79200,
+              "margin_top": 39600,
+              "margin_bottom": 39600
             },
             "paragraphs": [
               {
                 "text": "ABC",
-                "alignment": null,
+                "alignment": "CENTER",
                 "level": 0,
                 "runs": [
                   {
@@ -512,10 +515,14 @@
                     "font": {
                       "name": "Arial",
                       "size": 177800,
-                      "bold": null,
+                      "bold": true,
                       "italic": null,
                       "underline": null,
-                      "color": {}
+                      "color": {
+                        "rgb": "FFFF00",
+                        "theme_color": "NOT_THEME_COLOR",
+                        "brightness": 0
+                      }
                     }
                   }
                 ]
@@ -533,29 +540,29 @@
           "picture": null
         },
         {
-          "id": "10",
+          "id": "71",
           "name": "TextBox 9",
-          "shape_type": "TEXT_BOX (17)",
-          "shape_type_name": "TEXT_BOX",
+          "shape_type": "AUTO_SHAPE (1)",
+          "shape_type_name": "AUTO_SHAPE",
           "rotation": 0.0,
           "bbox": {
             "emu": {
-              "x": 6538900,
-              "y": 7977279,
-              "width": 1479227,
-              "height": 448474
+              "x": 6539040,
+              "y": 7977240,
+              "width": 1478880,
+              "height": 448200
             },
             "inches": {
-              "x": 7.151,
-              "y": 8.7241,
-              "width": 1.6177,
-              "height": 0.4905
+              "x": 7.1512,
+              "y": 8.724,
+              "width": 1.6173,
+              "height": 0.4902
             },
             "normalized": {
-              "x": 0.432622,
-              "y": 0.746333,
-              "width": 0.097868,
-              "height": 0.041958
+              "x": 0.432631,
+              "y": 0.746329,
+              "width": 0.097845,
+              "height": 0.041932
             }
           },
           "placeholder": null,
@@ -563,18 +570,18 @@
             "has_text_frame": true,
             "text": "XYZ",
             "word_wrap": false,
-            "auto_size": null,
+            "auto_size": "NONE",
             "vertical_anchor": "MIDDLE",
             "margins": {
-              "margin_left": 79352,
-              "margin_right": 79352,
-              "margin_top": 39676,
-              "margin_bottom": 39676
+              "margin_left": 79200,
+              "margin_right": 79200,
+              "margin_top": 39600,
+              "margin_bottom": 39600
             },
             "paragraphs": [
               {
                 "text": "XYZ",
-                "alignment": null,
+                "alignment": "CENTER",
                 "level": 0,
                 "runs": [
                   {
@@ -582,10 +589,14 @@
                     "font": {
                       "name": "Arial",
                       "size": 177800,
-                      "bold": null,
+                      "bold": true,
                       "italic": null,
                       "underline": null,
-                      "color": {}
+                      "color": {
+                        "rgb": "FFFF00",
+                        "theme_color": "NOT_THEME_COLOR",
+                        "brightness": 0
+                      }
                     }
                   }
                 ]
@@ -610,35 +621,35 @@
         "slide_number": 1,
         "shape_count": 7,
         "relationship_targets": {
-          "rId3": "../media/image2.emf",
-          "rId2": "../media/image1.jpg",
-          "rId1": "../slideLayouts/slideLayout2.xml"
+          "rId1": "../media/image1.jpeg",
+          "rId2": "../media/image2.wmf",
+          "rId3": "../slideLayouts/slideLayout4.xml"
         },
         "shapes": [
           {
-            "id": "1026",
+            "id": "65",
             "name": "Picture 2",
             "shape_type": "PICTURE (13)",
             "shape_type_name": "PICTURE",
             "rotation": 0.0,
             "bbox": {
               "emu": {
-                "x": 2207,
-                "y": 14129,
-                "width": 15108007,
-                "height": 10693508
+                "x": 2160,
+                "y": 14040,
+                "width": 15107760,
+                "height": 10693080
               },
               "inches": {
                 "x": 0.0024,
-                "y": 0.0155,
-                "width": 16.5223,
-                "height": 11.6946
+                "y": 0.0154,
+                "width": 16.522,
+                "height": 11.6941
               },
               "normalized": {
-                "x": 0.000146,
-                "y": 0.001322,
-                "width": 0.999565,
-                "height": 1.000456
+                "x": 0.000143,
+                "y": 0.001314,
+                "width": 0.999548,
+                "height": 1.000416
               }
             },
             "placeholder": null,
@@ -654,8 +665,8 @@
               "color": {}
             },
             "picture": {
-              "relationship_id": "rId2",
-              "relationship_target": "../media/image1.jpg",
+              "relationship_id": "rId1",
+              "relationship_target": "../media/image1.jpeg",
               "crop": {
                 "crop_left": 0.0,
                 "crop_right": 0.0,
@@ -663,8 +674,8 @@
                 "crop_bottom": 0.0
               },
               "media": {
-                "relationship_target": "../media/image1.jpg",
-                "resolved_path": "ppt/media/image1.jpg",
+                "relationship_target": "../media/image1.jpeg",
+                "resolved_path": "ppt/media/image1.jpeg",
                 "found": true,
                 "bytes": 270775,
                 "image": {
@@ -677,81 +688,93 @@
             }
           },
           {
-            "id": "7",
+            "id": "66",
             "name": "TextBox 6",
-            "shape_type": "TEXT_BOX (17)",
-            "shape_type_name": "TEXT_BOX",
+            "shape_type": "AUTO_SHAPE (1)",
+            "shape_type_name": "AUTO_SHAPE",
             "rotation": 0.0,
             "bbox": {
               "emu": {
-                "x": 1111372,
-                "y": 243570,
-                "width": 13837322,
-                "height": 448473
+                "x": 1111320,
+                "y": 135720,
+                "width": 13836960,
+                "height": 443880
               },
               "inches": {
                 "x": 1.2154,
-                "y": 0.2664,
-                "width": 15.1327,
-                "height": 0.4905
+                "y": 0.1484,
+                "width": 15.1323,
+                "height": 0.4854
               },
               "normalized": {
-                "x": 0.07353,
-                "y": 0.022788,
-                "width": 0.915494,
-                "height": 0.041958
+                "x": 0.073526,
+                "y": 0.012698,
+                "width": 0.915471,
+                "height": 0.041528
               }
             },
             "placeholder": null,
             "text": {
               "has_text_frame": true,
               "text": "NAME, TIME",
-              "word_wrap": true,
+              "word_wrap": null,
               "auto_size": "SHAPE_TO_FIT_TEXT",
-              "vertical_anchor": null,
+              "vertical_anchor": "TOP",
               "margins": {
-                "margin_left": 169815,
-                "margin_right": 169815,
-                "margin_top": 84908,
-                "margin_bottom": 84908
+                "margin_left": 169920,
+                "margin_right": 169920,
+                "margin_top": 84960,
+                "margin_bottom": 84960
               },
               "paragraphs": [
                 {
                   "text": "NAME, TIME",
-                  "alignment": null,
+                  "alignment": "CENTER",
                   "level": 0,
                   "runs": [
                     {
                       "text": "NAME",
                       "font": {
-                        "name": null,
-                        "size": null,
-                        "bold": null,
+                        "name": "Arial",
+                        "size": 228600,
+                        "bold": true,
                         "italic": null,
                         "underline": null,
-                        "color": {}
+                        "color": {
+                          "rgb": "000000",
+                          "theme_color": "NOT_THEME_COLOR",
+                          "brightness": 0
+                        }
                       }
                     },
                     {
                       "text": ", ",
                       "font": {
-                        "name": null,
-                        "size": null,
-                        "bold": null,
+                        "name": "Arial",
+                        "size": 228600,
+                        "bold": true,
                         "italic": null,
                         "underline": null,
-                        "color": {}
+                        "color": {
+                          "rgb": "000000",
+                          "theme_color": "NOT_THEME_COLOR",
+                          "brightness": 0
+                        }
                       }
                     },
                     {
                       "text": "TIME",
                       "font": {
-                        "name": null,
-                        "size": null,
-                        "bold": null,
+                        "name": "Arial",
+                        "size": 228600,
+                        "bold": true,
                         "italic": null,
                         "underline": null,
-                        "color": {}
+                        "color": {
+                          "rgb": "000000",
+                          "theme_color": "NOT_THEME_COLOR",
+                          "brightness": 0
+                        }
                       }
                     }
                   ]
@@ -769,29 +792,29 @@
             "picture": null
           },
           {
-            "id": "14",
+            "id": "67",
             "name": "Rectangle 13",
             "shape_type": "AUTO_SHAPE (1)",
             "shape_type_name": "AUTO_SHAPE",
             "rotation": 0.0,
             "bbox": {
               "emu": {
-                "x": 7753358,
-                "y": 1074142,
-                "width": 553357,
-                "height": 307777
+                "x": 7756200,
+                "y": 966240,
+                "width": 546840,
+                "height": 303120
               },
               "inches": {
-                "x": 8.4792,
-                "y": 1.1747,
-                "width": 0.6052,
-                "height": 0.3366
+                "x": 8.4823,
+                "y": 1.0567,
+                "width": 0.598,
+                "height": 0.3315
               },
               "normalized": {
-                "x": 0.512972,
-                "y": 0.100494,
-                "width": 0.036611,
-                "height": 0.028795
+                "x": 0.51316,
+                "y": 0.090399,
+                "width": 0.03618,
+                "height": 0.028359
               }
             },
             "placeholder": null,
@@ -800,12 +823,12 @@
               "text": "time",
               "word_wrap": false,
               "auto_size": "SHAPE_TO_FIT_TEXT",
-              "vertical_anchor": null,
+              "vertical_anchor": "TOP",
               "margins": {
-                "margin_left": 91440,
-                "margin_right": 91440,
-                "margin_top": 45720,
-                "margin_bottom": 45720
+                "margin_left": 90000,
+                "margin_right": 90000,
+                "margin_top": 45000,
+                "margin_bottom": 45000
               },
               "paragraphs": [
                 {
@@ -847,43 +870,43 @@
             "picture": null
           },
           {
-            "id": "2",
+            "id": "68",
             "name": "TextBox 1",
-            "shape_type": "TEXT_BOX (17)",
-            "shape_type_name": "TEXT_BOX",
+            "shape_type": "AUTO_SHAPE (1)",
+            "shape_type_name": "AUTO_SHAPE",
             "rotation": 0.0,
             "bbox": {
               "emu": {
-                "x": 5591242,
-                "y": 9983187,
-                "width": 5334000,
-                "height": 307777
+                "x": 5591160,
+                "y": 9875160,
+                "width": 5333760,
+                "height": 303120
               },
               "inches": {
-                "x": 6.1147,
-                "y": 10.9177,
-                "width": 5.8333,
-                "height": 0.3366
+                "x": 6.1146,
+                "y": 10.7996,
+                "width": 5.8331,
+                "height": 0.3315
               },
               "normalized": {
-                "x": 0.369924,
-                "y": 0.934,
-                "width": 0.352904,
-                "height": 0.028795
+                "x": 0.369918,
+                "y": 0.923893,
+                "width": 0.352888,
+                "height": 0.028359
               }
             },
             "placeholder": null,
             "text": {
               "has_text_frame": true,
               "text": "comment",
-              "word_wrap": true,
+              "word_wrap": null,
               "auto_size": "SHAPE_TO_FIT_TEXT",
-              "vertical_anchor": null,
+              "vertical_anchor": "TOP",
               "margins": {
-                "margin_left": 91440,
-                "margin_right": 91440,
-                "margin_top": 45720,
-                "margin_bottom": 45720
+                "margin_left": 90000,
+                "margin_right": 90000,
+                "margin_top": 45000,
+                "margin_bottom": 45000
               },
               "paragraphs": [
                 {
@@ -892,22 +915,7 @@
                   "level": 0,
                   "runs": [
                     {
-                      "text": "c",
-                      "font": {
-                        "name": "Arial",
-                        "size": 177800,
-                        "bold": true,
-                        "italic": null,
-                        "underline": null,
-                        "color": {
-                          "rgb": "FFFF00",
-                          "theme_color": "NOT_THEME_COLOR",
-                          "brightness": 0
-                        }
-                      }
-                    },
-                    {
-                      "text": "omment",
+                      "text": "comment",
                       "font": {
                         "name": "Arial",
                         "size": 177800,
@@ -940,29 +948,29 @@
             "picture": null
           },
           {
-            "id": "9",
+            "id": "69",
             "name": "Picture 8",
             "shape_type": "PICTURE (13)",
             "shape_type_name": "PICTURE",
             "rotation": 0.0,
             "bbox": {
               "emu": {
-                "x": 14242111,
-                "y": 1059061,
-                "width": 296883,
-                "height": 694252
+                "x": 14241960,
+                "y": 1059120,
+                "width": 296640,
+                "height": 693720
               },
               "inches": {
-                "x": 15.5754,
-                "y": 1.1582,
-                "width": 0.3247,
-                "height": 0.7592
+                "x": 15.5752,
+                "y": 1.1583,
+                "width": 0.3244,
+                "height": 0.7587
               },
               "normalized": {
-                "x": 0.942276,
-                "y": 0.099083,
-                "width": 0.019642,
-                "height": 0.064952
+                "x": 0.942266,
+                "y": 0.099088,
+                "width": 0.019626,
+                "height": 0.064903
               }
             },
             "placeholder": null,
@@ -978,8 +986,8 @@
               "color": {}
             },
             "picture": {
-              "relationship_id": "rId3",
-              "relationship_target": "../media/image2.emf",
+              "relationship_id": "rId2",
+              "relationship_target": "../media/image2.wmf",
               "crop": {
                 "crop_left": 0.0,
                 "crop_right": 0.0,
@@ -987,8 +995,8 @@
                 "crop_bottom": 0.0
               },
               "media": {
-                "relationship_target": "../media/image2.emf",
-                "resolved_path": "ppt/media/image2.emf",
+                "relationship_target": "../media/image2.wmf",
+                "resolved_path": "ppt/media/image2.wmf",
                 "found": true,
                 "bytes": 1248,
                 "image": {
@@ -1001,29 +1009,29 @@
             }
           },
           {
-            "id": "8",
+            "id": "70",
             "name": "TextBox 7",
-            "shape_type": "TEXT_BOX (17)",
-            "shape_type_name": "TEXT_BOX",
+            "shape_type": "AUTO_SHAPE (1)",
+            "shape_type_name": "AUTO_SHAPE",
             "rotation": 0.0,
             "bbox": {
               "emu": {
-                "x": 5423694,
-                "y": 6868319,
-                "width": 1479227,
-                "height": 448474
+                "x": 5423760,
+                "y": 6868440,
+                "width": 1478880,
+                "height": 448200
               },
               "inches": {
-                "x": 5.9314,
-                "y": 7.5113,
-                "width": 1.6177,
-                "height": 0.4905
+                "x": 5.9315,
+                "y": 7.5114,
+                "width": 1.6173,
+                "height": 0.4902
               },
               "normalized": {
-                "x": 0.358838,
-                "y": 0.642581,
-                "width": 0.097868,
-                "height": 0.041958
+                "x": 0.358843,
+                "y": 0.642593,
+                "width": 0.097845,
+                "height": 0.041932
               }
             },
             "placeholder": null,
@@ -1031,18 +1039,18 @@
               "has_text_frame": true,
               "text": "ABC",
               "word_wrap": false,
-              "auto_size": null,
+              "auto_size": "NONE",
               "vertical_anchor": "MIDDLE",
               "margins": {
-                "margin_left": 79352,
-                "margin_right": 79352,
-                "margin_top": 39676,
-                "margin_bottom": 39676
+                "margin_left": 79200,
+                "margin_right": 79200,
+                "margin_top": 39600,
+                "margin_bottom": 39600
               },
               "paragraphs": [
                 {
                   "text": "ABC",
-                  "alignment": null,
+                  "alignment": "CENTER",
                   "level": 0,
                   "runs": [
                     {
@@ -1050,10 +1058,14 @@
                       "font": {
                         "name": "Arial",
                         "size": 177800,
-                        "bold": null,
+                        "bold": true,
                         "italic": null,
                         "underline": null,
-                        "color": {}
+                        "color": {
+                          "rgb": "FFFF00",
+                          "theme_color": "NOT_THEME_COLOR",
+                          "brightness": 0
+                        }
                       }
                     }
                   ]
@@ -1071,29 +1083,29 @@
             "picture": null
           },
           {
-            "id": "10",
+            "id": "71",
             "name": "TextBox 9",
-            "shape_type": "TEXT_BOX (17)",
-            "shape_type_name": "TEXT_BOX",
+            "shape_type": "AUTO_SHAPE (1)",
+            "shape_type_name": "AUTO_SHAPE",
             "rotation": 0.0,
             "bbox": {
               "emu": {
-                "x": 6538900,
-                "y": 7977279,
-                "width": 1479227,
-                "height": 448474
+                "x": 6539040,
+                "y": 7977240,
+                "width": 1478880,
+                "height": 448200
               },
               "inches": {
-                "x": 7.151,
-                "y": 8.7241,
-                "width": 1.6177,
-                "height": 0.4905
+                "x": 7.1512,
+                "y": 8.724,
+                "width": 1.6173,
+                "height": 0.4902
               },
               "normalized": {
-                "x": 0.432622,
-                "y": 0.746333,
-                "width": 0.097868,
-                "height": 0.041958
+                "x": 0.432631,
+                "y": 0.746329,
+                "width": 0.097845,
+                "height": 0.041932
               }
             },
             "placeholder": null,
@@ -1101,18 +1113,18 @@
               "has_text_frame": true,
               "text": "XYZ",
               "word_wrap": false,
-              "auto_size": null,
+              "auto_size": "NONE",
               "vertical_anchor": "MIDDLE",
               "margins": {
-                "margin_left": 79352,
-                "margin_right": 79352,
-                "margin_top": 39676,
-                "margin_bottom": 39676
+                "margin_left": 79200,
+                "margin_right": 79200,
+                "margin_top": 39600,
+                "margin_bottom": 39600
               },
               "paragraphs": [
                 {
                   "text": "XYZ",
-                  "alignment": null,
+                  "alignment": "CENTER",
                   "level": 0,
                   "runs": [
                     {
@@ -1120,10 +1132,14 @@
                       "font": {
                         "name": "Arial",
                         "size": 177800,
-                        "bold": null,
+                        "bold": true,
                         "italic": null,
                         "underline": null,
-                        "color": {}
+                        "color": {
+                          "rgb": "FFFF00",
+                          "theme_color": "NOT_THEME_COLOR",
+                          "brightness": 0
+                        }
                       }
                     }
                   ]
@@ -1144,7 +1160,7 @@
       }
     ],
     "map_shape": {
-      "id": "1026",
+      "id": "65",
       "name": "Picture 2",
       "selection_rule": "explicit option or largest picture on selected slide"
     },

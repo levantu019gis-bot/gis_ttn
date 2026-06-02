@@ -76,12 +76,52 @@ class TargetExportConfig(BaseModel):
         validation_alias=AliasChoices("template_pptx_file", "template_metadata_file")
     )
     placeholders: list[TemplatePlaceholder] = Field(default_factory=list)
-    txt_line_template: str | None = None
+    txt_line_template: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("txt_line_template", "template_txt_value"),
+        serialization_alias="template_txt_value",
+    )
+    date_format: str = "yyyy-MM-dd"
+    time_format: str = "HH:mm:ss"
+    map_background_color: str = Field(
+        default="#FFFFFF",
+        validation_alias=AliasChoices(
+            "map_background_color",
+            "background_color",
+            "map_background",
+        ),
+    )
+
+    @field_validator("map_background_color", mode="before")
+    @classmethod
+    def map_background_color_from_string_or_object(cls, value: object) -> object:
+        if isinstance(value, dict):
+            return value.get("color") or value.get("background") or value.get("fill")
+        return value
+
+    @field_validator("map_background_color")
+    @classmethod
+    def map_background_color_must_be_hex_rgb(cls, value: str) -> str:
+        text = value.strip().lstrip("#")
+        if len(text) != 6:
+            msg = "map_background_color must use #RRGGBB"
+            raise ValueError(msg)
+        try:
+            int(text, 16)
+        except ValueError as exc:
+            msg = "map_background_color must use #RRGGBB"
+            raise ValueError(msg) from exc
+        return f"#{text.upper()}"
 
     @property
     def template_metadata_file(self) -> str:
         """Backward-compatible access during the Epic 6 migration."""
         return self.template_pptx_file
+
+    @property
+    def template_txt_value(self) -> str | None:
+        """Config-contract alias for TXT export content."""
+        return self.txt_line_template
 
 
 class TargetConfig(BaseModel):

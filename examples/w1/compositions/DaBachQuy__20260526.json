@@ -1,14 +1,14 @@
 {
   "artifacts": {
     "export_log_path": null,
-    "final_render_path": null,
+    "final_render_path": "renders/DaBachQuy__20260526.c81525a1bd9d.jpg",
     "preview_render_path": null,
-    "render_log_path": null
+    "render_log_path": "renders/DaBachQuy__20260526.render-log.json"
   },
   "capture_date": "2026-05-26",
   "composition_id": "DaBachQuy__20260526",
   "grid_override": null,
-  "include": false,
+  "include": true,
   "layers": [
     {
       "cache_path": "cache/DaBachQuy/20260526/PSScene_20260526_041543_16_24fb_cloud_28.000000000000004__a3617ff119a6.tif",
@@ -61,9 +61,9 @@
   ],
   "needs_revalidation": false,
   "notes": "",
-  "ready": false,
-  "review_order": null,
-  "reviewed": false,
+  "ready": true,
+  "review_order": 2,
+  "reviewed": true,
   "target_id": "DaBachQuy",
   "validation_summary": {
     "error_count": 0,

@@ -50,19 +50,43 @@ def replace_shape_with_picture(slide: Slide, element_id: int, image_path: Path) 
     shape = find_shape_by_element_id(slide, element_id)
     if shape is None:
         return False
+    parent = shape.element.getparent()
+    shape_index = parent.index(shape.element)
     left, top, width, height = shape.left, shape.top, shape.width, shape.height
-    shape.element.getparent().remove(shape.element)
-    slide.shapes.add_picture(str(image_path), left, top, width=width, height=height)
+    parent.remove(shape.element)
+    picture = slide.shapes.add_picture(str(image_path), left, top, width=width, height=height)
+    picture_parent = picture.element.getparent()
+    picture_parent.remove(picture.element)
+    parent.insert(shape_index, picture.element)
     return True
 
 
 def replace_text(slide: Slide, element_id: int, value: str) -> bool:
-    """Replace the text of a shape addressed by element id."""
+    """Replace text while preserving the first existing run's formatting."""
     shape = find_shape_by_element_id(slide, element_id)
     if shape is None or not getattr(shape, "has_text_frame", False):
         return False
-    shape.text = value
+    paragraphs = tuple(shape.text_frame.paragraphs)
+    first_run = None
+    template_text_parts: list[str] = []
+    for paragraph in paragraphs:
+        for run in paragraph.runs:
+            if first_run is None:
+                first_run = run
+            template_text_parts.append(run.text)
+            run.text = ""
+
+    replacement = value.upper() if _is_all_caps_template("".join(template_text_parts)) else value
+    if first_run is not None:
+        first_run.text = replacement
+    elif paragraphs:
+        paragraphs[0].add_run().text = replacement
     return True
+
+
+def _is_all_caps_template(text: str) -> bool:
+    letters = [character for character in text if character.isalpha()]
+    return bool(letters) and all(character == character.upper() for character in letters)
 
 
 def _find_shape_by_element_id(shapes: Any, element_id: int) -> Any | None:

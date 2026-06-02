@@ -5,7 +5,7 @@ from __future__ import annotations
 from enum import StrEnum
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 class PlaceholderType(StrEnum):
@@ -35,8 +35,22 @@ class TemplatePlaceholder(BaseModel):
     field: str
     element_id: int = Field(gt=0)
     kind: PlaceholderType
+    value: str | None = None
     diagnostic_name: str | None = None
     required: bool = True
+
+    @model_validator(mode="before")
+    @classmethod
+    def default_kind_from_field(cls, data: object) -> object:
+        if not isinstance(data, dict) or data.get("kind"):
+            return data
+        updated = dict(data)
+        updated["kind"] = (
+            PlaceholderType.MAP_IMAGE
+            if updated.get("field") == "map_image"
+            else PlaceholderType.TEXT
+        )
+        return updated
 
 
 class TemplateMetadata(BaseModel):

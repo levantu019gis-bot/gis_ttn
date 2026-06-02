@@ -80,7 +80,7 @@ def build_export_preflight_plan(
                 review_order=composition.review_order,
                 target_label=_target_label(target, composition.target_id),
                 date_label=composition.capture_date.isoformat(),
-                time_label=time_label(composition),
+                time_label=time_label(composition, target=target) if target is not None else "",
                 template_status=_template_status(row_issues),
                 final_render_path=composition.artifacts.final_render_path,
                 issues=row_issues,
@@ -188,7 +188,7 @@ def _txt_template_issues(
 ) -> list[Issue]:
     if target is None:
         return []
-    template = target.export.txt_line_template
+    template = target.export.template_txt_value
     if not template:
         return [
             Issue(
@@ -197,8 +197,8 @@ def _txt_template_issues(
                 scope=IssueScope.EXPORT,
                 target_id=target.id,
                 composition_id=composition.composition_id,
-                message="Target chua cau hinh txt_line_template.",
-                remediation="Bo sung `export.txt_line_template` cho target truoc khi export TXT.",
+                message="Target chua cau hinh template_txt_value.",
+                remediation="Bo sung `export.template_txt_value` cho target truoc khi export TXT.",
             )
         ]
 
@@ -219,7 +219,7 @@ def _txt_template_issues(
                     target_id=target.id,
                     composition_id=composition.composition_id,
                     message=f"TXT template dung placeholder chua ho tro: {problem.field}.",
-                    remediation="Sua txt_line_template de chi dung cac placeholder da ho tro.",
+                    remediation="Sua template_txt_value de chi dung cac placeholder da ho tro.",
                 )
             )
         elif problem.issue_id == "export.txt_time_label_unresolved":

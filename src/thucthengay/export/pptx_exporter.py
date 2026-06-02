@@ -3,9 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
-from datetime import time
 from pathlib import Path
-from typing import Any
 
 from pptx import Presentation
 from pydantic import ValidationError
@@ -17,6 +15,11 @@ from thucthengay.export.pptx_slide_copy import (
     replace_text,
 )
 from thucthengay.export.preflight import build_export_preflight_plan
+from thucthengay.export.txt_values import (
+    SUPPORTED_TEXT_FIELDS,
+    TxtLineResolution,
+    resolve_export_text,
+)
 from thucthengay.models import (
     Composition,
     ExportedComposition,
@@ -28,19 +31,9 @@ from thucthengay.models import (
     PlaceholderType,
     TargetConfig,
     TemplateMetadata,
+    TemplatePlaceholder,
 )
 from thucthengay.workspace import WorkspaceService
-
-_SUPPORTED_TEXT_FIELDS = {
-    "capture_date",
-    "composition_id",
-    "slide_number",
-    "target_alias",
-    "target_id",
-    "target_name",
-    "target_title",
-    "time_label",
-}
 
 
 def export_combined_pptx(
@@ -89,10 +82,16 @@ def export_combined_pptx(
             if placeholder.kind == PlaceholderType.MAP_IMAGE:
                 replace_shape_with_picture(slide, placeholder.element_id, render_path)
             elif placeholder.kind == PlaceholderType.TEXT:
+                resolution = _placeholder_text_resolution(
+                    placeholder,
+                    composition,
+                    target,
+                    slide_number,
+                )
                 replace_text(
                     slide,
                     placeholder.element_id,
-                    _text_values(composition, target, slide_number).get(placeholder.field, ""),
+                    resolution.text if resolution.ok else "",
                 )
         exported.append(
             ExportedComposition(
@@ -177,7 +176,6 @@ def _template_placeholder_issues(
                 composition=composition,
             )
         ]
-    values = _text_values(composition, target, slide_number)
     issues: list[Issue] = []
     for placeholder in template.placeholders:
         source_shape = find_shape_by_element_id(source.slides[0], placeholder.element_id)
@@ -213,21 +211,25 @@ def _template_placeholder_issues(
                         )
                     )
                 continue
-            if placeholder.field not in _SUPPORTED_TEXT_FIELDS or values.get(placeholder.field) in (
-                None,
-                "",
-            ):
+            resolution = _placeholder_text_resolution(
+                placeholder,
+                composition,
+                target,
+                slide_number,
+            )
+            if resolution.problems:
                 if placeholder.required:
+                    fields = ", ".join(problem.field for problem in resolution.problems)
                     issues.append(
                         _issue(
                             "export.pptx_placeholder_unresolved",
                             (
                                 "Khong resolve duoc text placeholder bat buoc "
-                                f"`{placeholder.field}` cho PPTX."
+                                f"`{fields}` cho PPTX."
                             ),
                             (
-                                "Sua field placeholder trong target export config hoac bo sung "
-                                "du lieu composition/target can thiet."
+                                "Sua field/value placeholder trong target export config hoac bo "
+                                "sung du lieu composition/target can thiet."
                             ),
                             composition=composition,
                         )
@@ -235,36 +237,22 @@ def _template_placeholder_issues(
     return issues
 
 
-def _text_values(
+def _placeholder_text_resolution(
+    placeholder: TemplatePlaceholder,
     composition: Composition,
     target: TargetConfig,
     slide_number: int,
-) -> dict[str, Any]:
-    return {
-        "capture_date": composition.capture_date.isoformat(),
-        "composition_id": composition.composition_id,
-        "slide_number": slide_number,
-        "target_alias": target.alias or "",
-        "target_id": target.id,
-        "target_name": target.name,
-        "target_title": target.title or target.name,
-        "time_label": _time_label(composition),
-    }
-
-
-def _time_label(composition: Composition) -> str:
-    visible_times = [
-        layer.capture_time
-        for layer in composition.layers
-        if layer.visible and layer.capture_time is not None
-    ]
-    if not visible_times:
-        return ""
-    return _format_time(min(visible_times))
-
-
-def _format_time(value: time) -> str:
-    return value.strftime("%H:%M:%S")
+) -> TxtLineResolution:
+    template = placeholder.value if placeholder.value is not None else f"{{{placeholder.field}}}"
+    return resolve_export_text(
+        template,
+        composition,
+        target,
+        slide_number=slide_number,
+        supported_fields=SUPPORTED_TEXT_FIELDS,
+        unknown_issue_id="export.pptx_placeholder_unknown",
+        unresolved_issue_id="export.pptx_placeholder_unresolved",
+    )
 
 
 def _template_metadata(target: TargetConfig) -> TemplateMetadata:

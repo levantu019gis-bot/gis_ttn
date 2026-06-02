@@ -93,6 +93,10 @@ def target_from_geojson(
         },
         "export": {
             "template_pptx_file": relative_path(template_pptx_file, config_dir),
+            "template_txt_value": "Tại {target_title} (lúc {time_label}, độ phân giải 3 m): ",
+            "date_format": "dd.MM.yy",
+            "time_format": "HH.mm/dd.MM.yy",
+            "map_background_color": "#FFFFFF",
             "placeholders": [
                 {
                     "field": "map_image",
@@ -101,7 +105,6 @@ def target_from_geojson(
                     "required": True,
                 }
             ],
-            "txt_line_template": "{target_alias} {capture_date} {capture_time}",
         },
         "metadata": {
             "geojson_type": data.get("type"),
@@ -161,7 +164,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
         default=Path("examples/templates/target_001.template.pptx"),
         help="One-slide PPTX template shared by all targets unless edited later.",
     )
-    parser.add_argument("--map-element-id", type=int, default=1026)
+    parser.add_argument("--map-element-id", type=int, default=65)
     parser.add_argument("--scale", type=int, default=50000)
     parser.add_argument("--grid-minutes", type=int, default=1)
     return parser.parse_args(argv)
@@ -179,7 +182,8 @@ def main(argv: list[str]) -> int:
         grid_minutes=args.grid_minutes,
     )
     output_path.write_text(
-        json.dumps(config.model_dump(mode="json"), ensure_ascii=False, indent=2) + "\n",
+        json.dumps(config.model_dump(mode="json", by_alias=True), ensure_ascii=False, indent=2)
+        + "\n",
         encoding="utf-8",
     )
     print(f"Wrote {output_path} ({len(config.targets)} targets)")

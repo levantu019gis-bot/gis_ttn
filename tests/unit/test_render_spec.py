@@ -39,6 +39,7 @@ def _target(
     target_id: str = "tgt",
     *,
     grid: GridConfig | None = None,
+    map_background_color: str = "#FFFFFF",
 ) -> TargetConfig:
     return TargetConfig(
         id=target_id,
@@ -48,7 +49,10 @@ def _target(
         coordinate=[106.7, 10.8],
         scale=50000,
         grid=grid or GridConfig(interval=GridInterval(minutes=1)),
-        export=TargetExportConfig(template_metadata_file=f"{target_id}.template.json"),
+        export=TargetExportConfig(
+            template_metadata_file=f"{target_id}.template.json",
+            map_background_color=map_background_color,
+        ),
     )
 
 
@@ -109,6 +113,18 @@ class TestBuildRenderSpecHappyPath:
         assert spec.template_pptx == "tgt.pptx"
         assert spec.slide_index == 0
         assert spec.background.color == "#FFFFFF"
+
+    def test_uses_target_export_map_background_color(self) -> None:
+        spec = build_render_spec(
+            composition=_composition(),
+            target=_target(map_background_color="#112233"),
+            template=_template(),
+            template_metadata_file="targets/tgt.template.json",
+            output_width=1280,
+            output_height=720,
+        )
+
+        assert spec.background.color == "#112233"
 
     def test_map_frame_aspect_matches_template(self) -> None:
         spec = build_render_spec(

@@ -133,6 +133,11 @@ class RenderSpec(BaseModel):
         return value
 
 
+def target_render_background(target: TargetConfig) -> RenderBackground:
+    """Return the configured background for the target map render area."""
+    return RenderBackground(color=target.export.map_background_color)
+
+
 def _issue(
     issue_id: str,
     message: str,
@@ -312,7 +317,7 @@ def build_render_spec(
         geo_window=geo_window,
         visible_layers=visible_refs,
         grid=grid,
-        background=RenderBackground(),
+        background=target_render_background(target),
         template_metadata_file=template_metadata_file,
         template_pptx=template.template_pptx,
         slide_index=template.slide_index,

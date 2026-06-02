@@ -117,6 +117,36 @@ def test_export_txt_report_writes_lines_sorted_by_review_order(tmp_path: Path) -
     ]
 
 
+def test_export_txt_report_uses_template_txt_value_and_config_formats(
+    tmp_path: Path,
+) -> None:
+    service = _workspace(tmp_path, _composition("alpha__20260525"))
+    output_path = service.paths.exports / "contract.txt"
+    target = TargetConfig(
+        id="alpha",
+        name="Alpha Name",
+        title="Alpha Title",
+        geojson_file="targets/alpha.geojson",
+        coordinate=[106.7, 10.8],
+        scale=50000,
+        grid=GridConfig(interval=GridInterval(minutes=1)),
+        export={
+            "template_pptx_file": "templates/alpha.pptx",
+            "template_txt_value": "Tai {target_title} luc {time_label} ngay {capture_date}",
+            "date_format": "dd.MM.yy",
+            "time_format": "HH.mm/dd.MM.yy",
+            "placeholders": [{"field": "map_image", "element_id": "10"}],
+        },
+    )
+
+    result = export_txt_report(service, [target], output_path=output_path)
+
+    assert result.ok is True
+    assert output_path.read_text(encoding="utf-8").strip() == (
+        "Tai Alpha Title luc 08.30/25.05.26 ngay 25.05.26"
+    )
+
+
 def test_export_txt_report_blocks_required_unknown_placeholder(tmp_path: Path) -> None:
     service = _workspace(tmp_path, _composition("alpha__20260525"))
     output_path = service.paths.exports / "blocked.txt"
