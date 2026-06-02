@@ -28,6 +28,7 @@ from thucthengay.render.raster import CancelCallback, RasterRenderResult, Render
 from thucthengay.render.spec import RenderSpec
 
 FinalRenderFunction = Callable[..., RasterRenderResult]
+FINAL_RENDER_DPI = 200
 
 
 def render_spec_hash(spec: RenderSpec) -> str:
@@ -150,6 +151,8 @@ def is_final_render_current(
         return FinalRenderCurrentness(current=False, reason="spec_hash_mismatch")
     if latest.width != spec.output_width or latest.height != spec.output_height:
         return FinalRenderCurrentness(current=False, reason="output_size_mismatch")
+    if not _png_has_expected_dpi(resolved_output):
+        return FinalRenderCurrentness(current=False, reason="output_dpi_mismatch")
 
     return FinalRenderCurrentness(current=True, reason=None)
 
@@ -259,7 +262,11 @@ def _atomic_write_png(path: Path, canvas: np.ndarray) -> None:
             delete=False,
         ) as temp_file:
             temp_path = Path(temp_file.name)
-        Image.fromarray(_as_rgb_uint8(canvas)).save(temp_path, format="PNG")
+        Image.fromarray(_as_rgb_uint8(canvas)).save(
+            temp_path,
+            format="PNG",
+            dpi=(FINAL_RENDER_DPI, FINAL_RENDER_DPI),
+        )
         os.replace(temp_path, path)
     except Exception:
         if temp_path is not None:
@@ -289,6 +296,17 @@ def _as_rgb_uint8(canvas: np.ndarray) -> np.ndarray:
         msg = "final render canvas must be RGB with shape (height, width, 3)"
         raise ValueError(msg)
     return canvas
+
+
+def _png_has_expected_dpi(path: Path) -> bool:
+    try:
+        with Image.open(path) as image:
+            dpi = image.info.get("dpi")
+    except OSError:
+        return False
+    if not isinstance(dpi, tuple) or len(dpi) < 2:
+        return False
+    return round(float(dpi[0])) == FINAL_RENDER_DPI and round(float(dpi[1])) == FINAL_RENDER_DPI
 
 
 def _is_workspace_render_artifact_path(value: str) -> bool:

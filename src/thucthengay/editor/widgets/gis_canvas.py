@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import StrEnum
 from math import isfinite
+from pathlib import Path
 
 import numpy as np
 from PySide6.QtCore import QPoint, QPointF, QRectF, Qt, Signal
@@ -109,6 +110,14 @@ class GisCanvasWidget(QGraphicsView):
         """Return the pixel size that should be rendered for the visible map frame."""
         frame = self._frame_rect()
         return max(1, int(frame.width())), max(1, int(frame.height()))
+
+    def export_displayed_image(self, output_path: str | Path) -> bool:
+        """Save the current rendered map image, excluding the editor scene chrome."""
+        if self._rendered_pixmap is None:
+            return False
+        path = Path(output_path)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        return self._rendered_pixmap.save(str(path), "PNG")
 
     def set_frame_aspect(self, aspect: float) -> None:
         """Set map-frame aspect from template metadata when available."""
@@ -289,6 +298,23 @@ class GisCanvasWidget(QGraphicsView):
         if self._rendered_pixmap is None:
             self._draw_frame(frame)
             self._draw_state_text(width)
+
+    def _displayed_image(self) -> QImage:
+        scene_rect = self._scene.sceneRect()
+        width = max(1, int(scene_rect.width()))
+        height = max(1, int(scene_rect.height()))
+        image = QImage(width, height, QImage.Format.Format_ARGB32)
+        image.fill(QColor("#242a31"))
+        painter = QPainter(image)
+        try:
+            self._scene.render(
+                painter,
+                QRectF(0, 0, width, height),
+                scene_rect,
+            )
+        finally:
+            painter.end()
+        return image
 
     def _frame_rect(self) -> QRectF:
         width = max(self.viewport().width(), 640)

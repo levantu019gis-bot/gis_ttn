@@ -10,6 +10,7 @@ from PySide6.QtWidgets import (
     QAbstractItemView,
     QApplication,
     QButtonGroup,
+    QFileDialog,
     QFrame,
     QGridLayout,
     QHBoxLayout,
@@ -53,6 +54,7 @@ from thucthengay.models import (
     TargetConfig,
     TemplateMetadata,
 )
+from thucthengay.export.final_render import final_render_output_size
 from thucthengay.render.raster import render_raster_layers
 from thucthengay.render.spec import RenderSpecError, build_render_spec
 from thucthengay.render.target_preview import build_target_preview_spec
@@ -187,6 +189,11 @@ class ReviewEditMode(QWidget):
 
         self.gis_canvas = GisCanvasWidget()
         self.gis_canvas.viewEditCompleted.connect(self._persist_canvas_view)
+        self.export_canvas_button = QPushButton("Xuất ảnh")
+        self.export_canvas_button.setObjectName("reviewGisExportImage")
+        self.export_canvas_button.setToolTip("Xuất ảnh đang hiển thị trong GIS editor")
+        self.export_canvas_button.clicked.connect(self._export_canvas_image)
+        self.export_canvas_button.setEnabled(False)
 
         self.previous_button = QPushButton("Trước")
         self.previous_button.setObjectName("reviewActionPrevious")
@@ -296,10 +303,27 @@ class ReviewEditMode(QWidget):
         layout.setContentsMargins(8, 0, 0, 0)
         layout.setSpacing(8)
         layout.addWidget(self.composition_title)
-        layout.addWidget(self._panel_frame("GIS editor", self.gis_canvas), 4)
+        layout.addWidget(self._build_gis_editor_panel(), 4)
         layout.addLayout(self._review_action_layout())
         layout.addWidget(self._panel_frame("Warnings", self.warnings_panel), 1)
         return panel
+
+    def _build_gis_editor_panel(self) -> QFrame:
+        frame = QFrame()
+        frame.setFrameShape(QFrame.Shape.StyledPanel)
+        frame.setMinimumHeight(104)
+        layout = QVBoxLayout(frame)
+        layout.setContentsMargins(10, 8, 10, 8)
+        layout.setSpacing(4)
+
+        header = QHBoxLayout()
+        header.addWidget(QLabel("GIS editor"))
+        header.addStretch(1)
+        header.addWidget(self.export_canvas_button)
+
+        layout.addLayout(header)
+        layout.addWidget(self.gis_canvas, 1)
+        return frame
 
     def _review_action_layout(self) -> QHBoxLayout:
         layout = QHBoxLayout()
@@ -608,7 +632,7 @@ class ReviewEditMode(QWidget):
         if not _has_existing_visible_raster(render_composition):
             self.gis_canvas.set_error("Không tìm thấy file raster visible để render canvas.")
             return
-        canvas_width, canvas_height = self.gis_canvas.render_output_size()
+        canvas_width, canvas_height = final_render_output_size(context.template_metadata)
         try:
             spec = build_render_spec(
                 composition=render_composition,
@@ -928,6 +952,7 @@ class ReviewEditMode(QWidget):
         self.previous_button.setEnabled(previous_available)
         self.skip_button.setEnabled(has_selection)
         self.include_validate_button.setEnabled(has_selection)
+        self.export_canvas_button.setEnabled(has_selection)
         self.revalidate_button.setEnabled(
             has_selection
             and self.selected_composition is not None
@@ -1044,6 +1069,49 @@ class ReviewEditMode(QWidget):
         self.selected_composition = updated
         self._update_detail_panels(updated)
         self._refresh_workspace_projection(updated.composition_id, validate_selection=False)
+
+    def _export_canvas_image(self) -> None:
+        if self._workspace_service is None or self.selected_composition is None:
+            self.action_summary.setText("Chọn composition trước khi xuất ảnh GIS editor.")
+            return
+
+        output_path = self._select_canvas_export_path(self._default_canvas_export_path())
+        if output_path is None:
+            self.action_summary.setText("Đã hủy xuất ảnh GIS editor.")
+            return
+
+        try:
+            saved = self.gis_canvas.export_displayed_image(output_path)
+        except OSError as error:
+            self.action_summary.setText(f"Không xuất được ảnh GIS editor: {error}")
+            return
+
+        if saved:
+            self.action_summary.setText(f"Đã xuất ảnh GIS editor: {output_path}")
+        else:
+            self.action_summary.setText("Không xuất được ảnh GIS editor.")
+
+    def _default_canvas_export_path(self) -> Path:
+        if self._workspace_service is None or self.selected_composition is None:
+            return Path("gis-editor.png")
+        return (
+            self._workspace_service.paths.renders
+            / f"{self.selected_composition.composition_id}.gis-editor.png"
+        )
+
+    def _select_canvas_export_path(self, default_path: Path) -> Path | None:
+        path, _selected_filter = QFileDialog.getSaveFileName(
+            self,
+            "Xuất ảnh GIS editor",
+            str(default_path),
+            "PNG image (*.png)",
+        )
+        if not path:
+            return None
+        selected = Path(path)
+        if selected.suffix.lower() != ".png":
+            selected = selected.with_suffix(".png")
+        return selected
 
     def _refresh_workspace_projection(
         self,

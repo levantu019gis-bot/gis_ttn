@@ -6,8 +6,10 @@ from pathlib import Path
 from pptx import Presentation
 from pptx.enum.shapes import MSO_SHAPE
 from pptx.util import Inches
+from PIL import Image
 
 from thucthengay.config import load_project_config
+from thucthengay.export.final_render import final_render_output_size
 
 
 def write_json(path: Path, data: dict[str, object]) -> None:
@@ -77,6 +79,22 @@ def prepare_target_files(root: Path, target_id: str, template_name: str | None =
     return write_template_pptx(root / "templates" / (template_name or f"{target_id}.pptx"))
 
 
+def write_picture_template_pptx(path: Path, image_path: Path) -> int:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    presentation = Presentation()
+    blank_layout = presentation.slide_layouts[6]
+    slide = presentation.slides.add_slide(blank_layout)
+    shape = slide.shapes.add_picture(
+        str(image_path),
+        Inches(1),
+        Inches(1),
+        width=Inches(4),
+        height=Inches(3),
+    )
+    presentation.save(path)
+    return int(shape.shape_id)
+
+
 def test_load_project_config_filters_enabled_targets_and_resolves_paths(tmp_path: Path) -> None:
     id_b = prepare_target_files(tmp_path, "target_b")
     id_a = prepare_target_files(tmp_path, "target_a")
@@ -105,6 +123,28 @@ def test_load_project_config_filters_enabled_targets_and_resolves_paths(tmp_path
     assert result.enabled_targets[0].metadata["template_metadata"]["template_pptx"] == str(
         (tmp_path / "templates" / "target_a.pptx").resolve()
     )
+
+
+def test_pptx_template_metadata_keeps_map_picture_pixel_size(tmp_path: Path) -> None:
+    (tmp_path / "targets").mkdir(parents=True)
+    (tmp_path / "targets" / "target_a.geojson").write_text("{}", encoding="utf-8")
+    image_path = tmp_path / "templates" / "map-placeholder.png"
+    image_path.parent.mkdir(parents=True)
+    Image.new("RGB", (3306, 2340), (255, 255, 255)).save(image_path)
+    element_id = write_picture_template_pptx(tmp_path / "templates" / "target_a.pptx", image_path)
+    write_json(
+        tmp_path / "config.json",
+        {"targets": [target_config("target_a", 1, map_element_id=element_id)]},
+    )
+
+    result = load_project_config(tmp_path / "config.json")
+
+    assert result.ok is True
+    metadata = result.enabled_targets[0].metadata["template_metadata"]["metadata"]
+    image = metadata["selected_slide"]["shapes"][0]["picture"]["media"]["image"]
+    assert image["width_px"] == 3306
+    assert image["height_px"] == 2340
+    assert final_render_output_size(result.template_metadata["target_a"]) == (3306, 2340)
 
 
 def test_disabled_targets_are_not_schema_or_reference_blockers(tmp_path: Path) -> None:

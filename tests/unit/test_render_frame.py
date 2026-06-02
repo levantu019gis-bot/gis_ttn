@@ -9,6 +9,7 @@ from thucthengay.models.config import GridConfig, GridInterval
 from thucthengay.models.template import MapFrame
 from thucthengay.render import (
     GeoWindow,
+    MapSurroundLayout,
     PixelRect,
     RenderBackground,
     RenderError,
@@ -26,6 +27,7 @@ def _spec(
     height: int = 80,
     interval: GridInterval | None = None,
     label_format: str = "dms_full",
+    grid_style: dict[str, object] | None = None,
 ) -> RenderSpec:
     return RenderSpec(
         composition_id="tgt__20260525",
@@ -41,6 +43,7 @@ def _spec(
         grid=GridConfig(
             interval=interval or GridInterval(minutes=30),
             label_format=label_format,
+            style=grid_style or {},
         ),
         background=RenderBackground(color="#010203"),
         template_metadata_file="t.json",
@@ -145,6 +148,18 @@ class TestMapSurroundFrame:
 
         assert layout.outer_frame == PixelRect(left=244, top=165, right=3272, bottom=2307)
         assert layout.inner_map == PixelRect(left=292, top=213, right=3224, bottom=2259)
+        assert layout.inner_map.left - (layout.outer_frame.left + 6) == 42
+        assert layout.inner_map.top - (layout.outer_frame.top + 6) == 42
+        assert layout.outer_frame.right - 6 - layout.inner_map.right == 42
+        assert layout.outer_frame.bottom - 6 - layout.inner_map.bottom == 42
+
+    def test_layout_keeps_frame_gap_absolute_at_preview_size(self) -> None:
+        layout = build_map_surround_layout(640, 453)
+
+        assert layout.inner_map.left - (layout.outer_frame.left + 6) == 42
+        assert layout.inner_map.top - (layout.outer_frame.top + 6) == 42
+        assert layout.outer_frame.right - 6 - layout.inner_map.right == 42
+        assert layout.outer_frame.bottom - 6 - layout.inner_map.bottom == 42
 
     def test_fit_rect_to_aspect_preserves_geographic_view_shape(self) -> None:
         layout = build_map_surround_layout(330, 234)
@@ -199,11 +214,161 @@ class TestMapSurroundFrame:
         top_band = canvas[layout.outer_frame.top : layout.inner_map.top, :, :]
         assert (top_band != np.array([255, 255, 255], dtype=np.uint8)).any()
         inner_interior = canvas[
-            layout.inner_map.top + 1 : layout.inner_map.bottom - 1,
-            layout.inner_map.left + 1 : layout.inner_map.right - 1,
+            layout.inner_map.top + 4 : layout.inner_map.bottom - 4,
+            layout.inner_map.left + 4 : layout.inner_map.right - 4,
             :,
         ]
         assert np.array_equal(
             inner_interior,
             np.full_like(inner_interior, np.array([17, 34, 51], dtype=np.uint8)),
         )
+
+    def test_map_surround_ticks_anchor_to_inner_frame_and_extend_outward(self) -> None:
+        spec = _spec(
+            width=240,
+            height=200,
+            interval=GridInterval(minutes=30),
+        )
+        layout = MapSurroundLayout(
+            outer_frame=PixelRect(left=10, top=10, right=230, bottom=190),
+            inner_map=PixelRect(left=70, top=70, right=170, bottom=130),
+        )
+        canvas = np.zeros((spec.output_height, spec.output_width, 3), dtype=np.uint8)
+        canvas[:, :] = (255, 255, 255)
+        canvas[
+            layout.inner_map.top : layout.inner_map.bottom,
+            layout.inner_map.left : layout.inner_map.right,
+            :,
+        ] = (17, 34, 51)
+
+        draw_map_surround_frame(canvas, spec, layout)
+
+        lon_tick_x = layout.inner_map.center_x
+        lat_tick_y = layout.inner_map.center_y
+        assert tuple(canvas[layout.inner_map.top - 14, lon_tick_x].tolist()) == (0, 0, 0)
+        assert tuple(canvas[layout.inner_map.top - 15, lon_tick_x].tolist()) == (255, 255, 255)
+        assert tuple(canvas[layout.inner_map.bottom + 13, lon_tick_x].tolist()) == (0, 0, 0)
+        assert tuple(canvas[layout.inner_map.bottom + 14, lon_tick_x].tolist()) == (255, 255, 255)
+        assert tuple(canvas[lat_tick_y, layout.inner_map.left - 14].tolist()) == (0, 0, 0)
+        assert tuple(canvas[lat_tick_y, layout.inner_map.left - 15].tolist()) == (255, 255, 255)
+        assert tuple(canvas[lat_tick_y, layout.inner_map.right + 13].tolist()) == (0, 0, 0)
+        assert tuple(canvas[lat_tick_y, layout.inner_map.right + 14].tolist()) == (255, 255, 255)
+
+    def test_draws_horizontal_degree_labels_when_frame_band_can_fit_text(self) -> None:
+        spec = _spec(
+            width=640,
+            height=453,
+            interval=GridInterval(minutes=30),
+            grid_style={
+                "label_color": "#FF0000",
+                "label_font_size": 10,
+            },
+        )
+        layout = build_map_surround_layout(spec.output_width, spec.output_height)
+        canvas = np.zeros((spec.output_height, spec.output_width, 3), dtype=np.uint8)
+        canvas[:, :] = (255, 255, 255)
+        canvas[
+            layout.inner_map.top : layout.inner_map.bottom,
+            layout.inner_map.left : layout.inner_map.right,
+            :,
+        ] = (17, 34, 51)
+
+        draw_map_surround_frame(canvas, spec, layout)
+
+        top_gap = canvas[layout.outer_frame.top + 1 : layout.inner_map.top, :, :]
+        assert (
+            (top_gap[:, :, 0] > 180)
+            & (top_gap[:, :, 1] < 100)
+            & (top_gap[:, :, 2] < 100)
+        ).any()
+
+        inner_interior = canvas[
+            layout.inner_map.top + 4 : layout.inner_map.bottom - 4,
+            layout.inner_map.left + 4 : layout.inner_map.right - 4,
+            :,
+        ]
+        assert np.array_equal(
+            inner_interior,
+            np.full_like(inner_interior, np.array([17, 34, 51], dtype=np.uint8)),
+        )
+
+    def test_draws_rotated_degree_labels_when_side_band_can_fit_text(self) -> None:
+        spec = _spec(
+            width=640,
+            height=453,
+            interval=GridInterval(minutes=30),
+            grid_style={
+                "label_color": "#FF0000",
+                "label_font_size": 10,
+            },
+        )
+        layout = build_map_surround_layout(spec.output_width, spec.output_height)
+        canvas = np.zeros((spec.output_height, spec.output_width, 3), dtype=np.uint8)
+        canvas[:, :] = (255, 255, 255)
+        canvas[
+            layout.inner_map.top : layout.inner_map.bottom,
+            layout.inner_map.left : layout.inner_map.right,
+            :,
+        ] = (17, 34, 51)
+
+        draw_map_surround_frame(canvas, spec, layout)
+
+        left_gap = canvas[:, layout.outer_frame.left + 1 : layout.inner_map.left, :]
+        assert (
+            (left_gap[:, :, 0] > 180)
+            & (left_gap[:, :, 1] < 100)
+            & (left_gap[:, :, 2] < 100)
+        ).any()
+
+    def test_reference_frame_widths_match_template_sample(self) -> None:
+        spec = _spec(width=3306, height=2340, interval=GridInterval(degrees=1))
+        layout = build_map_surround_layout(spec.output_width, spec.output_height)
+        canvas = np.zeros((spec.output_height, spec.output_width, 3), dtype=np.uint8)
+        canvas[:, :] = (255, 255, 255)
+        canvas[
+            layout.inner_map.top : layout.inner_map.bottom,
+            layout.inner_map.left : layout.inner_map.right,
+            :,
+        ] = (17, 34, 51)
+
+        draw_map_surround_frame(canvas, spec, layout)
+
+        assert np.array_equal(
+            canvas[165:171, 500:1000],
+            np.full((6, 500, 3), np.array([0, 0, 0], dtype=np.uint8)),
+        )
+        assert np.array_equal(
+            canvas[213:217, 500:1000],
+            np.full((4, 500, 3), np.array([0, 0, 0], dtype=np.uint8)),
+        )
+        assert tuple(canvas[217, 296].tolist()) == (17, 34, 51)
+
+    def test_reference_label_height_matches_template_sample(self) -> None:
+        spec = _spec(width=3306, height=2340, interval=GridInterval(minutes=30))
+        layout = build_map_surround_layout(spec.output_width, spec.output_height)
+        canvas = np.zeros((spec.output_height, spec.output_width, 3), dtype=np.uint8)
+        canvas[:, :] = (255, 255, 255)
+        canvas[
+            layout.inner_map.top : layout.inner_map.bottom,
+            layout.inner_map.left : layout.inner_map.right,
+            :,
+        ] = (17, 34, 51)
+
+        draw_map_surround_frame(canvas, spec, layout)
+
+        top_center_label = canvas[
+            layout.outer_frame.top + 6 : layout.inner_map.top,
+            layout.inner_map.center_x - 150 : layout.inner_map.center_x + 150,
+            :,
+        ]
+        black_pixels_by_row = (top_center_label.max(axis=2) <= 10).sum(axis=1)
+        text_row_indexes = np.flatnonzero(black_pixels_by_row >= 20)
+
+        assert text_row_indexes[-1] - text_row_indexes[0] + 1 >= 16
+        label_center_y = (
+            layout.outer_frame.top
+            + 6
+            + int(text_row_indexes[0] + text_row_indexes[-1]) // 2
+        )
+        band_center_y = (layout.outer_frame.top + layout.inner_map.top) // 2
+        assert abs(label_center_y - band_center_y) <= 1

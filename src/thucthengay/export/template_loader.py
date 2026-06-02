@@ -116,6 +116,17 @@ def load_target_template(target: TargetConfig, template_pptx_file: Path) -> Load
             ),
         ) from exc
 
+    metadata: dict[str, Any] = {
+        "source": "template_pptx_file",
+        "element_names": {str(key): value for key, value in element_names.items()},
+    }
+    map_shape_metadata = _picture_shape_metadata(map_shape)
+    if map_shape_metadata is not None:
+        metadata["selected_slide"] = {
+            "slide_index": 0,
+            "shapes": [map_shape_metadata],
+        }
+
     return LoadedTemplate(
         target_id=target.id,
         template_pptx_file=template_pptx_file,
@@ -124,10 +135,7 @@ def load_target_template(target: TargetConfig, template_pptx_file: Path) -> Load
             slide_index=0,
             map_frame=map_frame,
             placeholders=placeholders,
-            metadata={
-                "source": "template_pptx_file",
-                "element_names": {str(key): value for key, value in element_names.items()},
-            },
+            metadata=metadata,
         ),
         element_names=element_names,
         compatibility_signature=_compatibility_signature(presentation),
@@ -170,6 +178,34 @@ def _shapes_by_element_id(shapes: Any) -> dict[int, Any]:
         if child_shapes is not None:
             result.update(_shapes_by_element_id(child_shapes))
     return result
+
+
+def _picture_shape_metadata(shape: Any) -> dict[str, Any] | None:
+    image = getattr(shape, "image", None)
+    size = getattr(image, "size", None)
+    if not isinstance(size, tuple) or len(size) != 2:
+        return None
+    width_px, height_px = size
+    try:
+        width = int(width_px)
+        height = int(height_px)
+    except (TypeError, ValueError):
+        return None
+    if width <= 0 or height <= 0:
+        return None
+
+    return {
+        "id": str(shape.shape_id),
+        "name": getattr(shape, "name", ""),
+        "picture": {
+            "media": {
+                "image": {
+                    "width_px": width,
+                    "height_px": height,
+                }
+            }
+        },
+    }
 
 
 def _placeholders_with_diagnostics(

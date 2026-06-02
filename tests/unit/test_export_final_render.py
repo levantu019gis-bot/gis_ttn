@@ -9,6 +9,7 @@ from thucthengay.export import (
     ExportFinalRenderStatus,
     build_export_preflight_plan,
     ensure_final_renders_for_export,
+    final_render_output_size,
 )
 from thucthengay.models import (
     Composition,
@@ -134,6 +135,41 @@ def test_export_final_render_generates_missing_and_persists_workspace_artifacts(
     persisted = service.read_composition("alpha__20260525")
     assert persisted.artifacts.final_render_path == row.final_render_path
     assert persisted.artifacts.render_log_path == row.render_log_path
+
+
+def test_final_render_output_size_prefers_map_placeholder_image_dimensions() -> None:
+    template = TemplateMetadata(
+        template_pptx="templates/alpha.pptx",
+        slide_index=0,
+        map_frame=MapFrame(x=0, y=0, width=16.5223, height=11.6946),
+        placeholders=[
+            TemplatePlaceholder(
+                field="map",
+                element_id=1026,
+                kind=PlaceholderType.MAP_IMAGE,
+                required=True,
+            )
+        ],
+        metadata={
+            "selected_slide": {
+                "shapes": [
+                    {
+                        "id": "1026",
+                        "picture": {
+                            "media": {
+                                "image": {
+                                    "width_px": 3306,
+                                    "height_px": 2340,
+                                }
+                            }
+                        },
+                    }
+                ]
+            }
+        },
+    )
+
+    assert final_render_output_size(template) == (3306, 2340)
 
 
 def test_export_final_render_resolves_workspace_relative_layer_paths(

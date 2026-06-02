@@ -10,7 +10,7 @@ import numpy as np
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QKeyEvent
+from PySide6.QtGui import QImage, QKeyEvent
 from PySide6.QtWidgets import (
     QApplication,
     QGraphicsView,
@@ -552,7 +552,77 @@ def test_gis_canvas_states_fixed_frame_and_stale_render_guard() -> None:
     assert "raster" in canvas.state_text()
 
 
-def test_review_edit_canvas_render_uses_map_frame_size_not_viewport(
+def test_gis_canvas_exports_current_displayed_image(tmp_path: Path) -> None:
+    qapp()
+    canvas = GisCanvasWidget()
+    canvas.resize(800, 450)
+    canvas.set_composition(
+        composition(
+            "alpha__20260525",
+            "alpha",
+            date(2026, 5, 25),
+            needs_revalidation=False,
+        )
+    )
+    token = canvas.begin_render_request()
+    rendered = np.zeros((120, 160, 3), dtype=np.uint8)
+    rendered[:, :, 1] = 180
+
+    assert canvas.apply_render_result(token, "preview render", canvas=rendered) is True
+
+    output_path = tmp_path / "gis-editor.png"
+    assert canvas.export_displayed_image(output_path) is True
+
+    image = QImage(str(output_path))
+    assert not image.isNull()
+    assert image.width() == 160
+    assert image.height() == 120
+
+
+def test_gis_canvas_export_requires_rendered_map_image(tmp_path: Path) -> None:
+    qapp()
+    canvas = GisCanvasWidget()
+    output_path = tmp_path / "gis-editor.png"
+
+    assert canvas.export_displayed_image(output_path) is False
+    assert not output_path.exists()
+
+
+def test_review_edit_export_button_saves_gis_canvas_image(tmp_path: Path) -> None:
+    qapp()
+    service = WorkspaceService(tmp_path / "workspace")
+    service.initialize(config_path="config.json")
+    service.write_composition(
+        composition("alpha__20260525", "alpha", date(2026, 5, 25), needs_revalidation=False)
+    )
+
+    mode = ReviewEditMode()
+    mode._request_canvas_render = lambda _composition: None  # noqa: SLF001
+    mode._request_target_preview = lambda _composition: None  # noqa: SLF001
+    output_path = tmp_path / "review-export.png"
+    mode._select_canvas_export_path = lambda _default: output_path  # type: ignore[method-assign]  # noqa: SLF001
+    mode.load_workspace(
+        service,
+        targets=[target_config("alpha", sort_order=1, name="Alpha Target")],
+    )
+    target_index = mode.tree_model.index(0, 0)
+    mode.tree_view.setCurrentIndex(mode.tree_model.index(0, 0, target_index))
+    token = mode.gis_canvas.begin_render_request()
+    rendered = np.full((2340, 3306, 3), 255, dtype=np.uint8)
+    assert mode.gis_canvas.apply_render_result(token, "rendered", canvas=rendered) is True
+
+    assert mode.export_canvas_button.isEnabled()
+
+    mode.export_canvas_button.click()
+
+    assert output_path.is_file()
+    image = QImage(str(output_path))
+    assert image.size().width() == 3306
+    assert image.size().height() == 2340
+    assert "Đã xuất ảnh GIS editor" in mode.action_summary.text()
+
+
+def test_review_edit_canvas_render_uses_final_template_size_not_viewport(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
@@ -583,14 +653,48 @@ def test_review_edit_canvas_render_uses_map_frame_size_not_viewport(
     service.write_composition(selected)
 
     mode = ReviewEditMode()
-    mode.load_workspace(
-        service,
-        targets=[target_config("alpha", sort_order=1, name="Alpha Target")],
+    target = target_config("alpha", sort_order=1, name="Alpha Target")
+    target = target.model_copy(
+        update={
+            "metadata": {
+                "template_metadata": {
+                    "template_pptx": "alpha.pptx",
+                    "slide_index": 0,
+                    "map_frame": {"x": 0, "y": 0, "width": 16.5223, "height": 11.6946},
+                    "placeholders": [
+                        {
+                            "field": "map",
+                            "element_id": 10,
+                            "kind": "map_image",
+                            "required": True,
+                        }
+                    ],
+                    "metadata": {
+                        "selected_slide": {
+                            "shapes": [
+                                {
+                                    "id": "10",
+                                    "picture": {
+                                        "media": {
+                                            "image": {
+                                                "width_px": 3306,
+                                                "height_px": 2340,
+                                            }
+                                        }
+                                    },
+                                }
+                            ]
+                        }
+                    },
+                }
+            }
+        }
     )
+    mode.load_workspace(service, targets=[target])
     mode.gis_canvas.resize(800, 500)
     mode.gis_canvas.set_frame_aspect(GisCanvasWidget.DEFAULT_FRAME_ASPECT)
     mode.gis_canvas.set_composition(selected)
-    expected_size = mode.gis_canvas.render_output_size()
+    expected_size = (3306, 2340)
     viewport_size = (
         max(mode.gis_canvas.viewport().width(), 640),
         max(mode.gis_canvas.viewport().height(), 360),

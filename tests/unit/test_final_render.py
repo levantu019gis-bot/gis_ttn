@@ -22,6 +22,7 @@ from thucthengay.render import (
     render_final_png,
     render_spec_hash,
 )
+from thucthengay.render.final import FINAL_RENDER_DPI
 
 
 def _spec(*, width: int = 96, height: int = 54, scale: int = 50000) -> RenderSpec:
@@ -77,6 +78,9 @@ def test_final_render_writes_png_and_success_log(tmp_path: Path) -> None:
     with Image.open(png_path) as image:
         assert image.size == (120, 68)
         assert image.mode == "RGB"
+        dpi = image.info["dpi"]
+        assert round(dpi[0]) == FINAL_RENDER_DPI
+        assert round(dpi[1]) == FINAL_RENDER_DPI
 
     log = json.loads((tmp_path / result.log_path).read_text(encoding="utf-8"))
     entry = log["entries"][-1]
@@ -164,6 +168,17 @@ def test_final_render_currentness_rejects_missing_path_failed_log_and_spec_misma
         log_path=result.log_path,
         spec=stale_spec,
     ).reason == "spec_hash_mismatch"
+
+    assert result.output_path is not None
+    Image.new("RGB", (spec.output_width, spec.output_height), (1, 2, 3)).save(
+        tmp_path / result.output_path
+    )
+    assert is_final_render_current(
+        workspace_root=tmp_path,
+        output_path=result.output_path,
+        log_path=result.log_path,
+        spec=spec,
+    ).reason == "output_dpi_mismatch"
 
     failed = render_final_png(
         spec,

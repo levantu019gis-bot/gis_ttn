@@ -23,8 +23,14 @@ _EPSILON = 1e-10
 _MAX_FRAME_TICKS_PER_AXIS = 2000
 _REFERENCE_WIDTH = 3306
 _REFERENCE_HEIGHT = 2340
-_REFERENCE_OUTER_FRAME = (244, 165, 3272, 2307)
-_REFERENCE_INNER_MAP = (292, 213, 3224, 2259)
+_REFERENCE_OUTER_FRAME = (244, 144, 3272, 2286)
+_REFERENCE_FRAME_GAP = 42
+_SURROUND_OUTER_STROKE_WIDTH = 6
+_SURROUND_INNER_STROKE_WIDTH = 4
+_SURROUND_TICK_LENGTH = 14
+_SURROUND_TICK_STROKE_WIDTH = 4
+_REFERENCE_LABEL_FONT_SIZE = 72
+_DEFAULT_LABEL_FONT = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
 
 
 @dataclass(frozen=True)
@@ -73,7 +79,7 @@ class FrameStyle:
     frame_color: tuple[int, int, int] = (0, 0, 0)
     label_color: tuple[int, int, int] = (0, 0, 0)
     label_halo_color: tuple[int, int, int] = (255, 255, 255)
-    tick_length: int = 6
+    tick_length: int = 3
     label_padding: int = 3
 
 
@@ -86,7 +92,7 @@ def build_map_surround_layout(width: int, height: int) -> MapSurroundLayout:
         )
 
     outer = _scale_reference_rect(_REFERENCE_OUTER_FRAME, width, height)
-    inner = _scale_reference_rect(_REFERENCE_INNER_MAP, width, height)
+    inner = _inner_from_outer_frame(outer)
     inner = PixelRect(
         left=max(outer.left + 1, min(inner.left, outer.right - 2)),
         top=max(outer.top + 1, min(inner.top, outer.bottom - 2)),
@@ -96,6 +102,16 @@ def build_map_surround_layout(width: int, height: int) -> MapSurroundLayout:
     if inner.width <= 0 or inner.height <= 0:
         inner = PixelRect(outer.left, outer.top, outer.right, outer.bottom)
     return MapSurroundLayout(outer_frame=outer, inner_map=inner)
+
+
+def _inner_from_outer_frame(outer: PixelRect) -> PixelRect:
+    inset = _SURROUND_OUTER_STROKE_WIDTH + _REFERENCE_FRAME_GAP
+    return PixelRect(
+        left=outer.left + inset,
+        top=outer.top + inset,
+        right=outer.right - inset,
+        bottom=outer.bottom - inset,
+    )
 
 
 def fit_rect_to_aspect(rect: PixelRect, aspect: float) -> PixelRect:
@@ -132,6 +148,38 @@ def _scale_reference_rect(
         right=max(1, min(width, scaled.right)),
         bottom=max(1, min(height, scaled.bottom)),
     )
+
+
+def _scale_reference_value(
+    value: int,
+    width: int,
+    height: int,
+    *,
+    min_value: int = 1,
+) -> int:
+    scale = min(width / _REFERENCE_WIDTH, height / _REFERENCE_HEIGHT)
+    return max(min_value, int(round(value * scale)))
+
+
+def _styled_dimension(
+    style: dict[str, object],
+    key: str,
+    reference_value: int,
+    width: int,
+    height: int,
+    *,
+    min_value: int = 1,
+) -> int:
+    if key in style:
+        return _positive_int(style.get(key), fallback=min_value, min_value=min_value)
+    return _scale_reference_value(reference_value, width, height, min_value=min_value)
+
+
+def _label_font(size: int) -> ImageFont.ImageFont:
+    try:
+        return ImageFont.truetype(_DEFAULT_LABEL_FONT, size=size)
+    except OSError:
+        return ImageFont.load_default()
 
 
 def _issue(
@@ -176,13 +224,14 @@ def _positive_int(value: object, *, fallback: int, min_value: int = 1) -> int:
 def _frame_style(grid: GridConfig) -> FrameStyle:
     style = grid.style
     default = FrameStyle()
+    tick_length = style.get("tick_length", style.get("tick_length_px"))
     return FrameStyle(
         frame_color=_parse_hex_color(style.get("frame_color"), fallback=default.frame_color),
         label_color=_parse_hex_color(style.get("label_color"), fallback=default.label_color),
         label_halo_color=_parse_hex_color(
             style.get("label_halo_color"), fallback=default.label_halo_color
         ),
-        tick_length=_positive_int(style.get("tick_length"), fallback=default.tick_length),
+        tick_length=_positive_int(tick_length, fallback=default.tick_length),
         label_padding=_positive_int(
             style.get("label_padding"), fallback=default.label_padding, min_value=0
         ),
@@ -306,7 +355,7 @@ def _format_dms(value: float, *, axis: str, label_format: str) -> str:
 
     if label_format == "dms_short":
         return f"{degrees:02d}d{minutes:02d}m{hemisphere}"
-    return f"{degrees:02d}d{minutes:02d}m{seconds:02d}s{hemisphere}"
+    return f"{degrees:02d}°{minutes:02d}'{seconds:02d}\"{hemisphere}"
 
 
 def _draw_text_with_halo(
@@ -348,6 +397,30 @@ def _text_size(
     return bbox[2] - bbox[0], bbox[3] - bbox[1]
 
 
+def _fit_label_padding(style: FrameStyle, label_band: int) -> int:
+    if label_band <= 0:
+        return 0
+    return min(style.label_padding, max(0, label_band // 8))
+
+
+def _fit_label_font_size(
+    draw: ImageDraw.ImageDraw,
+    *,
+    requested_size: int,
+    max_label_height: int,
+    labels: tuple[str, ...],
+) -> int:
+    if max_label_height <= 0:
+        return requested_size
+
+    min_size = min(4, requested_size)
+    for size in range(requested_size, min_size - 1, -1):
+        font = _label_font(size)
+        if all(_text_size(draw, label, font=font)[1] <= max_label_height for label in labels):
+            return size
+    return min_size
+
+
 def _centered_text_origin(
     draw: ImageDraw.ImageDraw,
     text: str,
@@ -357,9 +430,9 @@ def _centered_text_origin(
     width: int,
     height: int,
 ) -> tuple[int, int]:
-    text_w, text_h = _text_size(draw, text, font=font)
-    x = center[0] - text_w // 2
-    y = center[1] - text_h // 2
+    bbox = draw.textbbox((0, 0), text, font=font)
+    x = center[0] - (bbox[0] + bbox[2]) // 2
+    y = center[1] - (bbox[1] + bbox[3]) // 2
     return _clamped_text_origin(draw, text, (x, y), font=font, width=width, height=height)
 
 
@@ -430,44 +503,71 @@ def draw_map_surround_frame(
     outer = layout.outer_frame
     inner = layout.inner_map
     map_view = layout.map_view
+    label_font_size = _styled_dimension(
+        spec.grid.style,
+        "label_font_size",
+        _REFERENCE_LABEL_FONT_SIZE,
+        width,
+        height,
+        min_value=8,
+    )
 
     image = Image.fromarray(canvas, mode="RGB")
     draw = ImageDraw.Draw(image)
-    font = ImageFont.load_default()
     sample_lon_label = _format_dms(spec.geo_window.min_lon, axis="lon", label_format=label_format)
     sample_lat_label = _format_dms(spec.geo_window.min_lat, axis="lat", label_format=label_format)
+    vertical_label_band = min(inner.top - outer.top, outer.bottom - inner.bottom)
+    horizontal_label_band = min(inner.left - outer.left, outer.right - inner.right)
+    label_padding = _fit_label_padding(style, min(vertical_label_band, horizontal_label_band))
+    label_font_size = _fit_label_font_size(
+        draw,
+        requested_size=label_font_size,
+        max_label_height=min(vertical_label_band - 2, horizontal_label_band - 4)
+        - 2 * label_padding,
+        labels=(sample_lon_label, sample_lat_label),
+    )
+    font = _label_font(label_font_size)
     _lon_label_w, lon_label_h = _text_size(draw, sample_lon_label, font=font)
     _lat_label_w, lat_label_h = _text_size(draw, sample_lat_label, font=font)
 
     draw.rectangle(
         (outer.left, outer.top, outer.right - 1, outer.bottom - 1),
         outline=style.frame_color,
-        width=1,
+        width=_SURROUND_OUTER_STROKE_WIDTH,
     )
     draw.rectangle(
         (inner.left, inner.top, inner.right - 1, inner.bottom - 1),
         outline=style.frame_color,
-        width=1,
+        width=_SURROUND_INNER_STROKE_WIDTH,
     )
 
-    tick_len = min(style.tick_length, max(1, min(map_view.width, map_view.height) // 4))
-    top_label_y = max(outer.top + style.label_padding, (outer.top + inner.top) // 2)
+    top_label_y = max(outer.top + label_padding, (outer.top + inner.top) // 2)
     bottom_label_y = min(
-        outer.bottom - 1 - style.label_padding,
+        outer.bottom - 1 - label_padding,
         (inner.bottom + outer.bottom - 1) // 2,
     )
-    draw_lon_labels = min(inner.top - outer.top, outer.bottom - inner.bottom) > (
-        lon_label_h + 2 * style.label_padding
-    )
+    draw_lon_labels = vertical_label_band >= (lon_label_h + 2 + 2 * label_padding)
     for lon in _tick_values(spec.geo_window.min_lon, spec.geo_window.max_lon, interval, spec):
         if is_cancelled is not None and is_cancelled():
             raise _cancelled_render_error(spec)
         x = _lon_to_rect_x(spec.geo_window, map_view, lon)
-        draw.line((x, outer.top, x, min(inner.top, outer.top + tick_len)), fill=style.frame_color)
-        draw.line(
-            (x, max(inner.bottom - 1, outer.bottom - 1 - tick_len), x, outer.bottom - 1),
-            fill=style.frame_color,
-        )
+        if inner.top > outer.top:
+            draw.line(
+                (x, max(outer.top, inner.top - _SURROUND_TICK_LENGTH), x, inner.top),
+                fill=style.frame_color,
+                width=_SURROUND_TICK_STROKE_WIDTH,
+            )
+        if outer.bottom > inner.bottom:
+            draw.line(
+                (
+                    x,
+                    inner.bottom - 1,
+                    x,
+                    min(outer.bottom - 1, inner.bottom - 1 + _SURROUND_TICK_LENGTH),
+                ),
+                fill=style.frame_color,
+                width=_SURROUND_TICK_STROKE_WIDTH,
+            )
         if not draw_lon_labels:
             continue
         label = _format_dms(lon, axis="lon", label_format=label_format)
@@ -504,26 +604,33 @@ def draw_map_surround_frame(
             halo=style.label_halo_color,
         )
 
-    left_label_x = max(outer.left + style.label_padding, (outer.left + inner.left) // 2)
+    left_label_x = max(outer.left + label_padding, (outer.left + inner.left) // 2)
     right_label_x = min(
-        outer.right - 1 - style.label_padding,
+        outer.right - 1 - label_padding,
         (inner.right + outer.right - 1) // 2,
     )
-    draw_lat_labels = min(inner.left - outer.left, outer.right - inner.right) > (
-        lat_label_h + 2 * style.label_padding
-    )
+    draw_lat_labels = horizontal_label_band >= (lat_label_h + 4 + 2 * label_padding)
     for lat in _tick_values(spec.geo_window.min_lat, spec.geo_window.max_lat, interval, spec):
         if is_cancelled is not None and is_cancelled():
             raise _cancelled_render_error(spec)
         y = _lat_to_rect_y(spec.geo_window, map_view, lat)
-        draw.line(
-            (outer.left, y, min(inner.left, outer.left + tick_len), y),
-            fill=style.frame_color,
-        )
-        draw.line(
-            (max(inner.right - 1, outer.right - 1 - tick_len), y, outer.right - 1, y),
-            fill=style.frame_color,
-        )
+        if inner.left > outer.left:
+            draw.line(
+                (max(outer.left, inner.left - _SURROUND_TICK_LENGTH), y, inner.left, y),
+                fill=style.frame_color,
+                width=_SURROUND_TICK_STROKE_WIDTH,
+            )
+        if outer.right > inner.right:
+            draw.line(
+                (
+                    inner.right - 1,
+                    y,
+                    min(outer.right - 1, inner.right - 1 + _SURROUND_TICK_LENGTH),
+                    y,
+                ),
+                fill=style.frame_color,
+                width=_SURROUND_TICK_STROKE_WIDTH,
+            )
         if not draw_lat_labels:
             continue
         label = _format_dms(lat, axis="lat", label_format=label_format)

@@ -31,7 +31,7 @@ from thucthengay.render.raster import CancelCallback
 from thucthengay.render.spec import MAX_RENDER_PIXELS, build_render_spec
 from thucthengay.workspace import WorkspaceError, WorkspaceService
 
-DEFAULT_FINAL_RENDER_DPI = 144
+DEFAULT_FINAL_RENDER_DPI = 200
 
 
 def ensure_final_renders_for_export(
@@ -91,14 +91,59 @@ def final_render_output_size(
     final_dpi: int = DEFAULT_FINAL_RENDER_DPI,
 ) -> tuple[int, int]:
     """Convert a PowerPoint point-sized map frame into final render pixels."""
+    if placeholder_size := _template_map_placeholder_image_size(template):
+        return _cap_render_size(*placeholder_size)
+
     dpi = max(1, final_dpi)
     width = max(1, ceil(template.map_frame.width / 72 * dpi))
     height = max(1, ceil(template.map_frame.height / 72 * dpi))
+    return _cap_render_size(width, height)
+
+
+def _cap_render_size(width: int, height: int) -> tuple[int, int]:
     if width * height > MAX_RENDER_PIXELS:
         ratio = (MAX_RENDER_PIXELS / (width * height)) ** 0.5
         width = max(1, int(width * ratio))
         height = max(1, int(height * ratio))
     return width, height
+
+
+def _template_map_placeholder_image_size(template: TemplateMetadata) -> tuple[int, int] | None:
+    map_placeholder_ids = {
+        str(placeholder.element_id)
+        for placeholder in template.placeholders
+        if placeholder.kind == "map_image"
+    }
+    if not map_placeholder_ids:
+        return None
+
+    selected_slide = template.metadata.get("selected_slide")
+    if not isinstance(selected_slide, dict):
+        return None
+    shapes = selected_slide.get("shapes")
+    if not isinstance(shapes, list):
+        return None
+
+    for shape in shapes:
+        if not isinstance(shape, dict) or str(shape.get("id")) not in map_placeholder_ids:
+            continue
+        picture = shape.get("picture")
+        if not isinstance(picture, dict):
+            continue
+        media = picture.get("media")
+        if not isinstance(media, dict):
+            continue
+        image = media.get("image")
+        if not isinstance(image, dict):
+            continue
+        try:
+            width = int(image.get("width_px"))
+            height = int(image.get("height_px"))
+        except (TypeError, ValueError):
+            continue
+        if width > 0 and height > 0:
+            return width, height
+    return None
 
 
 def final_render_currentness_issue(
