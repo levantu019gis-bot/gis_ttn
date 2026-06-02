@@ -1,5 +1,21 @@
 {
   "schema_version": "1.0",
+  "defaults": {
+    "grid": {
+      "label_format": "dms_full",
+      "style": {
+        "frame_color": "#000000",
+        "label_color": "#000000",
+        "label_font_size": 24,
+        "tick_length_px": 8
+      }
+    },
+    "export": {
+      "date_format": "dd.MM.yy",
+      "time_format": "HH.mm/dd.MM.yy",
+      "map_background_color": "#000000"
+    }
+  },
   "filename_patterns": [
     {
       "name": "PlanetScope PSScene",
@@ -29,21 +45,11 @@
           "degrees": 0,
           "minutes": 1,
           "seconds": 0.0
-        },
-        "label_format": "dms_full",
-        "style": {
-          "frame_color": "#000000",
-          "label_color": "#000000",
-          "label_font_size": 24,
-          "tick_length_px": 8
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
         "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
-        "date_format": "dd.MM.yy",
-        "time_format": "HH.mm/dd.MM.yy",
-        "map_background_color": "#000000",
         "placeholders": [
           {
             "field": "map_image",
@@ -127,21 +133,11 @@
           "degrees": 0,
           "minutes": 1,
           "seconds": 0.0
-        },
-        "label_format": "dms_full",
-        "style": {
-          "frame_color": "#000000",
-          "label_color": "#000000",
-          "label_font_size": 24,
-          "tick_length_px": 8
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
         "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
-        "date_format": "dd.MM.yy",
-        "time_format": "HH.mm/dd.MM.yy",
-        "map_background_color": "#000000",
         "placeholders": [
           {
             "field": "map_image",
@@ -219,27 +215,15 @@
         112.2693916021012,
         16.978867952752235
       ],
-      "scale": 50000,
+      "scale": 5000,
       "grid": {
         "interval": {
-          "degrees": 0,
-          "minutes": 1,
-          "seconds": 0.0
-        },
-        "label_format": "dms_full",
-        "style": {
-          "frame_color": "#000000",
-          "label_color": "#000000",
-          "label_font_size": 24,
-          "tick_length_px": 8
+          "seconds": 30
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
         "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
-        "date_format": "dd.MM.yy",
-        "time_format": "HH.mm/dd.MM.yy",
-        "map_background_color": "#000000",
         "placeholders": [
           {
             "field": "map_image",
@@ -323,21 +307,11 @@
           "degrees": 0,
           "minutes": 1,
           "seconds": 0.0
-        },
-        "label_format": "dms_full",
-        "style": {
-          "frame_color": "#000000",
-          "label_color": "#000000",
-          "label_font_size": 24,
-          "tick_length_px": 8
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
         "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
-        "date_format": "dd.MM.yy",
-        "time_format": "HH.mm/dd.MM.yy",
-        "map_background_color": "#000000",
         "placeholders": [
           {
             "field": "map_image",
@@ -437,21 +411,11 @@
           "degrees": 0,
           "minutes": 1,
           "seconds": 0.0
-        },
-        "label_format": "dms_full",
-        "style": {
-          "frame_color": "#000000",
-          "label_color": "#000000",
-          "label_font_size": 24,
-          "tick_length_px": 8
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
         "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
-        "date_format": "dd.MM.yy",
-        "time_format": "HH.mm/dd.MM.yy",
-        "map_background_color": "#000000",
         "placeholders": [
           {
             "field": "map_image",
@@ -535,21 +499,11 @@
           "degrees": 0,
           "minutes": 1,
           "seconds": 0.0
-        },
-        "label_format": "dms_full",
-        "style": {
-          "frame_color": "#000000",
-          "label_color": "#000000",
-          "label_font_size": 24,
-          "tick_length_px": 8
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
         "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
-        "date_format": "dd.MM.yy",
-        "time_format": "HH.mm/dd.MM.yy",
-        "map_background_color": "#000000",
         "placeholders": [
           {
             "field": "map_image",
@@ -641,21 +595,11 @@
           "degrees": 0,
           "minutes": 1,
           "seconds": 0.0
-        },
-        "label_format": "dms_full",
-        "style": {
-          "frame_color": "#000000",
-          "label_color": "#000000",
-          "label_font_size": 24,
-          "tick_length_px": 8
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
         "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
-        "date_format": "dd.MM.yy",
-        "time_format": "HH.mm/dd.MM.yy",
-        "map_background_color": "#000000",
         "placeholders": [
           {
             "field": "map_image",
@@ -743,21 +687,11 @@
           "degrees": 0,
           "minutes": 1,
           "seconds": 0.0
-        },
-        "label_format": "dms_full",
-        "style": {
-          "frame_color": "#000000",
-          "label_color": "#000000",
-          "label_font_size": 24,
-          "tick_length_px": 8
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
         "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
-        "date_format": "dd.MM.yy",
-        "time_format": "HH.mm/dd.MM.yy",
-        "map_background_color": "#000000",
         "placeholders": [
           {
             "field": "map_image",
@@ -861,21 +795,11 @@
           "degrees": 0,
           "minutes": 1,
           "seconds": 0.0
-        },
-        "label_format": "dms_full",
-        "style": {
-          "frame_color": "#000000",
-          "label_color": "#000000",
-          "label_font_size": 24,
-          "tick_length_px": 8
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
         "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
-        "date_format": "dd.MM.yy",
-        "time_format": "HH.mm/dd.MM.yy",
-        "map_background_color": "#000000",
         "placeholders": [
           {
             "field": "map_image",
@@ -959,21 +883,11 @@
           "degrees": 0,
           "minutes": 1,
           "seconds": 0.0
-        },
-        "label_format": "dms_full",
-        "style": {
-          "frame_color": "#000000",
-          "label_color": "#000000",
-          "label_font_size": 24,
-          "tick_length_px": 8
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
         "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
-        "date_format": "dd.MM.yy",
-        "time_format": "HH.mm/dd.MM.yy",
-        "map_background_color": "#000000",
         "placeholders": [
           {
             "field": "map_image",
@@ -1057,21 +971,11 @@
           "degrees": 0,
           "minutes": 1,
           "seconds": 0.0
-        },
-        "label_format": "dms_full",
-        "style": {
-          "frame_color": "#000000",
-          "label_color": "#000000",
-          "label_font_size": 24,
-          "tick_length_px": 8
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
         "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
-        "date_format": "dd.MM.yy",
-        "time_format": "HH.mm/dd.MM.yy",
-        "map_background_color": "#000000",
         "placeholders": [
           {
             "field": "map_image",
@@ -1155,21 +1059,11 @@
           "degrees": 0,
           "minutes": 1,
           "seconds": 0.0
-        },
-        "label_format": "dms_full",
-        "style": {
-          "frame_color": "#000000",
-          "label_color": "#000000",
-          "label_font_size": 24,
-          "tick_length_px": 8
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
         "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
-        "date_format": "dd.MM.yy",
-        "time_format": "HH.mm/dd.MM.yy",
-        "map_background_color": "#000000",
         "placeholders": [
           {
             "field": "map_image",
@@ -1253,21 +1147,11 @@
           "degrees": 0,
           "minutes": 1,
           "seconds": 0.0
-        },
-        "label_format": "dms_full",
-        "style": {
-          "frame_color": "#000000",
-          "label_color": "#000000",
-          "label_font_size": 24,
-          "tick_length_px": 8
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
         "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
-        "date_format": "dd.MM.yy",
-        "time_format": "HH.mm/dd.MM.yy",
-        "map_background_color": "#000000",
         "placeholders": [
           {
             "field": "map_image",
@@ -1355,21 +1239,11 @@
           "degrees": 0,
           "minutes": 1,
           "seconds": 0.0
-        },
-        "label_format": "dms_full",
-        "style": {
-          "frame_color": "#000000",
-          "label_color": "#000000",
-          "label_font_size": 24,
-          "tick_length_px": 8
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
         "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
-        "date_format": "dd.MM.yy",
-        "time_format": "HH.mm/dd.MM.yy",
-        "map_background_color": "#000000",
         "placeholders": [
           {
             "field": "map_image",
@@ -1453,21 +1327,11 @@
           "degrees": 0,
           "minutes": 1,
           "seconds": 0.0
-        },
-        "label_format": "dms_full",
-        "style": {
-          "frame_color": "#000000",
-          "label_color": "#000000",
-          "label_font_size": 24,
-          "tick_length_px": 8
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
         "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
-        "date_format": "dd.MM.yy",
-        "time_format": "HH.mm/dd.MM.yy",
-        "map_background_color": "#000000",
         "placeholders": [
           {
             "field": "map_image",
@@ -1551,21 +1415,11 @@
           "degrees": 0,
           "minutes": 1,
           "seconds": 0.0
-        },
-        "label_format": "dms_full",
-        "style": {
-          "frame_color": "#000000",
-          "label_color": "#000000",
-          "label_font_size": 24,
-          "tick_length_px": 8
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
         "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
-        "date_format": "dd.MM.yy",
-        "time_format": "HH.mm/dd.MM.yy",
-        "map_background_color": "#000000",
         "placeholders": [
           {
             "field": "map_image",
@@ -1657,21 +1511,11 @@
           "degrees": 0,
           "minutes": 1,
           "seconds": 0.0
-        },
-        "label_format": "dms_full",
-        "style": {
-          "frame_color": "#000000",
-          "label_color": "#000000",
-          "label_font_size": 24,
-          "tick_length_px": 8
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
         "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
-        "date_format": "dd.MM.yy",
-        "time_format": "HH.mm/dd.MM.yy",
-        "map_background_color": "#000000",
         "placeholders": [
           {
             "field": "map_image",
@@ -1771,21 +1615,11 @@
           "degrees": 0,
           "minutes": 1,
           "seconds": 0.0
-        },
-        "label_format": "dms_full",
-        "style": {
-          "frame_color": "#000000",
-          "label_color": "#000000",
-          "label_font_size": 24,
-          "tick_length_px": 8
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
         "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
-        "date_format": "dd.MM.yy",
-        "time_format": "HH.mm/dd.MM.yy",
-        "map_background_color": "#000000",
         "placeholders": [
           {
             "field": "map_image",
@@ -1877,21 +1711,11 @@
           "degrees": 0,
           "minutes": 1,
           "seconds": 0.0
-        },
-        "label_format": "dms_full",
-        "style": {
-          "frame_color": "#000000",
-          "label_color": "#000000",
-          "label_font_size": 24,
-          "tick_length_px": 8
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
         "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
-        "date_format": "dd.MM.yy",
-        "time_format": "HH.mm/dd.MM.yy",
-        "map_background_color": "#000000",
         "placeholders": [
           {
             "field": "map_image",
@@ -1987,21 +1811,11 @@
           "degrees": 0,
           "minutes": 1,
           "seconds": 0.0
-        },
-        "label_format": "dms_full",
-        "style": {
-          "frame_color": "#000000",
-          "label_color": "#000000",
-          "label_font_size": 24,
-          "tick_length_px": 8
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
         "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
-        "date_format": "dd.MM.yy",
-        "time_format": "HH.mm/dd.MM.yy",
-        "map_background_color": "#000000",
         "placeholders": [
           {
             "field": "map_image",
@@ -2097,21 +1911,11 @@
           "degrees": 0,
           "minutes": 1,
           "seconds": 0.0
-        },
-        "label_format": "dms_full",
-        "style": {
-          "frame_color": "#000000",
-          "label_color": "#000000",
-          "label_font_size": 24,
-          "tick_length_px": 8
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
         "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
-        "date_format": "dd.MM.yy",
-        "time_format": "HH.mm/dd.MM.yy",
-        "map_background_color": "#000000",
         "placeholders": [
           {
             "field": "map_image",
@@ -2203,21 +2007,11 @@
           "degrees": 0,
           "minutes": 1,
           "seconds": 0.0
-        },
-        "label_format": "dms_full",
-        "style": {
-          "frame_color": "#000000",
-          "label_color": "#000000",
-          "label_font_size": 24,
-          "tick_length_px": 8
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
         "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
-        "date_format": "dd.MM.yy",
-        "time_format": "HH.mm/dd.MM.yy",
-        "map_background_color": "#000000",
         "placeholders": [
           {
             "field": "map_image",
@@ -2309,21 +2103,11 @@
           "degrees": 0,
           "minutes": 1,
           "seconds": 0.0
-        },
-        "label_format": "dms_full",
-        "style": {
-          "frame_color": "#000000",
-          "label_color": "#000000",
-          "label_font_size": 24,
-          "tick_length_px": 8
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
         "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
-        "date_format": "dd.MM.yy",
-        "time_format": "HH.mm/dd.MM.yy",
-        "map_background_color": "#000000",
         "placeholders": [
           {
             "field": "map_image",
@@ -2427,21 +2211,11 @@
           "degrees": 0,
           "minutes": 1,
           "seconds": 0.0
-        },
-        "label_format": "dms_full",
-        "style": {
-          "frame_color": "#000000",
-          "label_color": "#000000",
-          "label_font_size": 24,
-          "tick_length_px": 8
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
         "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
-        "date_format": "dd.MM.yy",
-        "time_format": "HH.mm/dd.MM.yy",
-        "map_background_color": "#000000",
         "placeholders": [
           {
             "field": "map_image",
@@ -2557,21 +2331,11 @@
           "degrees": 0,
           "minutes": 1,
           "seconds": 0.0
-        },
-        "label_format": "dms_full",
-        "style": {
-          "frame_color": "#000000",
-          "label_color": "#000000",
-          "label_font_size": 24,
-          "tick_length_px": 8
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
         "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
-        "date_format": "dd.MM.yy",
-        "time_format": "HH.mm/dd.MM.yy",
-        "map_background_color": "#000000",
         "placeholders": [
           {
             "field": "map_image",
@@ -2671,21 +2435,11 @@
           "degrees": 0,
           "minutes": 1,
           "seconds": 0.0
-        },
-        "label_format": "dms_full",
-        "style": {
-          "frame_color": "#000000",
-          "label_color": "#000000",
-          "label_font_size": 24,
-          "tick_length_px": 8
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
         "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
-        "date_format": "dd.MM.yy",
-        "time_format": "HH.mm/dd.MM.yy",
-        "map_background_color": "#000000",
         "placeholders": [
           {
             "field": "map_image",
@@ -2785,21 +2539,11 @@
           "degrees": 0,
           "minutes": 1,
           "seconds": 0.0
-        },
-        "label_format": "dms_full",
-        "style": {
-          "frame_color": "#000000",
-          "label_color": "#000000",
-          "label_font_size": 24,
-          "tick_length_px": 8
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
         "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
-        "date_format": "dd.MM.yy",
-        "time_format": "HH.mm/dd.MM.yy",
-        "map_background_color": "#000000",
         "placeholders": [
           {
             "field": "map_image",
@@ -2951,21 +2695,11 @@
           "degrees": 0,
           "minutes": 1,
           "seconds": 0.0
-        },
-        "label_format": "dms_full",
-        "style": {
-          "frame_color": "#000000",
-          "label_color": "#000000",
-          "label_font_size": 24,
-          "tick_length_px": 8
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
         "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
-        "date_format": "dd.MM.yy",
-        "time_format": "HH.mm/dd.MM.yy",
-        "map_background_color": "#000000",
         "placeholders": [
           {
             "field": "map_image",
@@ -3061,21 +2795,11 @@
           "degrees": 0,
           "minutes": 1,
           "seconds": 0.0
-        },
-        "label_format": "dms_full",
-        "style": {
-          "frame_color": "#000000",
-          "label_color": "#000000",
-          "label_font_size": 24,
-          "tick_length_px": 8
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
         "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
-        "date_format": "dd.MM.yy",
-        "time_format": "HH.mm/dd.MM.yy",
-        "map_background_color": "#000000",
         "placeholders": [
           {
             "field": "map_image",
@@ -3163,21 +2887,11 @@
           "degrees": 0,
           "minutes": 1,
           "seconds": 0.0
-        },
-        "label_format": "dms_full",
-        "style": {
-          "frame_color": "#000000",
-          "label_color": "#000000",
-          "label_font_size": 24,
-          "tick_length_px": 8
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
         "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
-        "date_format": "dd.MM.yy",
-        "time_format": "HH.mm/dd.MM.yy",
-        "map_background_color": "#000000",
         "placeholders": [
           {
             "field": "map_image",
@@ -3273,21 +2987,11 @@
           "degrees": 0,
           "minutes": 1,
           "seconds": 0.0
-        },
-        "label_format": "dms_full",
-        "style": {
-          "frame_color": "#000000",
-          "label_color": "#000000",
-          "label_font_size": 24,
-          "tick_length_px": 8
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
         "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
-        "date_format": "dd.MM.yy",
-        "time_format": "HH.mm/dd.MM.yy",
-        "map_background_color": "#000000",
         "placeholders": [
           {
             "field": "map_image",
@@ -3375,21 +3079,11 @@
           "degrees": 0,
           "minutes": 1,
           "seconds": 0.0
-        },
-        "label_format": "dms_full",
-        "style": {
-          "frame_color": "#000000",
-          "label_color": "#000000",
-          "label_font_size": 24,
-          "tick_length_px": 8
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
         "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
-        "date_format": "dd.MM.yy",
-        "time_format": "HH.mm/dd.MM.yy",
-        "map_background_color": "#000000",
         "placeholders": [
           {
             "field": "map_image",
@@ -3485,21 +3179,11 @@
           "degrees": 0,
           "minutes": 1,
           "seconds": 0.0
-        },
-        "label_format": "dms_full",
-        "style": {
-          "frame_color": "#000000",
-          "label_color": "#000000",
-          "label_font_size": 24,
-          "tick_length_px": 8
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
         "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
-        "date_format": "dd.MM.yy",
-        "time_format": "HH.mm/dd.MM.yy",
-        "map_background_color": "#000000",
         "placeholders": [
           {
             "field": "map_image",
@@ -3591,21 +3275,11 @@
           "degrees": 0,
           "minutes": 1,
           "seconds": 0.0
-        },
-        "label_format": "dms_full",
-        "style": {
-          "frame_color": "#000000",
-          "label_color": "#000000",
-          "label_font_size": 24,
-          "tick_length_px": 8
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
         "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
-        "date_format": "dd.MM.yy",
-        "time_format": "HH.mm/dd.MM.yy",
-        "map_background_color": "#000000",
         "placeholders": [
           {
             "field": "map_image",
@@ -3697,21 +3371,11 @@
           "degrees": 0,
           "minutes": 1,
           "seconds": 0.0
-        },
-        "label_format": "dms_full",
-        "style": {
-          "frame_color": "#000000",
-          "label_color": "#000000",
-          "label_font_size": 24,
-          "tick_length_px": 8
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
         "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
-        "date_format": "dd.MM.yy",
-        "time_format": "HH.mm/dd.MM.yy",
-        "map_background_color": "#000000",
         "placeholders": [
           {
             "field": "map_image",
@@ -3807,21 +3471,11 @@
           "degrees": 0,
           "minutes": 1,
           "seconds": 0.0
-        },
-        "label_format": "dms_full",
-        "style": {
-          "frame_color": "#000000",
-          "label_color": "#000000",
-          "label_font_size": 24,
-          "tick_length_px": 8
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
         "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
-        "date_format": "dd.MM.yy",
-        "time_format": "HH.mm/dd.MM.yy",
-        "map_background_color": "#000000",
         "placeholders": [
           {
             "field": "map_image",
@@ -3909,21 +3563,11 @@
           "degrees": 0,
           "minutes": 1,
           "seconds": 0.0
-        },
-        "label_format": "dms_full",
-        "style": {
-          "frame_color": "#000000",
-          "label_color": "#000000",
-          "label_font_size": 24,
-          "tick_length_px": 8
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
         "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
-        "date_format": "dd.MM.yy",
-        "time_format": "HH.mm/dd.MM.yy",
-        "map_background_color": "#000000",
         "placeholders": [
           {
             "field": "map_image",
@@ -4063,21 +3707,11 @@
           "degrees": 0,
           "minutes": 1,
           "seconds": 0.0
-        },
-        "label_format": "dms_full",
-        "style": {
-          "frame_color": "#000000",
-          "label_color": "#000000",
-          "label_font_size": 24,
-          "tick_length_px": 8
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
         "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
-        "date_format": "dd.MM.yy",
-        "time_format": "HH.mm/dd.MM.yy",
-        "map_background_color": "#000000",
         "placeholders": [
           {
             "field": "map_image",
@@ -4177,21 +3811,11 @@
           "degrees": 0,
           "minutes": 1,
           "seconds": 0.0
-        },
-        "label_format": "dms_full",
-        "style": {
-          "frame_color": "#000000",
-          "label_color": "#000000",
-          "label_font_size": 24,
-          "tick_length_px": 8
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
         "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
-        "date_format": "dd.MM.yy",
-        "time_format": "HH.mm/dd.MM.yy",
-        "map_background_color": "#000000",
         "placeholders": [
           {
             "field": "map_image",
@@ -4279,21 +3903,11 @@
           "degrees": 0,
           "minutes": 1,
           "seconds": 0.0
-        },
-        "label_format": "dms_full",
-        "style": {
-          "frame_color": "#000000",
-          "label_color": "#000000",
-          "label_font_size": 24,
-          "tick_length_px": 8
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
         "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
-        "date_format": "dd.MM.yy",
-        "time_format": "HH.mm/dd.MM.yy",
-        "map_background_color": "#000000",
         "placeholders": [
           {
             "field": "map_image",
@@ -4381,21 +3995,11 @@
           "degrees": 0,
           "minutes": 1,
           "seconds": 0.0
-        },
-        "label_format": "dms_full",
-        "style": {
-          "frame_color": "#000000",
-          "label_color": "#000000",
-          "label_font_size": 24,
-          "tick_length_px": 8
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
         "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
-        "date_format": "dd.MM.yy",
-        "time_format": "HH.mm/dd.MM.yy",
-        "map_background_color": "#000000",
         "placeholders": [
           {
             "field": "map_image",
@@ -4487,21 +4091,11 @@
           "degrees": 0,
           "minutes": 1,
           "seconds": 0.0
-        },
-        "label_format": "dms_full",
-        "style": {
-          "frame_color": "#000000",
-          "label_color": "#000000",
-          "label_font_size": 24,
-          "tick_length_px": 8
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
         "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
-        "date_format": "dd.MM.yy",
-        "time_format": "HH.mm/dd.MM.yy",
-        "map_background_color": "#000000",
         "placeholders": [
           {
             "field": "map_image",
@@ -4593,21 +4187,11 @@
           "degrees": 0,
           "minutes": 1,
           "seconds": 0.0
-        },
-        "label_format": "dms_full",
-        "style": {
-          "frame_color": "#000000",
-          "label_color": "#000000",
-          "label_font_size": 24,
-          "tick_length_px": 8
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
         "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
-        "date_format": "dd.MM.yy",
-        "time_format": "HH.mm/dd.MM.yy",
-        "map_background_color": "#000000",
         "placeholders": [
           {
             "field": "map_image",
@@ -4703,21 +4287,11 @@
           "degrees": 0,
           "minutes": 1,
           "seconds": 0.0
-        },
-        "label_format": "dms_full",
-        "style": {
-          "frame_color": "#000000",
-          "label_color": "#000000",
-          "label_font_size": 24,
-          "tick_length_px": 8
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
         "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
-        "date_format": "dd.MM.yy",
-        "time_format": "HH.mm/dd.MM.yy",
-        "map_background_color": "#000000",
         "placeholders": [
           {
             "field": "map_image",
@@ -4801,21 +4375,11 @@
           "degrees": 0,
           "minutes": 1,
           "seconds": 0.0
-        },
-        "label_format": "dms_full",
-        "style": {
-          "frame_color": "#000000",
-          "label_color": "#000000",
-          "label_font_size": 24,
-          "tick_length_px": 8
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
         "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
-        "date_format": "dd.MM.yy",
-        "time_format": "HH.mm/dd.MM.yy",
-        "map_background_color": "#000000",
         "placeholders": [
           {
             "field": "map_image",
@@ -4903,21 +4467,11 @@
           "degrees": 0,
           "minutes": 1,
           "seconds": 0.0
-        },
-        "label_format": "dms_full",
-        "style": {
-          "frame_color": "#000000",
-          "label_color": "#000000",
-          "label_font_size": 24,
-          "tick_length_px": 8
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
         "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
-        "date_format": "dd.MM.yy",
-        "time_format": "HH.mm/dd.MM.yy",
-        "map_background_color": "#000000",
         "placeholders": [
           {
             "field": "map_image",
@@ -5021,21 +4575,11 @@
           "degrees": 0,
           "minutes": 1,
           "seconds": 0.0
-        },
-        "label_format": "dms_full",
-        "style": {
-          "frame_color": "#000000",
-          "label_color": "#000000",
-          "label_font_size": 24,
-          "tick_length_px": 8
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
         "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
-        "date_format": "dd.MM.yy",
-        "time_format": "HH.mm/dd.MM.yy",
-        "map_background_color": "#000000",
         "placeholders": [
           {
             "field": "map_image",
@@ -5123,21 +4667,11 @@
           "degrees": 0,
           "minutes": 1,
           "seconds": 0.0
-        },
-        "label_format": "dms_full",
-        "style": {
-          "frame_color": "#000000",
-          "label_color": "#000000",
-          "label_font_size": 24,
-          "tick_length_px": 8
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
         "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
-        "date_format": "dd.MM.yy",
-        "time_format": "HH.mm/dd.MM.yy",
-        "map_background_color": "#000000",
         "placeholders": [
           {
             "field": "map_image",
@@ -5225,21 +4759,11 @@
           "degrees": 0,
           "minutes": 1,
           "seconds": 0.0
-        },
-        "label_format": "dms_full",
-        "style": {
-          "frame_color": "#000000",
-          "label_color": "#000000",
-          "label_font_size": 24,
-          "tick_length_px": 8
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
         "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
-        "date_format": "dd.MM.yy",
-        "time_format": "HH.mm/dd.MM.yy",
-        "map_background_color": "#000000",
         "placeholders": [
           {
             "field": "map_image",
@@ -5327,21 +4851,11 @@
           "degrees": 0,
           "minutes": 1,
           "seconds": 0.0
-        },
-        "label_format": "dms_full",
-        "style": {
-          "frame_color": "#000000",
-          "label_color": "#000000",
-          "label_font_size": 24,
-          "tick_length_px": 8
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
         "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
-        "date_format": "dd.MM.yy",
-        "time_format": "HH.mm/dd.MM.yy",
-        "map_background_color": "#000000",
         "placeholders": [
           {
             "field": "map_image",
@@ -5429,21 +4943,11 @@
           "degrees": 0,
           "minutes": 1,
           "seconds": 0.0
-        },
-        "label_format": "dms_full",
-        "style": {
-          "frame_color": "#000000",
-          "label_color": "#000000",
-          "label_font_size": 24,
-          "tick_length_px": 8
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
         "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
-        "date_format": "dd.MM.yy",
-        "time_format": "HH.mm/dd.MM.yy",
-        "map_background_color": "#000000",
         "placeholders": [
           {
             "field": "map_image",
@@ -5535,21 +5039,11 @@
           "degrees": 0,
           "minutes": 1,
           "seconds": 0.0
-        },
-        "label_format": "dms_full",
-        "style": {
-          "frame_color": "#000000",
-          "label_color": "#000000",
-          "label_font_size": 24,
-          "tick_length_px": 8
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
         "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
-        "date_format": "dd.MM.yy",
-        "time_format": "HH.mm/dd.MM.yy",
-        "map_background_color": "#000000",
         "placeholders": [
           {
             "field": "map_image",
@@ -5645,21 +5139,11 @@
           "degrees": 0,
           "minutes": 1,
           "seconds": 0.0
-        },
-        "label_format": "dms_full",
-        "style": {
-          "frame_color": "#000000",
-          "label_color": "#000000",
-          "label_font_size": 24,
-          "tick_length_px": 8
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
         "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
-        "date_format": "dd.MM.yy",
-        "time_format": "HH.mm/dd.MM.yy",
-        "map_background_color": "#000000",
         "placeholders": [
           {
             "field": "map_image",
@@ -5755,21 +5239,11 @@
           "degrees": 0,
           "minutes": 1,
           "seconds": 0.0
-        },
-        "label_format": "dms_full",
-        "style": {
-          "frame_color": "#000000",
-          "label_color": "#000000",
-          "label_font_size": 24,
-          "tick_length_px": 8
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
         "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
-        "date_format": "dd.MM.yy",
-        "time_format": "HH.mm/dd.MM.yy",
-        "map_background_color": "#000000",
         "placeholders": [
           {
             "field": "map_image",
@@ -5857,21 +5331,11 @@
           "degrees": 0,
           "minutes": 1,
           "seconds": 0.0
-        },
-        "label_format": "dms_full",
-        "style": {
-          "frame_color": "#000000",
-          "label_color": "#000000",
-          "label_font_size": 24,
-          "tick_length_px": 8
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
         "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
-        "date_format": "dd.MM.yy",
-        "time_format": "HH.mm/dd.MM.yy",
-        "map_background_color": "#000000",
         "placeholders": [
           {
             "field": "map_image",
@@ -5959,21 +5423,11 @@
           "degrees": 0,
           "minutes": 1,
           "seconds": 0.0
-        },
-        "label_format": "dms_full",
-        "style": {
-          "frame_color": "#000000",
-          "label_color": "#000000",
-          "label_font_size": 24,
-          "tick_length_px": 8
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
         "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
-        "date_format": "dd.MM.yy",
-        "time_format": "HH.mm/dd.MM.yy",
-        "map_background_color": "#000000",
         "placeholders": [
           {
             "field": "map_image",
@@ -6057,21 +5511,11 @@
           "degrees": 0,
           "minutes": 1,
           "seconds": 0.0
-        },
-        "label_format": "dms_full",
-        "style": {
-          "frame_color": "#000000",
-          "label_color": "#000000",
-          "label_font_size": 24,
-          "tick_length_px": 8
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
         "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
-        "date_format": "dd.MM.yy",
-        "time_format": "HH.mm/dd.MM.yy",
-        "map_background_color": "#000000",
         "placeholders": [
           {
             "field": "map_image",
@@ -6171,21 +5615,11 @@
           "degrees": 0,
           "minutes": 1,
           "seconds": 0.0
-        },
-        "label_format": "dms_full",
-        "style": {
-          "frame_color": "#000000",
-          "label_color": "#000000",
-          "label_font_size": 24,
-          "tick_length_px": 8
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
         "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
-        "date_format": "dd.MM.yy",
-        "time_format": "HH.mm/dd.MM.yy",
-        "map_background_color": "#000000",
         "placeholders": [
           {
             "field": "map_image",
@@ -6269,21 +5703,11 @@
           "degrees": 0,
           "minutes": 1,
           "seconds": 0.0
-        },
-        "label_format": "dms_full",
-        "style": {
-          "frame_color": "#000000",
-          "label_color": "#000000",
-          "label_font_size": 24,
-          "tick_length_px": 8
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
         "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
-        "date_format": "dd.MM.yy",
-        "time_format": "HH.mm/dd.MM.yy",
-        "map_background_color": "#000000",
         "placeholders": [
           {
             "field": "map_image",
@@ -6367,21 +5791,11 @@
           "degrees": 0,
           "minutes": 1,
           "seconds": 0.0
-        },
-        "label_format": "dms_full",
-        "style": {
-          "frame_color": "#000000",
-          "label_color": "#000000",
-          "label_font_size": 24,
-          "tick_length_px": 8
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
         "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
-        "date_format": "dd.MM.yy",
-        "time_format": "HH.mm/dd.MM.yy",
-        "map_background_color": "#000000",
         "placeholders": [
           {
             "field": "map_image",
@@ -6469,21 +5883,11 @@
           "degrees": 0,
           "minutes": 1,
           "seconds": 0.0
-        },
-        "label_format": "dms_full",
-        "style": {
-          "frame_color": "#000000",
-          "label_color": "#000000",
-          "label_font_size": 24,
-          "tick_length_px": 8
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
         "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
-        "date_format": "dd.MM.yy",
-        "time_format": "HH.mm/dd.MM.yy",
-        "map_background_color": "#000000",
         "placeholders": [
           {
             "field": "map_image",
@@ -6567,21 +5971,11 @@
           "degrees": 0,
           "minutes": 1,
           "seconds": 0.0
-        },
-        "label_format": "dms_full",
-        "style": {
-          "frame_color": "#000000",
-          "label_color": "#000000",
-          "label_font_size": 24,
-          "tick_length_px": 8
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
         "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
-        "date_format": "dd.MM.yy",
-        "time_format": "HH.mm/dd.MM.yy",
-        "map_background_color": "#000000",
         "placeholders": [
           {
             "field": "map_image",
@@ -6669,21 +6063,11 @@
           "degrees": 0,
           "minutes": 1,
           "seconds": 0.0
-        },
-        "label_format": "dms_full",
-        "style": {
-          "frame_color": "#000000",
-          "label_color": "#000000",
-          "label_font_size": 24,
-          "tick_length_px": 8
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
         "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
-        "date_format": "dd.MM.yy",
-        "time_format": "HH.mm/dd.MM.yy",
-        "map_background_color": "#000000",
         "placeholders": [
           {
             "field": "map_image",
@@ -6771,21 +6155,11 @@
           "degrees": 0,
           "minutes": 1,
           "seconds": 0.0
-        },
-        "label_format": "dms_full",
-        "style": {
-          "frame_color": "#000000",
-          "label_color": "#000000",
-          "label_font_size": 24,
-          "tick_length_px": 8
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
         "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
-        "date_format": "dd.MM.yy",
-        "time_format": "HH.mm/dd.MM.yy",
-        "map_background_color": "#000000",
         "placeholders": [
           {
             "field": "map_image",
@@ -6869,21 +6243,11 @@
           "degrees": 0,
           "minutes": 1,
           "seconds": 0.0
-        },
-        "label_format": "dms_full",
-        "style": {
-          "frame_color": "#000000",
-          "label_color": "#000000",
-          "label_font_size": 24,
-          "tick_length_px": 8
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
         "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
-        "date_format": "dd.MM.yy",
-        "time_format": "HH.mm/dd.MM.yy",
-        "map_background_color": "#000000",
         "placeholders": [
           {
             "field": "map_image",
@@ -6967,21 +6331,11 @@
           "degrees": 0,
           "minutes": 1,
           "seconds": 0.0
-        },
-        "label_format": "dms_full",
-        "style": {
-          "frame_color": "#000000",
-          "label_color": "#000000",
-          "label_font_size": 24,
-          "tick_length_px": 8
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
         "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
-        "date_format": "dd.MM.yy",
-        "time_format": "HH.mm/dd.MM.yy",
-        "map_background_color": "#000000",
         "placeholders": [
           {
             "field": "map_image",
@@ -7065,21 +6419,11 @@
           "degrees": 0,
           "minutes": 1,
           "seconds": 0.0
-        },
-        "label_format": "dms_full",
-        "style": {
-          "frame_color": "#000000",
-          "label_color": "#000000",
-          "label_font_size": 24,
-          "tick_length_px": 8
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
         "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
-        "date_format": "dd.MM.yy",
-        "time_format": "HH.mm/dd.MM.yy",
-        "map_background_color": "#000000",
         "placeholders": [
           {
             "field": "map_image",
@@ -7163,21 +6507,11 @@
           "degrees": 0,
           "minutes": 1,
           "seconds": 0.0
-        },
-        "label_format": "dms_full",
-        "style": {
-          "frame_color": "#000000",
-          "label_color": "#000000",
-          "label_font_size": 24,
-          "tick_length_px": 8
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
         "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
-        "date_format": "dd.MM.yy",
-        "time_format": "HH.mm/dd.MM.yy",
-        "map_background_color": "#000000",
         "placeholders": [
           {
             "field": "map_image",
@@ -7261,21 +6595,11 @@
           "degrees": 0,
           "minutes": 1,
           "seconds": 0.0
-        },
-        "label_format": "dms_full",
-        "style": {
-          "frame_color": "#000000",
-          "label_color": "#000000",
-          "label_font_size": 24,
-          "tick_length_px": 8
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
         "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
-        "date_format": "dd.MM.yy",
-        "time_format": "HH.mm/dd.MM.yy",
-        "map_background_color": "#000000",
         "placeholders": [
           {
             "field": "map_image",
@@ -7359,21 +6683,11 @@
           "degrees": 0,
           "minutes": 1,
           "seconds": 0.0
-        },
-        "label_format": "dms_full",
-        "style": {
-          "frame_color": "#000000",
-          "label_color": "#000000",
-          "label_font_size": 24,
-          "tick_length_px": 8
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
         "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
-        "date_format": "dd.MM.yy",
-        "time_format": "HH.mm/dd.MM.yy",
-        "map_background_color": "#000000",
         "placeholders": [
           {
             "field": "map_image",

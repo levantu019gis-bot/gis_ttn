@@ -36,6 +36,15 @@ class GridConfig(BaseModel):
     style: dict[str, Any] = Field(default_factory=dict)
 
 
+class GridDefaultsConfig(BaseModel):
+    """Project-level defaults shared by target grid settings."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    label_format: str = "dms_full"
+    style: dict[str, Any] = Field(default_factory=dict)
+
+
 class FilenamePatternConfig(BaseModel):
     """Configurable filename pattern for metadata extraction.
 
@@ -102,16 +111,7 @@ class TargetExportConfig(BaseModel):
     @field_validator("map_background_color")
     @classmethod
     def map_background_color_must_be_hex_rgb(cls, value: str) -> str:
-        text = value.strip().lstrip("#")
-        if len(text) != 6:
-            msg = "map_background_color must use #RRGGBB"
-            raise ValueError(msg)
-        try:
-            int(text, 16)
-        except ValueError as exc:
-            msg = "map_background_color must use #RRGGBB"
-            raise ValueError(msg) from exc
-        return f"#{text.upper()}"
+        return _normalize_hex_rgb(value, field_name="map_background_color")
 
     @property
     def template_metadata_file(self) -> str:
@@ -122,6 +122,44 @@ class TargetExportConfig(BaseModel):
     def template_txt_value(self) -> str | None:
         """Config-contract alias for TXT export content."""
         return self.txt_line_template
+
+
+class ExportDefaultsConfig(BaseModel):
+    """Project-level defaults shared by target export settings."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    date_format: str = "yyyy-MM-dd"
+    time_format: str = "HH:mm:ss"
+    map_background_color: str = Field(
+        default="#FFFFFF",
+        validation_alias=AliasChoices(
+            "map_background_color",
+            "background_color",
+            "map_background",
+        ),
+    )
+
+    @field_validator("map_background_color", mode="before")
+    @classmethod
+    def map_background_color_from_string_or_object(cls, value: object) -> object:
+        if isinstance(value, dict):
+            return value.get("color") or value.get("background") or value.get("fill")
+        return value
+
+    @field_validator("map_background_color")
+    @classmethod
+    def map_background_color_must_be_hex_rgb(cls, value: str) -> str:
+        return _normalize_hex_rgb(value, field_name="map_background_color")
+
+
+class ProjectDefaultsConfig(BaseModel):
+    """Project-level target defaults."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    grid: GridDefaultsConfig = Field(default_factory=GridDefaultsConfig)
+    export: ExportDefaultsConfig = Field(default_factory=ExportDefaultsConfig)
 
 
 class TargetConfig(BaseModel):
@@ -164,5 +202,96 @@ class ProjectConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     schema_version: str = "1.0"
+    defaults: ProjectDefaultsConfig = Field(default_factory=ProjectDefaultsConfig)
     filename_patterns: list[FilenamePatternConfig] = Field(default_factory=list)
     targets: list[TargetConfig]
+
+    @model_validator(mode="before")
+    @classmethod
+    def apply_project_defaults_to_targets(cls, data: object) -> object:
+        if not isinstance(data, dict):
+            return data
+        defaults = data.get("defaults")
+        targets = data.get("targets")
+        if not isinstance(defaults, dict) or not isinstance(targets, list):
+            return data
+
+        grid_defaults = defaults.get("grid")
+        export_defaults = defaults.get("export")
+        if not isinstance(grid_defaults, dict) and not isinstance(export_defaults, dict):
+            return data
+
+        normalized = dict(data)
+        normalized["targets"] = [
+            _target_with_project_defaults(
+                target,
+                grid_defaults=grid_defaults if isinstance(grid_defaults, dict) else {},
+                export_defaults=export_defaults if isinstance(export_defaults, dict) else {},
+            )
+            for target in targets
+        ]
+        return normalized
+
+
+def _target_with_project_defaults(
+    target: object,
+    *,
+    grid_defaults: dict[str, Any],
+    export_defaults: dict[str, Any],
+) -> object:
+    if not isinstance(target, dict):
+        return target
+
+    normalized = dict(target)
+    grid = normalized.get("grid")
+    if isinstance(grid, dict) and grid_defaults:
+        normalized["grid"] = _grid_with_project_defaults(grid, grid_defaults)
+
+    export = normalized.get("export")
+    if isinstance(export, dict) and export_defaults:
+        normalized["export"] = _export_with_project_defaults(export, export_defaults)
+
+    return normalized
+
+
+def _grid_with_project_defaults(
+    grid: dict[str, Any],
+    grid_defaults: dict[str, Any],
+) -> dict[str, Any]:
+    normalized = dict(grid)
+    if "label_format" not in normalized and "label_format" in grid_defaults:
+        normalized["label_format"] = grid_defaults["label_format"]
+
+    default_style = grid_defaults.get("style")
+    target_style = normalized.get("style")
+    if isinstance(default_style, dict):
+        merged_style = dict(default_style)
+        if isinstance(target_style, dict):
+            merged_style.update(target_style)
+        normalized["style"] = merged_style
+
+    return normalized
+
+
+def _export_with_project_defaults(
+    export: dict[str, Any],
+    export_defaults: dict[str, Any],
+) -> dict[str, Any]:
+    normalized = dict(export)
+    for field_name in ("date_format", "time_format", "map_background_color"):
+        if field_name not in normalized and field_name in export_defaults:
+            normalized[field_name] = export_defaults[field_name]
+    return normalized
+
+
+def _normalize_hex_rgb(value: str, *, field_name: str) -> str:
+    text = value.strip().lstrip("#")
+    if len(text) != 6:
+        msg = f"{field_name} must use #RRGGBB"
+        raise ValueError(msg)
+    try:
+        int(text, 16)
+    except ValueError as exc:
+        msg = f"{field_name} must use #RRGGBB"
+        raise ValueError(msg) from exc
+    return f"#{text.upper()}"

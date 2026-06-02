@@ -1,14 +1,14 @@
 {
   "artifacts": {
     "export_log_path": null,
-    "final_render_path": "renders/DaBenLac__20260526.d3c65ca0af3f.jpg",
+    "final_render_path": null,
     "preview_render_path": null,
-    "render_log_path": "renders/DaBenLac__20260526.render-log.json"
+    "render_log_path": null
   },
   "capture_date": "2026-05-26",
   "composition_id": "DaBenLac__20260526",
   "grid_override": null,
-  "include": true,
+  "include": false,
   "layers": [
     {
       "cache_path": "cache/DaBenLac/20260526/PSScene_20260526_025221_80_2520_cloud_17.0__9ddd911056d0.tif",
@@ -35,11 +35,11 @@
       "visible": true
     }
   ],
-  "needs_revalidation": false,
+  "needs_revalidation": true,
   "notes": "",
-  "ready": true,
-  "review_order": 3,
-  "reviewed": true,
+  "ready": false,
+  "review_order": null,
+  "reviewed": false,
   "target_id": "DaBenLac",
   "validation_summary": {
     "error_count": 0,

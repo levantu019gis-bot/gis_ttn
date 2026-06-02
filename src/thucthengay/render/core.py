@@ -2,15 +2,17 @@
 
 from __future__ import annotations
 
+import math
+
 import numpy as np
 import rasterio
 
 from thucthengay.models.issue import Issue, IssueScope, IssueSeverity
 from thucthengay.render.frame import (
     MapSurroundLayout,
+    PixelRect,
     build_map_surround_layout,
     draw_map_surround_frame,
-    fit_rect_to_aspect,
 )
 from thucthengay.render.raster import (
     CancelCallback,
@@ -19,7 +21,13 @@ from thucthengay.render.raster import (
     RenderError,
     render_raster_layers_to_size,
 )
-from thucthengay.render.spec import MAX_RENDER_PIXELS, RenderSpec
+from thucthengay.render.spec import MAX_RENDER_PIXELS, GeoWindow, RenderSpec
+
+_MIN_LON = -180.0
+_MAX_LON = 180.0
+_MIN_LAT = -90.0
+_MAX_LAT = 90.0
+_ASPECT_EPSILON = 1e-10
 
 
 def _cancelled_issue(spec: RenderSpec) -> Issue:
@@ -101,6 +109,82 @@ def _estimated_peak_pixels(*, output_pixels: int, inner_pixels: int) -> int:
     return output_pixels * 2 + inner_pixels
 
 
+def _centered_span(
+    *,
+    current_min: float,
+    current_max: float,
+    desired_span: float,
+    lower_bound: float,
+    upper_bound: float,
+) -> tuple[float, float]:
+    domain_span = upper_bound - lower_bound
+    span = min(desired_span, domain_span)
+    center = (current_min + current_max) / 2.0
+    new_min = center - span / 2.0
+    new_max = center + span / 2.0
+    if new_min < lower_bound:
+        shift = lower_bound - new_min
+        new_min += shift
+        new_max += shift
+    if new_max > upper_bound:
+        shift = new_max - upper_bound
+        new_min -= shift
+        new_max -= shift
+    return max(lower_bound, new_min), min(upper_bound, new_max)
+
+
+def _fit_geo_window_to_aspect(window: GeoWindow, aspect: float) -> GeoWindow:
+    """Expand the geo window so raster pixels fill a target aspect without bitmap scaling."""
+    if not math.isfinite(aspect) or aspect <= 0:
+        return window
+
+    lon_span = window.max_lon - window.min_lon
+    lat_span = window.max_lat - window.min_lat
+    current_aspect = lon_span / lat_span
+    if abs(current_aspect - aspect) <= _ASPECT_EPSILON:
+        return window
+
+    if current_aspect < aspect:
+        min_lon, max_lon = _centered_span(
+            current_min=window.min_lon,
+            current_max=window.max_lon,
+            desired_span=lat_span * aspect,
+            lower_bound=_MIN_LON,
+            upper_bound=_MAX_LON,
+        )
+        return GeoWindow(
+            min_lon=min_lon,
+            min_lat=window.min_lat,
+            max_lon=max_lon,
+            max_lat=window.max_lat,
+        )
+
+    min_lat, max_lat = _centered_span(
+        current_min=window.min_lat,
+        current_max=window.max_lat,
+        desired_span=lon_span / aspect,
+        lower_bound=_MIN_LAT,
+        upper_bound=_MAX_LAT,
+    )
+    return GeoWindow(
+        min_lon=window.min_lon,
+        min_lat=min_lat,
+        max_lon=window.max_lon,
+        max_lat=max_lat,
+    )
+
+
+def _spec_for_inner_map(spec: RenderSpec, inner_map: PixelRect) -> RenderSpec:
+    inner_aspect = inner_map.width / inner_map.height
+    geo_window = _fit_geo_window_to_aspect(spec.geo_window, inner_aspect)
+    return spec.model_copy(
+        update={
+            "geo_window": geo_window,
+            "map_frame_aspect": inner_aspect,
+        }
+    )
+
+
 def render_map(
     spec: RenderSpec,
     *,
@@ -113,22 +197,23 @@ def render_map(
         raise RenderError([_too_large_issue(spec)])
 
     base_layout = build_map_surround_layout(spec.output_width, spec.output_height)
-    geo_map = fit_rect_to_aspect(base_layout.inner_map, spec.map_frame_aspect)
+    inner = base_layout.inner_map
+    render_spec = _spec_for_inner_map(spec, inner)
     layout = MapSurroundLayout(
         outer_frame=base_layout.outer_frame,
-        inner_map=base_layout.inner_map,
-        geo_map=geo_map,
+        inner_map=inner,
+        geo_map=inner,
     )
-    inner_pixels = geo_map.width * geo_map.height
+    inner_pixels = inner.width * inner.height
     if _estimated_peak_pixels(output_pixels=output_pixels, inner_pixels=inner_pixels) > (
         MAX_RENDER_PIXELS * 2
     ):
         raise RenderError([_peak_too_large_issue(spec)])
 
     result = render_raster_layers_to_size(
-        spec,
-        output_width=geo_map.width,
-        output_height=geo_map.height,
+        render_spec,
+        output_width=inner.width,
+        output_height=inner.height,
         dataset_opener=dataset_opener,
         is_cancelled=is_cancelled,
     )
@@ -149,14 +234,13 @@ def render_map(
         raise RenderError([*result.issues, _memory_issue(spec)]) from exc
 
     canvas[:, :] = (255, 255, 255)
-    inner = layout.inner_map
     canvas[inner.top : inner.bottom, inner.left : inner.right, :] = bg
-    canvas[geo_map.top : geo_map.bottom, geo_map.left : geo_map.right, :] = result.canvas
+    canvas[inner.top : inner.bottom, inner.left : inner.right, :] = result.canvas
 
     try:
         if is_cancelled is not None and is_cancelled():
             raise RenderError([_cancelled_issue(spec)])
-        draw_map_surround_frame(canvas, spec, layout, is_cancelled=is_cancelled)
+        draw_map_surround_frame(canvas, render_spec, layout, is_cancelled=is_cancelled)
     except MemoryError as exc:
         raise RenderError([*result.issues, _memory_issue(spec)]) from exc
     except RenderError as exc:

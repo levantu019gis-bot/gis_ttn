@@ -69,6 +69,53 @@ def test_project_config_supports_target_specific_template_pptx() -> None:
     assert target.grid.interval.minutes == 1
 
 
+def test_project_config_applies_shared_target_defaults() -> None:
+    data = valid_target_dict()
+    data["grid"] = {
+        "interval": {"minutes": 1},
+        "style": {"label_color": "#445566"},
+    }
+    data["export"] = {
+        "template_pptx_file": "templates/target_001.pptx",
+        "placeholders": [{"field": "map_image", "kind": "map_image", "element_id": 2}],
+        "time_format": "HH:mm",
+    }
+
+    config = ProjectConfig.model_validate(
+        {
+            "defaults": {
+                "grid": {
+                    "label_format": "dms_short",
+                    "style": {
+                        "frame_color": "#112233",
+                        "label_color": "#000000",
+                        "label_font_size": 18,
+                        "tick_length_px": 10,
+                    },
+                },
+                "export": {
+                    "date_format": "dd.MM.yy",
+                    "time_format": "HH.mm/dd.MM.yy",
+                    "map_background_color": "#AABBCC",
+                },
+            },
+            "targets": [data],
+        }
+    )
+
+    target = config.targets[0]
+    assert target.grid.label_format == "dms_short"
+    assert target.grid.style == {
+        "frame_color": "#112233",
+        "label_color": "#445566",
+        "label_font_size": 18,
+        "tick_length_px": 10,
+    }
+    assert target.export.date_format == "dd.MM.yy"
+    assert target.export.time_format == "HH:mm"
+    assert target.export.map_background_color == "#AABBCC"
+
+
 def test_project_config_validation_error_locations_are_specific() -> None:
     data = valid_target_dict()
     data["coordinate"] = [200, 10]

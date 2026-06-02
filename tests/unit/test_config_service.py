@@ -8,8 +8,9 @@ from pptx import Presentation
 from pptx.enum.shapes import MSO_SHAPE
 from pptx.util import Inches
 
-from thucthengay.config import load_project_config
+from thucthengay.config import load_project_config, update_target_alignment_defaults
 from thucthengay.export.final_render import final_render_output_size
+from thucthengay.models import GridInterval
 
 
 def write_json(path: Path, data: dict[str, object]) -> None:
@@ -202,6 +203,57 @@ def test_load_project_config_accepts_export_contract_from_real_config_shape(
     )
 
 
+def test_load_project_config_applies_shared_defaults_with_target_overrides(
+    tmp_path: Path,
+) -> None:
+    (tmp_path / "targets").mkdir(parents=True)
+    (tmp_path / "targets" / "target_a.geojson").write_text("{}", encoding="utf-8")
+    element_id = write_template_pptx(tmp_path / "templates" / "target_a.pptx")
+    target = target_config("target_a", 1, map_element_id=element_id)
+    target["grid"] = {
+        "interval": {"minutes": 1},
+        "style": {"label_color": "#445566"},
+    }
+    target["export"]["time_format"] = "HH:mm"  # type: ignore[index]
+    write_json(
+        tmp_path / "config.json",
+        {
+            "defaults": {
+                "grid": {
+                    "label_format": "dms_short",
+                    "style": {
+                        "frame_color": "#112233",
+                        "label_color": "#000000",
+                        "label_font_size": 18,
+                        "tick_length_px": 10,
+                    },
+                },
+                "export": {
+                    "date_format": "dd.MM.yy",
+                    "time_format": "HH.mm/dd.MM.yy",
+                    "map_background_color": "#AABBCC",
+                },
+            },
+            "targets": [target],
+        },
+    )
+
+    result = load_project_config(tmp_path / "config.json")
+
+    assert result.ok is True
+    loaded_target = result.enabled_targets[0]
+    assert loaded_target.grid.label_format == "dms_short"
+    assert loaded_target.grid.style == {
+        "frame_color": "#112233",
+        "label_color": "#445566",
+        "label_font_size": 18,
+        "tick_length_px": 10,
+    }
+    assert loaded_target.export.date_format == "dd.MM.yy"
+    assert loaded_target.export.time_format == "HH:mm"
+    assert loaded_target.export.map_background_color == "#AABBCC"
+
+
 def test_pptx_template_metadata_keeps_map_picture_pixel_size(tmp_path: Path) -> None:
     (tmp_path / "targets").mkdir(parents=True)
     (tmp_path / "targets" / "target_a.geojson").write_text("{}", encoding="utf-8")
@@ -260,6 +312,41 @@ def test_invalid_config_returns_vietnamese_field_path_issue(tmp_path: Path) -> N
     assert result.issues[0].blocking is True
     assert "`targets.0.coordinate`" in result.issues[0].message
     assert "[lon, lat]" in (result.issues[0].remediation or "")
+
+
+def test_update_target_alignment_defaults_persists_scale_and_grid_interval(
+    tmp_path: Path,
+) -> None:
+    target_a = target_config("target_a", 1)
+    target_a["grid"] = {
+        "interval": {"minutes": 1},
+        "label_format": "dms_short",
+        "style": {"frame_color": "#112233"},
+    }
+    target_b = target_config("target_b", 2)
+    config_path = tmp_path / "config.json"
+    write_json(config_path, {"targets": [target_a, target_b]})
+
+    updated = update_target_alignment_defaults(
+        config_path,
+        target_id="target_a",
+        interval=GridInterval(minutes=2, seconds=30),
+        scale=25000,
+    )
+
+    raw = json.loads(config_path.read_text(encoding="utf-8"))
+    raw_a = raw["targets"][0]
+    raw_b = raw["targets"][1]
+    assert updated.id == "target_a"
+    assert updated.scale == 25000
+    assert updated.grid.interval.minutes == 2
+    assert updated.grid.interval.seconds == 30
+    assert raw_a["scale"] == 25000
+    assert raw_a["grid"]["interval"] == {"minutes": 2, "seconds": 30}
+    assert raw_a["grid"]["label_format"] == "dms_short"
+    assert raw_a["grid"]["style"] == {"frame_color": "#112233"}
+    assert raw_b["scale"] == 50000
+    assert raw_b["grid"]["interval"] == {"minutes": 1}
 
 
 def test_missing_references_create_blocking_target_issues(tmp_path: Path) -> None:

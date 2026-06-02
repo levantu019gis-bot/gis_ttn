@@ -25,6 +25,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from thucthengay.config import ConfigUpdateError, update_target_alignment_defaults
 from thucthengay.editor.models.composition_tree_model import (
     CompositionTreeModel,
     QueueFilter,
@@ -173,9 +174,10 @@ class ReviewEditMode(QWidget):
         self.grid_seconds_input.setObjectName("reviewGridSeconds")
         self.grid_seconds_input.setFixedWidth(64)
         self.grid_seconds_input.setToolTip("Giây của khoảng grid")
-        self.grid_label_format_input = QLineEdit("dms_full")
-        self.grid_label_format_input.setObjectName("reviewGridLabelFormat")
-        self.grid_label_format_input.setToolTip("Định dạng nhãn grid")
+        self.grid_scale_input = QLineEdit("50000")
+        self.grid_scale_input.setObjectName("reviewGridScale")
+        self.grid_scale_input.setFixedWidth(96)
+        self.grid_scale_input.setToolTip("Mẫu số tỷ lệ bản đồ")
         self.grid_status_label = QLabel("Chưa chọn composition.")
         self.grid_status_label.setObjectName("reviewGridStatus")
         self.grid_status_label.setWordWrap(True)
@@ -394,8 +396,8 @@ class ReviewEditMode(QWidget):
         fields.addWidget(self.grid_minutes_input, 0, 3)
         fields.addWidget(QLabel("Giây"), 0, 4)
         fields.addWidget(self.grid_seconds_input, 0, 5)
-        fields.addWidget(QLabel("Label"), 1, 0)
-        fields.addWidget(self.grid_label_format_input, 1, 1, 1, 5)
+        fields.addWidget(QLabel("Scale 1:"), 1, 0)
+        fields.addWidget(self.grid_scale_input, 1, 1, 1, 5)
 
         layout.addLayout(header)
         layout.addLayout(fields)
@@ -533,6 +535,15 @@ class ReviewEditMode(QWidget):
             return
 
         self.selected_composition = updated
+        try:
+            self._persist_included_target_alignment(updated)
+        except (ConfigUpdateError, WorkspaceError) as error:
+            self._update_detail_panels(updated)
+            self._refresh_workspace_projection(updated.composition_id, validate_selection=False)
+            self.action_summary.setText(
+                f"Đã include composition, nhưng không cập nhật được config target: {error}"
+            )
+            return
         self.action_summary.setText(
             "Đã include composition và chuyển sang mục kế tiếp nếu có."
         )
@@ -1099,12 +1110,38 @@ class ReviewEditMode(QWidget):
         self._refresh_filter_controls()
         self._restore_selection_with_signal_state(composition.composition_id, emit=False)
 
+    def _persist_included_target_alignment(self, composition: Composition) -> None:
+        if self._workspace_service is None:
+            return
+        grid, _source = self._effective_grid_for_composition(composition)
+        manifest = self._workspace_service.load_manifest()
+        updated_target = update_target_alignment_defaults(
+            manifest.config_path,
+            target_id=composition.target_id,
+            interval=grid.interval,
+            scale=composition.view.scale,
+        )
+        self._sync_target_alignment_in_memory(updated_target)
+
+    def _sync_target_alignment_in_memory(self, updated_target: TargetConfig) -> None:
+        if self._targets is None:
+            return
+        self._targets = [
+            target.model_copy(
+                update={"scale": updated_target.scale, "grid": updated_target.grid}
+            )
+            if target.id == updated_target.id
+            else target
+            for target in self._targets
+        ]
+
     def _save_grid_override(self) -> None:
         if self._workspace_service is None or self.selected_composition is None:
             return
 
         try:
             grid = self._grid_from_inputs()
+            scale = self._scale_from_input()
             updated = self._workspace_service.update_grid_override(
                 self.selected_composition.composition_id,
                 degrees=grid.interval.degrees,
@@ -1113,6 +1150,12 @@ class ReviewEditMode(QWidget):
                 label_format=grid.label_format,
                 style=grid.style,
             )
+            if scale != updated.view.scale:
+                updated = self._workspace_service.update_view_state(
+                    updated.composition_id,
+                    center=list(updated.view.center),
+                    scale=scale,
+                )
         except ValueError as error:
             self.grid_validation_label.setText(str(error))
             return
@@ -1237,7 +1280,7 @@ class ReviewEditMode(QWidget):
         self.grid_degrees_input.setText(str(interval.degrees))
         self.grid_minutes_input.setText(str(interval.minutes))
         self.grid_seconds_input.setText(_format_number(interval.seconds))
-        self.grid_label_format_input.setText(grid.label_format or "dms_full")
+        self.grid_scale_input.setText(str(composition.view.scale))
         self.grid_validation_label.setText("")
         if source == "override":
             self.grid_status_label.setText("Đang dùng grid override của composition.")
@@ -1263,9 +1306,11 @@ class ReviewEditMode(QWidget):
         minutes = _parse_non_negative_int(self.grid_minutes_input.text(), "Phút")
         seconds = _parse_non_negative_float(self.grid_seconds_input.text(), "Giây")
         base_style: dict[str, object] = {}
+        label_format = "dms_full"
         if self.selected_composition is not None:
             base_grid, _source = self._effective_grid_for_composition(self.selected_composition)
             base_style = dict(base_grid.style)
+            label_format = base_grid.label_format or "dms_full"
         if minutes >= 60:
             raise ValueError("Phút phải nhỏ hơn 60.")
         if seconds >= 60:
@@ -1277,13 +1322,16 @@ class ReviewEditMode(QWidget):
                     minutes=minutes,
                     seconds=seconds,
                 ),
-                label_format=self.grid_label_format_input.text().strip() or "dms_full",
+                label_format=label_format,
                 style=base_style,
             )
         except ValidationError as error:
             if degrees == 0 and minutes == 0 and seconds == 0:
                 raise ValueError("Khoảng grid phải lớn hơn 0.") from error
             raise ValueError(f"Grid không hợp lệ: {error}") from error
+
+    def _scale_from_input(self) -> int:
+        return _parse_positive_int(self.grid_scale_input.text(), "Scale")
 
 
 def _is_positive_number(value: object) -> bool:
@@ -1317,6 +1365,13 @@ def _parse_non_negative_int(raw: str, label: str) -> int:
         raise ValueError(f"{label} phải là số nguyên không âm.") from error
     if value < 0:
         raise ValueError(f"{label} phải là số không âm.")
+    return value
+
+
+def _parse_positive_int(raw: str, label: str) -> int:
+    value = _parse_non_negative_int(raw, label)
+    if value <= 0:
+        raise ValueError(f"{label} phải là số nguyên dương.")
     return value
 
 

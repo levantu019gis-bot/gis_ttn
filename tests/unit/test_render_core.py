@@ -11,18 +11,19 @@ import rasterio
 from rasterio.io import MemoryFile
 from rasterio.transform import from_bounds
 
+import thucthengay.render.core as render_core
 from thucthengay.gis.crs import GEOGRAPHIC_CRS
 from thucthengay.models.config import GridConfig, GridInterval
 from thucthengay.models.template import MapFrame
 from thucthengay.render import (
     GeoWindow,
+    RasterRenderResult,
     RenderBackground,
     RenderError,
     RenderLayerRef,
     RenderSpec,
     build_map_surround_layout,
     draw_map_surround_frame,
-    fit_rect_to_aspect,
     render_map,
     render_raster_layers_to_size,
 )
@@ -113,14 +114,62 @@ class TestRenderMap:
             result = render_map(spec, dataset_opener=opener)
 
         layout = build_map_surround_layout(spec.output_width, spec.output_height)
-        geo_map = fit_rect_to_aspect(layout.inner_map, spec.map_frame_aspect)
+        geo_map = layout.inner_map
         raster_col = geo_map.left + geo_map.width // 4
         background_col = geo_map.left + geo_map.width * 3 // 4
         row = geo_map.center_y
         assert tuple(result.canvas[row, raster_col].tolist()) == (80, 90, 100)
         assert tuple(result.canvas[row, background_col].tolist()) == (17, 34, 51)
         assert tuple(result.canvas[0, 0].tolist()) == (255, 255, 255)
-        assert abs((geo_map.width / geo_map.height) - spec.map_frame_aspect) < 0.05
+
+    def test_raster_render_fills_entire_inner_map_without_bitmap_letterbox(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        spec = _spec(layers=[])
+        layout = build_map_surround_layout(spec.output_width, spec.output_height)
+        calls: dict[str, object] = {}
+
+        def fake_render_raster_layers_to_size(
+            render_spec: RenderSpec,
+            *,
+            output_width: int,
+            output_height: int,
+            dataset_opener,
+            is_cancelled,
+        ) -> RasterRenderResult:
+            calls["spec"] = render_spec
+            calls["output_width"] = output_width
+            calls["output_height"] = output_height
+            canvas = np.empty((output_height, output_width, 3), dtype=np.uint8)
+            canvas[:, :] = (80, 90, 100)
+            return RasterRenderResult(canvas=canvas)
+
+        monkeypatch.setattr(
+            render_core,
+            "render_raster_layers_to_size",
+            fake_render_raster_layers_to_size,
+        )
+
+        result = render_map(spec)
+
+        assert calls["output_width"] == layout.inner_map.width
+        assert calls["output_height"] == layout.inner_map.height
+        assert tuple(
+            result.canvas[layout.inner_map.center_y, layout.inner_map.left + 8].tolist()
+        ) == (80, 90, 100)
+        assert tuple(
+            result.canvas[layout.inner_map.center_y, layout.inner_map.right - 9].tolist()
+        ) == (80, 90, 100)
+        rendered_spec = calls["spec"]
+        assert isinstance(rendered_spec, RenderSpec)
+        geo_aspect = (
+            rendered_spec.geo_window.max_lon - rendered_spec.geo_window.min_lon
+        ) / (rendered_spec.geo_window.max_lat - rendered_spec.geo_window.min_lat)
+        assert geo_aspect == pytest.approx(layout.inner_map.width / layout.inner_map.height)
+        assert rendered_spec.geo_window.min_lon <= spec.geo_window.min_lon
+        assert rendered_spec.geo_window.max_lon >= spec.geo_window.max_lon
+        assert rendered_spec.geo_window.min_lat <= spec.geo_window.min_lat
+        assert rendered_spec.geo_window.max_lat >= spec.geo_window.max_lat
 
     def test_preserves_non_fatal_raster_issues(self) -> None:
         good = _make_memfile(bounds=(106.0, 10.0, 107.0, 11.0), rgb=(40, 50, 60))
@@ -139,7 +188,6 @@ class TestRenderMap:
         spec = _spec(layers=[], bg_color="#112233", interval=GridInterval(degrees=1))
         result = render_map(spec)
         layout = build_map_surround_layout(spec.output_width, spec.output_height)
-        geo_map = fit_rect_to_aspect(layout.inner_map, spec.map_frame_aspect)
 
         expected = np.zeros_like(result.canvas)
         expected[:, :] = (255, 255, 255)
@@ -148,17 +196,16 @@ class TestRenderMap:
             layout.inner_map.left : layout.inner_map.right,
             :,
         ] = (17, 34, 51)
-        expected[
-            geo_map.top : geo_map.bottom,
-            geo_map.left : geo_map.right,
-            :,
-        ] = (17, 34, 51)
         layout = layout.__class__(
             outer_frame=layout.outer_frame,
             inner_map=layout.inner_map,
-            geo_map=geo_map,
+            geo_map=layout.inner_map,
         )
-        draw_map_surround_frame(expected, spec, layout)
+        draw_map_surround_frame(
+            expected,
+            render_core._spec_for_inner_map(spec, layout.inner_map),
+            layout,
+        )
 
         assert np.array_equal(result.canvas, expected)
 

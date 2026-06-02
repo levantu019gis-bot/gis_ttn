@@ -8,10 +8,13 @@ from thucthengay.models.composition import (
     ViewState,
 )
 from thucthengay.models.config import (
+    ExportDefaultsConfig,
     FilenamePatternConfig,
     GridConfig,
+    GridDefaultsConfig,
     GridInterval,
     ProjectConfig,
+    ProjectDefaultsConfig,
     TargetConfig,
     TargetExportConfig,
 )
@@ -86,8 +89,10 @@ __all__ = [
     "FinalRenderLogEntry",
     "FinalRenderResult",
     "FinalRenderStatus",
+    "ExportDefaultsConfig",
     "FilenamePatternConfig",
     "GridConfig",
+    "GridDefaultsConfig",
     "GridInterval",
     "ImageLayer",
     "Issue",
@@ -99,6 +104,7 @@ __all__ = [
     "PlaceholderType",
     "PersistedValidationState",
     "ProjectConfig",
+    "ProjectDefaultsConfig",
     "RenderResult",
     "SkippedComposition",
     "TargetConfig",

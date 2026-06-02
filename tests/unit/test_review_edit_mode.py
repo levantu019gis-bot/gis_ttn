@@ -15,6 +15,7 @@ from PySide6.QtGui import QImage, QKeyEvent
 from PySide6.QtWidgets import (
     QApplication,
     QGraphicsView,
+    QLineEdit,
     QSplitter,
     QTableView,
     QTreeView,
@@ -92,6 +93,41 @@ def target_config(target_id: str, *, sort_order: int, name: str) -> TargetConfig
                 "map_frame": {"x": 0, "y": 0, "width": 640, "height": 360},
             }
         },
+    )
+
+
+def write_project_config(path: Path, target_id: str = "alpha") -> None:
+    path.write_text(
+        json.dumps(
+            {
+                "targets": [
+                    {
+                        "id": target_id,
+                        "enabled": True,
+                        "sort_order": 1,
+                        "name": "Alpha Target",
+                        "geojson_file": f"{target_id}.geojson",
+                        "coordinate": [106.7, 10.8],
+                        "scale": 50000,
+                        "grid": {
+                            "interval": {"minutes": 1},
+                            "label_format": "dms_short",
+                        },
+                        "export": {
+                            "template_pptx_file": f"{target_id}.pptx",
+                            "placeholders": [
+                                {
+                                    "field": "map_image",
+                                    "kind": "map_image",
+                                    "element_id": 2,
+                                }
+                            ],
+                        },
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
     )
 
 
@@ -493,6 +529,39 @@ def test_layer_stack_model_display_roles_and_no_visible_warning() -> None:
     assert "..." in long_filename.data(Qt.ItemDataRole.DisplayRole)
     assert "/imagery/" in long_filename.data(Qt.ItemDataRole.ToolTipRole)
     assert "Cache:" in long_filename.data(Qt.ItemDataRole.ToolTipRole)
+
+
+def test_layer_stack_model_accepts_integer_check_state_values() -> None:
+    qapp()
+    model = LayerStackModel()
+    model.set_composition(
+        Composition(
+            composition_id="alpha__20260525",
+            target_id="alpha",
+            capture_date=date(2026, 5, 25),
+            view=ViewState(center=[106.7, 10.8], scale=50000),
+            layers=[
+                ImageLayer(
+                    layer_id="old",
+                    source_path="/imagery/old.tif",
+                    visible=False,
+                    order=0,
+                    metadata_status=MetadataStatus.VALID,
+                )
+            ],
+        )
+    )
+
+    visibility_index = model.index(0, int(LayerStackColumn.VISIBILITY))
+
+    assert model.setData(
+        visibility_index,
+        Qt.CheckState.Checked.value,
+        Qt.ItemDataRole.CheckStateRole,
+    )
+    assert visibility_index.data(Qt.ItemDataRole.CheckStateRole) == Qt.CheckState.Checked
+    assert visibility_index.data(LayerStackRole.VISIBLE) is True
+    assert model.has_no_visible_layers() is False
 
 
 def test_gis_canvas_states_fixed_frame_and_stale_render_guard() -> None:
@@ -1193,6 +1262,16 @@ def test_review_edit_layer_stack_saves_visibility_order_and_warning(
     ) == "Không có layer bật"
     assert mode.filter_buttons[QueueFilter.ERROR].text() == "Có error (1)"
 
+    second_visibility = mode.layer_model.index(1, int(LayerStackColumn.VISIBILITY))
+    mode.layer_model.setData(
+        second_visibility,
+        Qt.CheckState.Checked.value,
+        Qt.ItemDataRole.CheckStateRole,
+    )
+
+    assert service.read_composition("alpha__20260525").layers[1].visible is True
+    assert mode.layer_warning_label.isHidden()
+
     mode.layer_table.setCurrentIndex(mode.layer_model.index(1, int(LayerStackColumn.FILENAME)))
     mode.move_layer_up_button.click()
 
@@ -1297,20 +1376,22 @@ def test_review_edit_grid_controls_show_defaults_save_override_and_mark_stale(
     assert mode.grid_degrees_input.text() == "0"
     assert mode.grid_minutes_input.text() == "1"
     assert mode.grid_seconds_input.text() == "0"
-    assert mode.grid_label_format_input.text() == "dms_full"
+    assert mode.grid_scale_input.text() == "50000"
+    assert mode.findChild(QLineEdit, "reviewGridLabelFormat") is None
     assert "mặc định target" in mode.grid_status_label.text()
 
     mode.grid_minutes_input.setText("2")
     mode.grid_seconds_input.setText("30")
-    mode.grid_label_format_input.setText("dms_short")
+    mode.grid_scale_input.setText("25000")
     mode.save_grid_button.click()
 
     reloaded = service.read_composition("alpha__20260525")
     assert reloaded.grid_override is not None
     assert reloaded.grid_override.interval.minutes == 2
     assert reloaded.grid_override.interval.seconds == 30
-    assert reloaded.grid_override.label_format == "dms_short"
+    assert reloaded.grid_override.label_format == "dms_full"
     assert reloaded.grid_override.style == {"color": "white"}
+    assert reloaded.view.scale == 25000
     assert reloaded.needs_revalidation is True
     assert reloaded.ready is False
     assert reloaded.include is False
@@ -1425,6 +1506,16 @@ def test_review_edit_grid_controls_reject_invalid_values_without_write(
     assert reloaded.grid_override.interval.minutes == 1
     assert "Phút phải nhỏ hơn 60" in mode.grid_validation_label.text()
 
+    mode.grid_minutes_input.setText("1")
+    mode.grid_scale_input.setText("0")
+    mode.save_grid_button.click()
+
+    reloaded = service.read_composition("alpha__20260525")
+    assert reloaded.grid_override is not None
+    assert reloaded.grid_override.interval.minutes == 1
+    assert reloaded.view.scale == 50000
+    assert "Scale phải là số nguyên dương" in mode.grid_validation_label.text()
+
 
 def test_review_edit_filter_bar_counts_empty_state_and_selection_restore(
     tmp_path: Path,
@@ -1505,8 +1596,10 @@ def test_review_edit_action_bar_includes_and_advances_on_passing_gate(
     tmp_path: Path,
 ) -> None:
     qapp()
+    config_path = tmp_path / "config.json"
+    write_project_config(config_path)
     service = WorkspaceService(tmp_path / "workspace")
-    service.initialize(config_path="config.json")
+    service.initialize(config_path=config_path)
     service.write_composition(
         composition("alpha__20260525", "alpha", date(2026, 5, 25), needs_revalidation=False)
     )
@@ -1543,6 +1636,46 @@ def test_review_edit_action_bar_includes_and_advances_on_passing_gate(
         "alpha__20260526"
     )
     assert mode.previous_button.isEnabled()
+
+
+def test_review_edit_include_persists_target_interval_and_scale_to_config(
+    tmp_path: Path,
+) -> None:
+    qapp()
+    config_path = tmp_path / "config.json"
+    write_project_config(config_path)
+    service = WorkspaceService(tmp_path / "workspace")
+    service.initialize(config_path=config_path)
+    service.write_composition(
+        composition("alpha__20260525", "alpha", date(2026, 5, 25), needs_revalidation=False)
+    )
+    target = target_config("alpha", sort_order=1, name="Alpha Target").model_copy(
+        update={
+            "grid": GridConfig(interval=GridInterval(minutes=1), label_format="dms_short")
+        }
+    )
+
+    mode = ReviewEditMode()
+    mode.load_workspace(service, targets=[target])
+    target_index = mode.tree_model.index(0, 0)
+    mode.tree_view.setCurrentIndex(mode.tree_model.index(0, 0, target_index))
+
+    mode.grid_minutes_input.setText("2")
+    mode.grid_seconds_input.setText("30")
+    mode.grid_scale_input.setText("25000")
+    mode.save_grid_button.click()
+    mode.include_validate_button.click()
+
+    raw = json.loads(config_path.read_text(encoding="utf-8"))
+    raw_target = raw["targets"][0]
+    included = service.read_composition("alpha__20260525")
+    assert included.include is True
+    assert raw_target["scale"] == 25000
+    assert raw_target["grid"]["interval"] == {"minutes": 2, "seconds": 30}
+    assert raw_target["grid"]["label_format"] == "dms_short"
+    assert mode._targets is not None  # noqa: SLF001
+    assert mode._targets[0].scale == 25000  # noqa: SLF001
+    assert mode._targets[0].grid.interval.minutes == 2  # noqa: SLF001
 
 
 def test_review_edit_action_bar_blocks_include_and_supports_skip_previous(

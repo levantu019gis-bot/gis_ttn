@@ -167,7 +167,11 @@ class LayerStackModel(QAbstractTableModel):
         ):
             return False
 
-        visible = value == Qt.CheckState.Checked
+        check_state = _coerce_check_state(value)
+        if check_state is None:
+            return False
+
+        visible = check_state == Qt.CheckState.Checked
         layer = self._layers[index.row()]
         if layer.visible == visible:
             return False
@@ -239,6 +243,13 @@ def _display_text(layer: ImageLayer, column: LayerStackColumn, row: int) -> str:
     if column is LayerStackColumn.ACTIONS:
         return "..."
     return ""
+
+
+def _coerce_check_state(value: Any) -> Qt.CheckState | None:
+    try:
+        return value if isinstance(value, Qt.CheckState) else Qt.CheckState(value)
+    except (TypeError, ValueError):
+        return None
 
 
 def _issue_display_text(severity: IssueSeverity | None) -> str:

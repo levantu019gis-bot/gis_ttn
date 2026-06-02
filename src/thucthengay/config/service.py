@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import json
+import os
+import tempfile
 from dataclasses import dataclass, field
 from json import JSONDecodeError
 from pathlib import Path
@@ -25,6 +28,11 @@ from thucthengay.models import (
     TargetConfig,
     TemplateMetadata,
 )
+from thucthengay.models.config import GridInterval
+
+
+class ConfigUpdateError(RuntimeError):
+    """Raised when an expected project config update cannot be persisted."""
 
 
 @dataclass(frozen=True)
@@ -123,6 +131,66 @@ def load_project_config(config_path: str | Path) -> ConfigLoadResult:
     return result
 
 
+def update_target_alignment_defaults(
+    config_path: str | Path,
+    *,
+    target_id: str,
+    interval: GridInterval,
+    scale: int,
+) -> TargetConfig:
+    """Persist the reviewed interval/scale back to one target in config.json."""
+    config_file = Path(config_path).expanduser()
+    if not config_file.is_absolute():
+        config_file = config_file.resolve()
+
+    try:
+        raw_config = load_json_file(config_file)
+    except (OSError, JSONDecodeError, ValueError) as error:
+        msg = f"Không đọc được config để cập nhật target `{target_id}`: {error}"
+        raise ConfigUpdateError(msg) from error
+
+    targets = raw_config.get("targets")
+    if not isinstance(targets, list):
+        msg = "Config không có danh sách `targets` hợp lệ."
+        raise ConfigUpdateError(msg)
+
+    raw_target: dict[str, Any] | None = None
+    for target in targets:
+        if isinstance(target, dict) and target.get("id") == target_id:
+            raw_target = target
+            break
+
+    if raw_target is None:
+        msg = f"Không tìm thấy target `{target_id}` trong config."
+        raise ConfigUpdateError(msg)
+
+    raw_target["scale"] = scale
+    raw_grid = raw_target.get("grid")
+    if not isinstance(raw_grid, dict):
+        raw_grid = {}
+        raw_target["grid"] = raw_grid
+    raw_grid["interval"] = _grid_interval_to_config(interval)
+
+    try:
+        validated_config = ProjectConfig.model_validate(_enabled_targets_only(raw_config))
+    except ValidationError as error:
+        msg = f"Config sau cập nhật target `{target_id}` không hợp lệ: {error}"
+        raise ConfigUpdateError(msg) from error
+
+    try:
+        _write_json_file(config_file, raw_config)
+    except OSError as error:
+        msg = f"Không ghi được config `{config_file}`: {error}"
+        raise ConfigUpdateError(msg) from error
+
+    for target in validated_config.targets:
+        if target.id == target_id:
+            return target
+
+    msg = f"Target `{target_id}` không còn hợp lệ sau khi cập nhật config."
+    raise ConfigUpdateError(msg)
+
+
 def _enabled_targets_only(raw_config: dict[str, Any]) -> dict[str, Any]:
     raw_targets = raw_config.get("targets")
     if not isinstance(raw_targets, list):
@@ -135,6 +203,43 @@ def _enabled_targets_only(raw_config: dict[str, Any]) -> dict[str, Any]:
         if not isinstance(target, dict) or target.get("enabled", True)
     ]
     return filtered_config
+
+
+def _grid_interval_to_config(interval: GridInterval) -> dict[str, int | float]:
+    data: dict[str, int | float] = {}
+    if interval.degrees:
+        data["degrees"] = interval.degrees
+    if interval.minutes:
+        data["minutes"] = interval.minutes
+    if interval.seconds:
+        seconds = interval.seconds
+        data["seconds"] = int(seconds) if seconds.is_integer() else seconds
+    return data
+
+
+def _write_json_file(path: Path, data: dict[str, Any]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temp_name: str | None = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            "w",
+            encoding="utf-8",
+            dir=path.parent,
+            prefix=f".{path.name}.",
+            suffix=".tmp",
+            delete=False,
+        ) as temp_file:
+            temp_name = temp_file.name
+            json.dump(data, temp_file, ensure_ascii=False, indent=2)
+            temp_file.write("\n")
+            temp_file.flush()
+            os.fsync(temp_file.fileno())
+
+        os.replace(temp_name, path)
+    except Exception:
+        if temp_name is not None:
+            Path(temp_name).unlink(missing_ok=True)
+        raise
 
 
 def _validate_target_references(

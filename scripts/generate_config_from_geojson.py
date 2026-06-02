@@ -83,20 +83,10 @@ def target_from_geojson(
         "scale": scale,
         "grid": {
             "interval": {"degrees": 0, "minutes": grid_minutes, "seconds": 0},
-            "label_format": "dms_full",
-            "style": {
-                "frame_color": "#000000",
-                "label_color": "#000000",
-                "label_font_size": 10,
-                "tick_length_px": 8,
-            },
         },
         "export": {
             "template_pptx_file": relative_path(template_pptx_file, config_dir),
             "template_txt_value": "Tại {target_title} (lúc {time_label}, độ phân giải 3 m): ",
-            "date_format": "dd.MM.yy",
-            "time_format": "HH.mm/dd.MM.yy",
-            "map_background_color": "#FFFFFF",
             "placeholders": [
                 {
                     "field": "map_image",
@@ -143,7 +133,79 @@ def build_config(
         for path in files
     ]
     targets.sort(key=lambda target: (target["sort_order"], target["id"]))
-    return ProjectConfig(schema_version="1.0", targets=targets)
+    return ProjectConfig(
+        schema_version="1.0",
+        defaults={
+            "grid": {
+                "label_format": "dms_full",
+                "style": {
+                    "frame_color": "#000000",
+                    "label_color": "#000000",
+                    "label_font_size": 24,
+                    "tick_length_px": 8,
+                },
+            },
+            "export": {
+                "date_format": "dd.MM.yy",
+                "time_format": "HH.mm/dd.MM.yy",
+                "map_background_color": "#000000",
+            },
+        },
+        targets=targets,
+    )
+
+
+def compact_config_dump(config: ProjectConfig) -> dict[str, Any]:
+    """Serialize generated config with inherited defaults omitted per target."""
+    data = config.model_dump(mode="json", by_alias=True)
+    defaults = data.get("defaults")
+    if not isinstance(defaults, dict):
+        return data
+
+    grid_defaults = defaults.get("grid")
+    export_defaults = defaults.get("export")
+    for target in data.get("targets", []):
+        if not isinstance(target, dict):
+            continue
+        grid = target.get("grid")
+        if isinstance(grid, dict) and isinstance(grid_defaults, dict):
+            _remove_matching_inherited_grid_values(grid, grid_defaults)
+        export = target.get("export")
+        if isinstance(export, dict) and isinstance(export_defaults, dict):
+            _remove_matching_values(
+                export,
+                export_defaults,
+                keys=("date_format", "time_format", "map_background_color"),
+            )
+    return data
+
+
+def _remove_matching_inherited_grid_values(
+    grid: dict[str, Any],
+    grid_defaults: dict[str, Any],
+) -> None:
+    _remove_matching_values(grid, grid_defaults, keys=("label_format",))
+    style = grid.get("style")
+    default_style = grid_defaults.get("style")
+    if isinstance(style, dict) and isinstance(default_style, dict):
+        _remove_matching_values(
+            style,
+            default_style,
+            keys=("frame_color", "label_color", "label_font_size", "tick_length_px"),
+        )
+        if not style:
+            grid.pop("style", None)
+
+
+def _remove_matching_values(
+    data: dict[str, Any],
+    defaults: dict[str, Any],
+    *,
+    keys: tuple[str, ...],
+) -> None:
+    for key in keys:
+        if data.get(key) == defaults.get(key):
+            data.pop(key, None)
 
 
 def parse_args(argv: list[str]) -> argparse.Namespace:
@@ -182,7 +244,7 @@ def main(argv: list[str]) -> int:
         grid_minutes=args.grid_minutes,
     )
     output_path.write_text(
-        json.dumps(config.model_dump(mode="json", by_alias=True), ensure_ascii=False, indent=2)
+        json.dumps(compact_config_dump(config), ensure_ascii=False, indent=2)
         + "\n",
         encoding="utf-8",
     )
