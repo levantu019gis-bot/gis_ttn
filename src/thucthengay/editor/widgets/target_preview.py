@@ -11,7 +11,7 @@ from PySide6.QtCore import Qt
 from PySide6.QtGui import QImage, QPixmap
 from PySide6.QtWidgets import QLabel, QVBoxLayout, QWidget
 
-from thucthengay.models import Composition
+from thucthengay.models import Composition, ImageLayer
 
 
 class TargetPreviewState(StrEnum):
@@ -31,6 +31,7 @@ class TargetPreviewKey:
 
     target_id: str
     capture_date: date
+    layer_signature: tuple[tuple[str, int, bool], ...]
 
 
 @dataclass(frozen=True)
@@ -111,6 +112,7 @@ class TargetPreviewWidget(QWidget):
         next_key = TargetPreviewKey(
             target_id=composition.target_id,
             capture_date=composition.capture_date,
+            layer_signature=_layer_signature(composition.layers),
         )
         if next_key == self._key:
             return False
@@ -125,6 +127,13 @@ class TargetPreviewWidget(QWidget):
             self._state = TargetPreviewState.NO_LAYER
             self._state_message = "Không có layer để tạo Target Preview."
             self._detail_message = "Chạy lại ingestion hoặc kiểm tra composition JSON."
+            self._refresh_labels()
+            return False
+
+        if not any(layer.visible for layer in composition.layers):
+            self._state = TargetPreviewState.NO_LAYER
+            self._state_message = "Không có layer đang bật để tạo Target Preview."
+            self._detail_message = "Bật ít nhất một layer trước khi cập nhật Target Preview."
             self._refresh_labels()
             return False
 
@@ -248,3 +257,10 @@ def _numpy_to_pixmap(canvas: np.ndarray) -> QPixmap:
         rgba = np.ascontiguousarray(canvas[:, :, :4])
         image = QImage(rgba.data, width, height, 4 * width, QImage.Format.Format_RGBA8888)
     return QPixmap.fromImage(image.copy())
+
+
+def _layer_signature(layers: list[ImageLayer]) -> tuple[tuple[str, int, bool], ...]:
+    return tuple(
+        (layer.layer_id, layer.order, layer.visible)
+        for layer in sorted(layers, key=lambda item: (item.order, item.layer_id))
+    )

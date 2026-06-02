@@ -78,7 +78,7 @@ def _composition(layers: list[ImageLayer]) -> Composition:
     )
 
 
-def test_target_preview_spec_covers_union_of_all_layers_even_when_hidden(
+def test_target_preview_spec_covers_union_of_visible_layers_only(
     tmp_path: Path,
 ) -> None:
     first = tmp_path / "first.tif"
@@ -99,9 +99,11 @@ def test_target_preview_spec_covers_union_of_all_layers_even_when_hidden(
         output_height=180,
     )
 
-    assert [layer.layer_id for layer in spec.visible_layers] == ["second", "first"]
-    assert spec.geo_window.min_lon <= 106.0
-    assert spec.geo_window.min_lat <= 10.0
+    assert [layer.layer_id for layer in spec.visible_layers] == ["second"]
+    assert spec.geo_window.min_lon <= 106.4
+    assert spec.geo_window.min_lat <= 10.4
+    assert spec.geo_window.min_lon > 106.0
+    assert spec.geo_window.min_lat > 10.0
     assert spec.geo_window.max_lon >= 107.0
     assert spec.geo_window.max_lat >= 11.0
     assert spec.output_width <= 320
@@ -138,3 +140,17 @@ def test_target_preview_spec_requires_at_least_one_layer() -> None:
         )
 
     assert exc_info.value.issues[0].issue_id == "target_preview.no_layers"
+
+
+def test_target_preview_spec_requires_at_least_one_visible_layer() -> None:
+    with pytest.raises(RenderSpecError) as exc_info:
+        build_target_preview_spec(
+            composition=_composition(
+                [ImageLayer(layer_id="hidden", source_path="hidden.tif", visible=False, order=0)]
+            ),
+            target=_target(),
+            output_width=320,
+            output_height=180,
+        )
+
+    assert exc_info.value.issues[0].issue_id == "target_preview.no_visible_layers"

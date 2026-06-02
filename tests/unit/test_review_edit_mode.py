@@ -1175,6 +1175,53 @@ def test_target_preview_stays_fixed_for_same_target_day_view_changes() -> None:
     assert "Scale 1:25,000" not in preview.detail_text()
 
 
+def test_target_preview_refreshes_for_layer_visibility_and_order_changes() -> None:
+    qapp()
+    preview = TargetPreviewWidget()
+    selected = composition(
+        "alpha__20260525",
+        "alpha",
+        date(2026, 5, 25),
+        needs_revalidation=False,
+    ).model_copy(
+        update={
+            "layers": [
+                ImageLayer(layer_id="old", source_path="old.tif", visible=True, order=0),
+                ImageLayer(layer_id="new", source_path="new.tif", visible=True, order=1),
+            ]
+        }
+    )
+
+    assert preview.set_composition(selected) is True
+    token = preview.set_loading()
+    preview.apply_render_result(
+        token,
+        "done",
+        canvas=np.full((12, 12, 3), 80, dtype=np.uint8),
+    )
+
+    hidden_old = selected.model_copy(
+        update={
+            "layers": [
+                selected.layers[0].model_copy(update={"visible": False}),
+                selected.layers[1],
+            ]
+        }
+    )
+    assert preview.set_composition(hidden_old) is True
+    assert preview.state() == TargetPreviewState.NEEDS_UPDATE
+
+    reordered = selected.model_copy(
+        update={
+            "layers": [
+                selected.layers[0].model_copy(update={"order": 1}),
+                selected.layers[1].model_copy(update={"order": 0}),
+            ]
+        }
+    )
+    assert preview.set_composition(reordered) is True
+
+
 def test_review_edit_layer_stack_saves_visibility_order_and_warning(
     tmp_path: Path,
 ) -> None:
@@ -1217,6 +1264,12 @@ def test_review_edit_layer_stack_saves_visibility_order_and_warning(
     )
 
     mode = ReviewEditMode()
+    target_preview_requests: list[tuple[tuple[str, int, bool], ...]] = []
+    mode._request_target_preview = (  # noqa: SLF001
+        lambda selected: target_preview_requests.append(
+            tuple((layer.layer_id, layer.order, layer.visible) for layer in selected.layers)
+        )
+    )
     target = target_config("alpha", sort_order=1, name="Alpha Target").model_copy(
         update={"metadata": {"map_frame": {"width": 4, "height": 3}}}
     )
@@ -1227,6 +1280,7 @@ def test_review_edit_layer_stack_saves_visibility_order_and_warning(
     target_index = mode.tree_model.index(0, 0)
     composition_index = mode.tree_model.index(0, 0, target_index)
     mode.tree_view.setCurrentIndex(composition_index)
+    assert len(target_preview_requests) == 1
 
     first_visibility = mode.layer_model.index(0, int(LayerStackColumn.VISIBILITY))
     second_visibility = mode.layer_model.index(1, int(LayerStackColumn.VISIBILITY))
@@ -1243,6 +1297,8 @@ def test_review_edit_layer_stack_saves_visibility_order_and_warning(
     assert reloaded.include is False
     assert reloaded.review_order is None
     assert mode.layer_warning_label.isHidden()
+    assert len(target_preview_requests) == 2
+    assert target_preview_requests[-1] == (("old", 0, False), ("new", 1, True))
 
     second_visibility = mode.layer_model.index(1, int(LayerStackColumn.VISIBILITY))
     mode.layer_model.setData(
@@ -1261,6 +1317,8 @@ def test_review_edit_layer_stack_saves_visibility_order_and_warning(
         CompositionTreeRole.STATUS_TEXT
     ) == "Không có layer bật"
     assert mode.filter_buttons[QueueFilter.ERROR].text() == "Có error (1)"
+    assert len(target_preview_requests) == 2
+    assert mode.target_preview.state() == TargetPreviewState.NO_LAYER
 
     second_visibility = mode.layer_model.index(1, int(LayerStackColumn.VISIBILITY))
     mode.layer_model.setData(
@@ -1271,6 +1329,8 @@ def test_review_edit_layer_stack_saves_visibility_order_and_warning(
 
     assert service.read_composition("alpha__20260525").layers[1].visible is True
     assert mode.layer_warning_label.isHidden()
+    assert len(target_preview_requests) == 3
+    assert target_preview_requests[-1] == (("old", 0, False), ("new", 1, True))
 
     mode.layer_table.setCurrentIndex(mode.layer_model.index(1, int(LayerStackColumn.FILENAME)))
     mode.move_layer_up_button.click()
@@ -1278,6 +1338,8 @@ def test_review_edit_layer_stack_saves_visibility_order_and_warning(
     reordered = service.read_composition("alpha__20260525")
     assert [layer.layer_id for layer in reordered.layers] == ["new", "old"]
     assert [layer.order for layer in reordered.layers] == [0, 1]
+    assert len(target_preview_requests) == 4
+    assert target_preview_requests[-1] == (("new", 0, True), ("old", 1, False))
 
 
 def test_review_edit_gis_canvas_saves_pan_zoom_and_marks_preview_stale(

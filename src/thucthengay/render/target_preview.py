@@ -55,13 +55,26 @@ def build_target_preview_spec(
             )
         )
 
-    layers = sorted(composition.layers, key=lambda layer: (layer.order, layer.layer_id))
-    if not layers:
+    if not composition.layers:
         issues.append(
             _issue(
                 "target_preview.no_layers",
                 "Composition không có layer để tạo Target Preview.",
                 "Chạy lại ingestion hoặc kiểm tra composition JSON.",
+                target_id=target.id,
+                composition_id=composition.composition_id,
+            )
+        )
+    layers = sorted(
+        (layer for layer in composition.layers if layer.visible),
+        key=lambda layer: (layer.order, layer.layer_id),
+    )
+    if composition.layers and not layers:
+        issues.append(
+            _issue(
+                "target_preview.no_visible_layers",
+                "Composition không có layer đang bật để tạo Target Preview.",
+                "Bật ít nhất một layer trước khi tạo Target Preview.",
                 target_id=target.id,
                 composition_id=composition.composition_id,
             )
