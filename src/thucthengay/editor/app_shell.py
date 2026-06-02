@@ -3,18 +3,19 @@
 from __future__ import annotations
 
 import sys
+from pathlib import Path
 from uuid import uuid4
 
 from PySide6.QtCore import QThread
 from PySide6.QtWidgets import QApplication, QMainWindow, QTabWidget
 
-from thucthengay.config import ConfigLoadResult
+from thucthengay.config import ConfigLoadResult, load_project_config
 from thucthengay.editor.ingestion_worker import IngestionWorker
 from thucthengay.editor.modes.export_mode import ExportMode
 from thucthengay.editor.modes.review_edit_mode import ReviewEditMode
 from thucthengay.editor.modes.setup_mode import SetupMode, SetupPaths
 from thucthengay.jobs import IngestionJobResult, IngestionSummary, JobControl, JobState
-from thucthengay.workspace import WorkspaceService
+from thucthengay.workspace import WorkspaceError, WorkspaceService
 
 
 class AppShell(QMainWindow):
@@ -36,6 +37,7 @@ class AppShell(QMainWindow):
         self.mode_tabs.addTab(self.review_edit_mode, "Review/Edit")
         self.mode_tabs.addTab(self.export_mode, "Export")
         self.setup_mode.ingestRequested.connect(self._run_ingestion)
+        self.setup_mode.openWorkspaceRequested.connect(self._open_existing_workspace)
         self.setup_mode.pauseRequested.connect(self._pause_ingestion)
         self.setup_mode.resumeRequested.connect(self._resume_ingestion)
         self.setup_mode.stopRequested.connect(self._stop_ingestion)
@@ -122,6 +124,38 @@ class AppShell(QMainWindow):
         )
         self.mode_tabs.setCurrentWidget(self.review_edit_mode)
 
+    def _open_existing_workspace(self, workspace_folder: Path) -> None:
+        workspace_service = WorkspaceService(workspace_folder)
+        try:
+            manifest = workspace_service.load_manifest()
+        except WorkspaceError as error:
+            self.setup_mode.show_workspace_open_error(str(error))
+            return
+
+        config_result = load_project_config(
+            _manifest_config_path(manifest.config_path, workspace_service.paths.root)
+        )
+        if not config_result.ok:
+            self.setup_mode.show_workspace_open_error(_config_issue_summary(config_result))
+            return
+
+        try:
+            composition_count = len(workspace_service.list_compositions())
+        except WorkspaceError as error:
+            self.setup_mode.show_workspace_open_error(str(error))
+            return
+
+        self.review_edit_mode.load_workspace(
+            workspace_service,
+            targets=config_result.enabled_targets,
+        )
+        self.export_mode.load_workspace(
+            workspace_service,
+            targets=config_result.enabled_targets,
+        )
+        self.setup_mode.show_workspace_opened(workspace_service.paths.root, composition_count)
+        self.mode_tabs.setCurrentWidget(self.review_edit_mode)
+
     def _jump_to_review_context(
         self,
         target_id: str,
@@ -138,3 +172,22 @@ def run_gui(argv: list[str] | None = None) -> int:
     shell = AppShell()
     shell.show()
     return app.exec()
+
+
+def _manifest_config_path(config_path: str, workspace_root: Path) -> Path:
+    path = Path(config_path).expanduser()
+    if path.is_absolute():
+        return path
+    workspace_relative = workspace_root / path
+    if workspace_relative.exists():
+        return workspace_relative
+    return path.resolve()
+
+
+def _config_issue_summary(config_result: ConfigLoadResult) -> str:
+    if not config_result.issues:
+        return "Config trong manifest không hợp lệ."
+    issue = config_result.issues[0]
+    if issue.remediation:
+        return f"{issue.message} {issue.remediation}"
+    return issue.message

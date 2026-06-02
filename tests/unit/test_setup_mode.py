@@ -74,6 +74,7 @@ def test_setup_mode_disables_ingest_until_all_required_paths_are_valid(tmp_path:
 
     setup = SetupMode()
     assert not setup.ingest_button.isEnabled()
+    assert not setup.open_workspace_button.isEnabled()
     assert setup.selected_paths() is None
 
     setup.config_row.set_path(config_file)
@@ -82,12 +83,29 @@ def test_setup_mode_disables_ingest_until_all_required_paths_are_valid(tmp_path:
 
     setup.workspace_row.set_path(workspace_folder)
     assert setup.ingest_button.isEnabled()
+    assert setup.open_workspace_button.isEnabled()
 
     selected_paths = setup.selected_paths()
     assert selected_paths is not None
     assert selected_paths.config_file == config_file.resolve()
     assert selected_paths.imagery_input_folder == imagery_folder.resolve()
     assert selected_paths.workspace_folder == workspace_folder.resolve()
+
+
+def test_setup_mode_can_request_opening_existing_workspace_with_workspace_only(
+    tmp_path: Path,
+) -> None:
+    qapp()
+    workspace_folder = tmp_path / "workspace"
+    workspace_folder.mkdir()
+    setup = SetupMode()
+    emitted: list[Path] = []
+    setup.openWorkspaceRequested.connect(emitted.append)
+
+    setup.workspace_row.set_path(workspace_folder)
+    setup.open_workspace_button.click()
+
+    assert emitted == [workspace_folder.resolve()]
 
 
 def test_setup_mode_reports_first_blocker_in_ingest_tooltip(tmp_path: Path) -> None:
@@ -353,4 +371,69 @@ def test_app_shell_runs_ingestion_when_setup_requests_it(
         ("review", job_kwargs["workspace_service"], [target]),
         ("export", job_kwargs["workspace_service"], [target]),
     ]
+    assert shell.mode_tabs.currentWidget() is shell.review_edit_mode
+
+
+def test_app_shell_opens_existing_workspace_from_manifest(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    qapp()
+    config_file = tmp_path / "project.json"
+    config_file.write_text("{}", encoding="utf-8")
+    workspace_folder = tmp_path / "workspace"
+    service = WorkspaceService(workspace_folder)
+    service.initialize(config_path=config_file.resolve())
+    target = TargetConfig(
+        id="alpha",
+        name="Alpha",
+        geojson_file="alpha.geojson",
+        coordinate=[106.7, 10.8],
+        scale=50000,
+        grid=GridConfig(interval=GridInterval(minutes=1)),
+        export={"template_pptx_file": "alpha.pptx"},
+    )
+    config_result = ConfigLoadResult(
+        config_path=config_file.resolve(),
+        enabled_targets=[target],
+    )
+    calls: dict[str, object] = {}
+
+    def fake_load_project_config(path: Path) -> ConfigLoadResult:
+        calls["config_path"] = path
+        return config_result
+
+    monkeypatch.setattr(
+        "thucthengay.editor.app_shell.load_project_config",
+        fake_load_project_config,
+    )
+
+    shell = AppShell()
+    loaded_modes: list[tuple[str, WorkspaceService, list[TargetConfig] | None]] = []
+
+    def capture_review_load(self, loaded_service, *, targets=None) -> None:
+        loaded_modes.append(("review", loaded_service, targets))
+
+    def capture_export_load(self, loaded_service, *, targets=None) -> None:
+        loaded_modes.append(("export", loaded_service, targets))
+
+    shell.review_edit_mode.load_workspace = MethodType(
+        capture_review_load,
+        shell.review_edit_mode,
+    )
+    shell.export_mode.load_workspace = MethodType(
+        capture_export_load,
+        shell.export_mode,
+    )
+    shell.setup_mode.workspace_row.set_path(workspace_folder)
+
+    shell.setup_mode.open_workspace_button.click()
+
+    assert calls["config_path"] == config_file.resolve()
+    assert loaded_modes == [
+        ("review", loaded_modes[0][1], [target]),
+        ("export", loaded_modes[0][1], [target]),
+    ]
+    assert loaded_modes[0][1].paths.root == workspace_folder.resolve()
+    assert "Đã mở workspace" in shell.setup_mode.workspace_status_label.text()
     assert shell.mode_tabs.currentWidget() is shell.review_edit_mode

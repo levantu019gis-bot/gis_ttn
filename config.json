@@ -42,9 +42,7 @@
       "scale": 50000,
       "grid": {
         "interval": {
-          "degrees": 0,
-          "minutes": 1,
-          "seconds": 0.0
+          "minutes": 1
         }
       },
       "export": {
