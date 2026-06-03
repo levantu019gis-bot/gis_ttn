@@ -7,15 +7,21 @@ from enum import IntEnum, StrEnum
 from typing import Any
 
 from PySide6.QtCore import QAbstractItemModel, QModelIndex, QObject, Qt
-from PySide6.QtGui import QIcon
+from PySide6.QtGui import QBrush, QColor, QFont, QIcon
 from PySide6.QtWidgets import QApplication, QStyle
 
-from thucthengay.models import Composition, PersistedValidationState, TargetConfig
+from thucthengay.models import (
+    Composition,
+    PersistedValidationState,
+    TargetConfig,
+    target_order_key,
+)
 
 
 class TreeNodeKind(StrEnum):
     """Node types exposed by the composition tree."""
 
+    GROUP = "group"
     TARGET = "target"
     COMPOSITION = "composition"
 
@@ -47,6 +53,7 @@ class _TreeNode:
     kind: TreeNodeKind | None
     label: str
     parent: _TreeNode | None = None
+    group_key: str | None = None
     target_id: str | None = None
     composition: Composition | None = None
     children: list[_TreeNode] = field(default_factory=list)
@@ -130,7 +137,7 @@ class CompositionTreeModel(QAbstractItemModel):
 
     def visible_composition_count(self) -> int:
         """Return the number of visible compositions after filtering."""
-        return sum(len(target.children) for target in self._root.children)
+        return len(self.visible_composition_ids())
 
     def has_visible_compositions(self) -> bool:
         """Return whether the active filter leaves at least one composition visible."""
@@ -142,20 +149,23 @@ class CompositionTreeModel(QAbstractItemModel):
 
     def index_for_composition_id(self, composition_id: str) -> QModelIndex:
         """Return the model index for a visible composition id, otherwise an invalid index."""
-        for target_row, target_node in enumerate(self._root.children):
-            for composition_row, composition_node in enumerate(target_node.children):
-                composition = composition_node.composition
-                if composition is not None and composition.composition_id == composition_id:
-                    target_index = self.index(target_row, 0)
-                    return self.index(composition_row, 0, target_index)
-        return QModelIndex()
+        return self._index_for_composition_id(composition_id, QModelIndex(), self._root)
 
     def index_for_target_id(self, target_id: str) -> QModelIndex:
         """Return the model index for a visible target id, otherwise an invalid index."""
-        for target_row, target_node in enumerate(self._root.children):
-            if target_node.target_id == target_id:
-                return self.index(target_row, 0)
-        return QModelIndex()
+        return self._index_for_target_id(target_id, QModelIndex(), self._root)
+
+    def visible_composition_ids(self) -> list[str]:
+        """Return visible composition ids in tree traversal order."""
+        return _visible_composition_ids_under(self._root)
+
+    def next_visible_composition_id(self, composition_id: str) -> str | None:
+        """Return the next visible composition id in tree order."""
+        return self._neighbor_visible_composition_id(composition_id, offset=1)
+
+    def previous_visible_composition_id(self, composition_id: str) -> str | None:
+        """Return the previous visible composition id in tree order."""
+        return self._neighbor_visible_composition_id(composition_id, offset=-1)
 
     def _rebuild_tree(self) -> None:
         self._root = _TreeNode(kind=None, label="root")
@@ -165,30 +175,64 @@ class CompositionTreeModel(QAbstractItemModel):
         for composition in self._filtered_compositions():
             grouped.setdefault(composition.target_id, []).append(composition)
 
-        for target_id in sorted(
-            grouped,
-            key=lambda item: (
-                target_lookup[item].sort_order if item in target_lookup else 10_000,
-                item,
-            ),
-        ):
+        use_group_nodes = any(
+            target_lookup[target_id].group is not None
+            for target_id in grouped
+            if target_id in target_lookup
+        )
+        if not use_group_nodes:
+            for target_id in sorted(
+                grouped,
+                key=lambda item: _target_sort_key(item, target_lookup),
+            ):
+                target = target_lookup.get(target_id)
+                target_node = _TreeNode(
+                    kind=TreeNodeKind.TARGET,
+                    label=_target_label(target_id, target),
+                    target_id=target_id,
+                )
+                self._root.append_child(target_node)
+                self._append_composition_children(target_node, grouped[target_id])
+            return
+
+        group_nodes: dict[str, _TreeNode] = {}
+        for target_id in sorted(grouped, key=lambda item: _target_sort_key(item, target_lookup)):
             target = target_lookup.get(target_id)
+            group_key, group_label = _group_identity(target)
+            group_node = group_nodes.get(group_key)
+            if group_node is None:
+                group_node = _TreeNode(
+                    kind=TreeNodeKind.GROUP,
+                    label=group_label,
+                    group_key=group_key,
+                )
+                self._root.append_child(group_node)
+                group_nodes[group_key] = group_node
+
             target_node = _TreeNode(
                 kind=TreeNodeKind.TARGET,
                 label=_target_label(target_id, target),
+                group_key=group_key,
                 target_id=target_id,
             )
-            self._root.append_child(target_node)
+            group_node.append_child(target_node)
+            self._append_composition_children(target_node, grouped[target_id])
 
-            for composition in sorted(grouped[target_id], key=_composition_sort_key):
-                target_node.append_child(
-                    _TreeNode(
-                        kind=TreeNodeKind.COMPOSITION,
-                        label=composition.composition_id,
-                        target_id=target_id,
-                        composition=composition,
-                    )
+    def _append_composition_children(
+        self,
+        target_node: _TreeNode,
+        compositions: list[Composition],
+    ) -> None:
+        for composition in sorted(compositions, key=_composition_sort_key):
+            target_node.append_child(
+                _TreeNode(
+                    kind=TreeNodeKind.COMPOSITION,
+                    label=composition.composition_id,
+                    group_key=target_node.group_key,
+                    target_id=target_node.target_id,
+                    composition=composition,
                 )
+            )
 
     def _filtered_compositions(self) -> list[Composition]:
         return [
@@ -234,6 +278,8 @@ class CompositionTreeModel(QAbstractItemModel):
             return None
 
         node = self._node_from_index(index)
+        if node.kind is TreeNodeKind.GROUP:
+            return self._group_data(node, role)
         if node.kind is TreeNodeKind.TARGET:
             return self._target_data(node, role)
         if node.kind is TreeNodeKind.COMPOSITION and node.composition is not None:
@@ -258,6 +304,42 @@ class CompositionTreeModel(QAbstractItemModel):
         if node.kind is not TreeNodeKind.COMPOSITION or node.composition is None:
             return None
         return node.composition.composition_id
+
+    def _group_data(self, node: _TreeNode, role: int) -> Any:
+        compositions = _compositions_under(node)
+        issue_count = sum(_issue_count(composition) for composition in compositions)
+        severity = _highest_severity(compositions)
+        if role == int(Qt.ItemDataRole.DisplayRole):
+            target_text = "1 target" if len(node.children) == 1 else f"{len(node.children)} targets"
+            composition_text = (
+                "1 composition"
+                if len(compositions) == 1
+                else f"{len(compositions)} compositions"
+            )
+            issue_text = "1 vấn đề" if issue_count == 1 else f"{issue_count} vấn đề"
+            return f"[{severity}] {node.label} - {target_text}, {composition_text} | {issue_text}"
+        if role == int(Qt.ItemDataRole.ToolTipRole):
+            return (
+                f"Group: {node.label}\n"
+                f"Targets: {len(node.children)}\n"
+                f"Compositions: {len(compositions)}\n"
+                f"Issues: {issue_count}"
+            )
+        if role == int(Qt.ItemDataRole.DecorationRole):
+            return _standard_icon(severity)
+        if role == int(Qt.ItemDataRole.FontRole):
+            font = QFont()
+            font.setBold(True)
+            return font
+        if role == int(Qt.ItemDataRole.ForegroundRole):
+            return QBrush(QColor("#155E75"))
+        if role == CompositionTreeRole.NODE_KIND:
+            return TreeNodeKind.GROUP
+        if role == CompositionTreeRole.SEVERITY_TEXT:
+            return severity
+        if role == CompositionTreeRole.ISSUE_COUNT:
+            return issue_count
+        return None
 
     def _target_data(self, node: _TreeNode, role: int) -> Any:
         issue_count = sum(_issue_count(child.composition) for child in node.children)
@@ -337,6 +419,52 @@ class CompositionTreeModel(QAbstractItemModel):
             return node
         return self._root
 
+    def _neighbor_visible_composition_id(self, composition_id: str, *, offset: int) -> str | None:
+        composition_ids = self.visible_composition_ids()
+        try:
+            index = composition_ids.index(composition_id)
+        except ValueError:
+            return None
+        neighbor_index = index + offset
+        if neighbor_index < 0 or neighbor_index >= len(composition_ids):
+            return None
+        return composition_ids[neighbor_index]
+
+    def _index_for_composition_id(
+        self,
+        composition_id: str,
+        parent_index: QModelIndex,
+        parent_node: _TreeNode,
+    ) -> QModelIndex:
+        for row, child in enumerate(parent_node.children):
+            child_index = self.index(row, 0, parent_index)
+            composition = child.composition
+            if composition is not None and composition.composition_id == composition_id:
+                return child_index
+            descendant_index = self._index_for_composition_id(
+                composition_id,
+                child_index,
+                child,
+            )
+            if descendant_index.isValid():
+                return descendant_index
+        return QModelIndex()
+
+    def _index_for_target_id(
+        self,
+        target_id: str,
+        parent_index: QModelIndex,
+        parent_node: _TreeNode,
+    ) -> QModelIndex:
+        for row, child in enumerate(parent_node.children):
+            child_index = self.index(row, 0, parent_index)
+            if child.kind is TreeNodeKind.TARGET and child.target_id == target_id:
+                return child_index
+            descendant_index = self._index_for_target_id(target_id, child_index, child)
+            if descendant_index.isValid():
+                return descendant_index
+        return QModelIndex()
+
 
 def _target_label(target_id: str, target: TargetConfig | None) -> str:
     if target is None:
@@ -344,6 +472,40 @@ def _target_label(target_id: str, target: TargetConfig | None) -> str:
     if target.alias:
         return f"{target.alias} - {target.name}"
     return target.name
+
+
+def _group_identity(target: TargetConfig | None) -> tuple[str, str]:
+    if target is None or target.group is None:
+        return ("0", "Chưa phân nhóm")
+    return (str(target.group.key), target.group.title)
+
+
+def _target_sort_key(
+    target_id: str,
+    target_lookup: dict[str, TargetConfig],
+) -> tuple[int, tuple[int, ...], str, int, str]:
+    target = target_lookup.get(target_id)
+    if target is None:
+        return (1, (10_000,), "", 10_000, target_id)
+    return target_order_key(target)
+
+
+def _compositions_under(node: _TreeNode) -> list[Composition]:
+    compositions: list[Composition] = []
+    for child in node.children:
+        if child.composition is not None:
+            compositions.append(child.composition)
+        compositions.extend(_compositions_under(child))
+    return compositions
+
+
+def _visible_composition_ids_under(node: _TreeNode) -> list[str]:
+    composition_ids: list[str] = []
+    if node.composition is not None:
+        composition_ids.append(node.composition.composition_id)
+    for child in node.children:
+        composition_ids.extend(_visible_composition_ids_under(child))
+    return composition_ids
 
 
 def _composition_sort_key(composition: Composition) -> tuple[int, int, str, str]:

@@ -27,6 +27,7 @@ from thucthengay.models import (
     ProjectConfig,
     TargetConfig,
     TemplateMetadata,
+    target_order_key,
 )
 from thucthengay.models.config import GridInterval
 
@@ -40,7 +41,7 @@ class ResolvedTargetPaths:
     """Filesystem paths resolved from one enabled target config."""
 
     target_id: str
-    geojson_file: Path
+    geojson_file: Path | None = None
     template_pptx_file: Path | None = None
     template_metadata_file: Path | None = None
     template_pptx: Path | None = None
@@ -121,7 +122,7 @@ def load_project_config(config_path: str | Path) -> ConfigLoadResult:
 
     result.enabled_targets = sorted(
         (target for target in result.config.targets if target.enabled),
-        key=lambda target: target.sort_order,
+        key=target_order_key,
     )
 
     for target in result.enabled_targets:
@@ -247,7 +248,11 @@ def _validate_target_references(
     target: TargetConfig,
     result: ConfigLoadResult,
 ) -> None:
-    geojson_file = resolve_relative_to_file(config_file, target.geojson_file)
+    geojson_file = (
+        resolve_relative_to_file(config_file, target.geojson_file)
+        if target.geojson_file is not None
+        else None
+    )
     template_pptx_file = resolve_relative_to_file(
         config_file,
         target.export.template_pptx_file,
@@ -258,7 +263,17 @@ def _validate_target_references(
         template_pptx_file=template_pptx_file,
     )
 
-    if not geojson_file.is_file():
+    if geojson_file is None:
+        if "geojson_geometry" not in target.metadata:
+            result.issues.append(
+                _target_issue(
+                    "target.geojson_missing",
+                    target.id,
+                    f"Target `{target.id}` không có `geojson_file` hoặc metadata geometry.",
+                    "Thêm `metadata.geojson_geometry` hoặc khôi phục `geojson_file` trong config.",
+                )
+            )
+    elif not geojson_file.is_file():
         result.issues.append(
             _target_issue(
                 "target.geojson_missing",

@@ -1,0 +1,24 @@
+{
+  "entries": [
+    {
+      "composition_id": "DaBongBay__20260526",
+      "failure_reason": null,
+      "height": 2340,
+      "issues": [],
+      "output_path": "renders/DaBongBay__20260526.50518f96415d.jpg",
+      "render_spec_hash": "50518f96415da9ac979cd76b466d91a7a34e9b53457d1182a5b1c480a87d5a10",
+      "status": "success",
+      "target_id": "DaBongBay",
+      "timestamp": "2026-06-03T15:38:08.850432Z",
+      "visible_layer_refs": [
+        "PSScene_20260526_034559_38_24da_cloud_0__6806cd752a7a",
+        "PSScene_20260526_034557_35_24da_cloud_0__a219fc2d8ba5",
+        "PSScene_20260526_034555_32_24da_cloud_0__0857041f4d3a",
+        "PSScene_20260526_033531_61_252e_cloud_2.0__7bac2dfb1113",
+        "PSScene_20260526_033529_39_252e_cloud_2.0__57ce186adbf7",
+        "PSScene_20260526_033527_17_252e_cloud_0__f05095c5afe5"
+      ],
+      "width": 3306
+    }
+  ]
+}

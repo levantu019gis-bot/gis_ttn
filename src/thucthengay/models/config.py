@@ -162,6 +162,15 @@ class ProjectDefaultsConfig(BaseModel):
     export: ExportDefaultsConfig = Field(default_factory=ExportDefaultsConfig)
 
 
+class TargetGroupConfig(BaseModel):
+    """Business grouping metadata for a reporting target."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    key: str | int | float
+    title: str
+
+
 class TargetConfig(BaseModel):
     """Configured reporting target."""
 
@@ -169,11 +178,12 @@ class TargetConfig(BaseModel):
 
     id: str
     enabled: bool = True
+    group: TargetGroupConfig | None = None
     sort_order: int = 0
     name: str
     alias: str | None = None
     title: str | None = None
-    geojson_file: str
+    geojson_file: str | None = None
     coordinate: list[float]
     scale: int = Field(gt=0)
     grid: GridConfig
@@ -194,6 +204,33 @@ class TargetConfig(BaseModel):
             msg = "latitude must be between -90 and 90"
             raise ValueError(msg)
         return value
+
+
+def target_group_order_key(target: TargetConfig) -> tuple[int, tuple[int, ...], str]:
+    """Return the primary ordering key for a target group."""
+    group = target.group
+    if group is None:
+        return (1, (10_000,), "")
+
+    group_key = str(group.key)
+    if group_key in {"0", "0.0"}:
+        return (1, (10_000,), group_key)
+    return (0, _dotted_numeric_key(group_key), group_key)
+
+
+def target_order_key(target: TargetConfig) -> tuple[int, tuple[int, ...], str, int, str]:
+    """Return target ordering by group first, then order within that group."""
+    group_bucket, group_key, group_text = target_group_order_key(target)
+    return (group_bucket, group_key, group_text, target.sort_order, target.id)
+
+
+def _dotted_numeric_key(value: str) -> tuple[int, ...]:
+    parts: list[int] = []
+    for part in value.split("."):
+        if not part.isdigit():
+            return (9_999, *[ord(char) for char in value])
+        parts.append(int(part))
+    return tuple(parts)
 
 
 class ProjectConfig(BaseModel):

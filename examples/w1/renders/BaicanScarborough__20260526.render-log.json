@@ -1,0 +1,21 @@
+{
+  "entries": [
+    {
+      "composition_id": "BaicanScarborough__20260526",
+      "failure_reason": null,
+      "height": 2340,
+      "issues": [],
+      "output_path": "renders/BaicanScarborough__20260526.f8b4ef0038a9.jpg",
+      "render_spec_hash": "f8b4ef0038a9630c47f0d46a2fe66465e64989e9a5a9478e7f5e30f5a7d8fc28",
+      "status": "success",
+      "target_id": "BaicanScarborough",
+      "timestamp": "2026-06-03T15:38:10.743995Z",
+      "visible_layer_refs": [
+        "PSScene_20260526_024539_82_255b_cloud_21.0__eedaa3d13f57",
+        "PSScene_20260526_024537_47_255b_cloud_11.0__1898c6887fe0",
+        "PSScene_20260526_024535_12_255b_cloud_10.0__48b8b55b58ab"
+      ],
+      "width": 3306
+    }
+  ]
+}

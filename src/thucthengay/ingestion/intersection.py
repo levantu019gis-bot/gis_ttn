@@ -82,7 +82,10 @@ def match_imagery_to_targets(
                 on_target_progress(target_index, total_targets, target, 0)
             continue
 
-        boundary, issue = load_target_boundary(target, target_paths.geojson_file)
+        if target_paths.geojson_file is None:
+            boundary, issue = load_target_boundary_from_metadata(target)
+        else:
+            boundary, issue = load_target_boundary(target, target_paths.geojson_file)
         if issue is not None:
             issues.append(issue)
             if on_target_progress is not None:
@@ -160,6 +163,44 @@ def load_target_boundary(
         )
 
     return TargetBoundary(target=target, path=path, geometry=geometry, crs=crs), None
+
+
+def load_target_boundary_from_metadata(
+    target: TargetConfig,
+) -> tuple[TargetBoundary | None, Issue | None]:
+    """Load a target boundary geometry embedded in target config metadata."""
+    raw_geometry = target.metadata.get("geojson_geometry")
+    if not isinstance(raw_geometry, dict):
+        return None, _target_issue(
+            "target.geojson_missing",
+            target.id,
+            f"Target `{target.id}` không có `metadata.geojson_geometry` hợp lệ.",
+            "Bổ sung geometry GeoJSON vào metadata hoặc khôi phục `geojson_file`.",
+        )
+
+    source = f"config:{target.id}:metadata.geojson_geometry"
+    try:
+        geometry = _geometry_from_geojson(raw_geometry)
+    except (TypeError, ValueError, ShapelyError) as error:
+        return None, _target_issue(
+            "target.geojson_invalid",
+            target.id,
+            f"Geometry trong config của target `{target.id}` không hợp lệ.",
+            f"Sửa `metadata.geojson_geometry`. Chi tiết kỹ thuật: {error}",
+        )
+
+    if geometry.is_empty or not geometry.is_valid:
+        return None, _target_issue(
+            "target.geojson_invalid",
+            target.id,
+            f"Geometry trong config của target `{target.id}` không hợp lệ.",
+            "Kiểm tra polygon/geometry của target.",
+        )
+
+    return (
+        TargetBoundary(target=target, path=Path(source), geometry=geometry, crs="EPSG:4326"),
+        None,
+    )
 
 
 def _image_intersects_target(

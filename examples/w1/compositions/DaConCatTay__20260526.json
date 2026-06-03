@@ -13,7 +13,7 @@
     {
       "cache_path": "cache/DaConCatTay/20260526/PSScene_20260526_041530_33_24fb_cloud_0__edf82d46b8eb.tif",
       "capture_date": "2026-05-26",
-      "capture_time": "04:15:30",
+      "capture_time": "11:15:30",
       "cloud_percent": 0.0,
       "layer_id": "PSScene_20260526_041530_33_24fb_cloud_0__edf82d46b8eb",
       "metadata_source": "filename",
@@ -25,7 +25,7 @@
     {
       "cache_path": "cache/DaConCatTay/20260526/PSScene_20260526_041528_49_24fb_cloud_0__74ab78beaf7c.tif",
       "capture_date": "2026-05-26",
-      "capture_time": "04:15:28",
+      "capture_time": "11:15:28",
       "cloud_percent": 0.0,
       "layer_id": "PSScene_20260526_041528_49_24fb_cloud_0__74ab78beaf7c",
       "metadata_source": "filename",
@@ -37,7 +37,7 @@
     {
       "cache_path": "cache/DaConCatTay/20260526/PSScene_20260526_033749_43_2515_cloud_0__2ebb6ac59677.tif",
       "capture_date": "2026-05-26",
-      "capture_time": "03:37:49",
+      "capture_time": "10:37:49",
       "cloud_percent": 0.0,
       "layer_id": "PSScene_20260526_033749_43_2515_cloud_0__2ebb6ac59677",
       "metadata_source": "filename",
@@ -49,7 +49,7 @@
     {
       "cache_path": "cache/DaConCatTay/20260526/PSScene_20260526_033747_32_2515_cloud_0__a0cebdb0485b.tif",
       "capture_date": "2026-05-26",
-      "capture_time": "03:37:47",
+      "capture_time": "10:37:47",
       "cloud_percent": 0.0,
       "layer_id": "PSScene_20260526_033747_32_2515_cloud_0__a0cebdb0485b",
       "metadata_source": "filename",
@@ -59,7 +59,7 @@
       "visible": true
     }
   ],
-  "needs_revalidation": false,
+  "needs_revalidation": true,
   "notes": "",
   "ready": false,
   "review_order": null,

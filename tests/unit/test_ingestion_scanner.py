@@ -53,9 +53,25 @@ def test_scan_recursively_discovers_geotiffs_and_ignores_unsupported_files(tmp_p
 
     assert [item.path for item in result.rasters] == [geotiff]
     assert result.rasters[0].layer.capture_date.isoformat() == "2026-05-25"
-    assert result.rasters[0].layer.capture_time.isoformat() == "10:11:12"
+    assert result.rasters[0].layer.capture_time.isoformat() == "17:11:12"
     assert result.rasters[0].layer.cloud_percent == 12
     assert result.warnings == []
+
+
+def test_scan_converts_filename_utc_timestamp_to_local_date_and_time(
+    tmp_path: Path,
+) -> None:
+    geotiff = tmp_path / "20260525_230000_psscene.tif"
+    write_geotiff(geotiff)
+
+    result = scan_imagery_folder(tmp_path)
+
+    assert len(result.rasters) == 1
+    layer = result.rasters[0].layer
+    assert layer.capture_date is not None
+    assert layer.capture_date.isoformat() == "2026-05-26"
+    assert layer.capture_time is not None
+    assert layer.capture_time.isoformat() == "06:00:00"
 
 
 def test_scan_uses_unique_layer_ids_for_duplicate_filenames_in_subfolders(tmp_path: Path) -> None:
@@ -180,7 +196,7 @@ class TestTryPatternMatch:
         assert result.capture_date is not None
         assert result.capture_date.isoformat() == "2026-05-26"
         assert result.capture_time is not None
-        assert result.capture_time.isoformat() == "02:45:35"
+        assert result.capture_time.isoformat() == "09:45:35"
         assert result.cloud_percent == 10.0
         assert result.field_sources["capture_date"] == MetadataSource.FILENAME
         assert result.field_sources["capture_time"] == MetadataSource.FILENAME
@@ -193,8 +209,16 @@ class TestTryPatternMatch:
         assert result.capture_date is not None
         assert result.capture_date.isoformat() == "2026-01-01"
         assert result.capture_time is not None
-        assert result.capture_time.isoformat() == "12:00:00"
+        assert result.capture_time.isoformat() == "19:00:00"
         assert result.cloud_percent is None
+
+    def test_pattern_date_time_rolls_over_to_next_local_day(self) -> None:
+        pat = _pattern("simple", "yyyyMMdd_HHmmss_*")
+        result = _try_pattern_match("20260101_230000_scene", pat)
+        assert result.capture_date is not None
+        assert result.capture_date.isoformat() == "2026-01-02"
+        assert result.capture_time is not None
+        assert result.capture_time.isoformat() == "06:00:00"
 
     def test_segment_count_mismatch_returns_empty(self) -> None:
         pat = _pattern("ps", "*_yyyyMMdd_HHmmss")
@@ -242,7 +266,7 @@ def test_scan_with_filename_patterns_extracts_metadata(tmp_path: Path) -> None:
     assert layer.capture_date is not None
     assert layer.capture_date.isoformat() == "2026-05-26"
     assert layer.capture_time is not None
-    assert layer.capture_time.isoformat() == "02:45:35"
+    assert layer.capture_time.isoformat() == "09:45:35"
     assert layer.cloud_percent == 10.0
     assert layer.metadata_status == MetadataStatus.VALID
     assert layer.metadata_source == MetadataSource.FILENAME

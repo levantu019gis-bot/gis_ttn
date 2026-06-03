@@ -17,6 +17,9 @@ from thucthengay.models.config import (
     ProjectDefaultsConfig,
     TargetConfig,
     TargetExportConfig,
+    TargetGroupConfig,
+    target_group_order_key,
+    target_order_key,
 )
 from thucthengay.models.export import (
     ExportCompletionState,
@@ -110,6 +113,9 @@ __all__ = [
     "SkippedComposition",
     "TargetConfig",
     "TargetExportConfig",
+    "TargetGroupConfig",
+    "target_group_order_key",
+    "target_order_key",
     "TemplateMetadata",
     "TemplatePlaceholder",
     "TemplatePlaceholderSelector",

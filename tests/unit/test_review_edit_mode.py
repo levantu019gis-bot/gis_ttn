@@ -11,7 +11,7 @@ from PIL import Image
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QImage, QKeyEvent
+from PySide6.QtGui import QBrush, QFont, QImage, QKeyEvent
 from PySide6.QtWidgets import (
     QApplication,
     QGraphicsView,
@@ -59,6 +59,7 @@ from thucthengay.models import (
     MetadataStatus,
     TargetConfig,
     TargetExportConfig,
+    TargetGroupConfig,
     ValidationSummary,
     ViewState,
 )
@@ -77,9 +78,16 @@ def qapp() -> QApplication:
     return QApplication.instance() or QApplication([])
 
 
-def target_config(target_id: str, *, sort_order: int, name: str) -> TargetConfig:
+def target_config(
+    target_id: str,
+    *,
+    sort_order: int,
+    name: str,
+    group: tuple[str | int | float, str] | None = None,
+) -> TargetConfig:
     return TargetConfig(
         id=target_id,
+        group=TargetGroupConfig(key=group[0], title=group[1]) if group is not None else None,
         sort_order=sort_order,
         name=name,
         geojson_file=f"{target_id}.geojson",
@@ -225,6 +233,62 @@ def test_composition_tree_groups_by_target_order_and_review_queue_order() -> Non
 
     assert first_alpha_child.data(CompositionTreeRole.COMPOSITION_ID) == "alpha__20260524"
     assert second_alpha_child.data(CompositionTreeRole.COMPOSITION_ID) == "alpha__20260526"
+
+
+def test_composition_tree_uses_group_nodes_and_local_target_order() -> None:
+    qapp()
+    model = CompositionTreeModel()
+    model.set_compositions(
+        [
+            composition("alpha__20260525", "alpha", date(2026, 5, 25)),
+            composition("beta__20260525", "beta", date(2026, 5, 25)),
+            composition("gamma__20260525", "gamma", date(2026, 5, 25)),
+        ],
+        targets=[
+            target_config(
+                "alpha",
+                sort_order=1,
+                name="Alpha Target",
+                group=("1.2", "Không người Trường Sa"),
+            ),
+            target_config(
+                "beta",
+                sort_order=1,
+                name="Beta Target",
+                group=("1.1", "Không người Hoàng Sa"),
+            ),
+            target_config(
+                "gamma",
+                sort_order=2,
+                name="Gamma Target",
+                group=("1.2", "Không người Trường Sa"),
+            ),
+        ],
+    )
+
+    first_group = model.index(0, 0)
+    second_group = model.index(1, 0)
+    beta_target = model.index(0, 0, first_group)
+    alpha_target = model.index(0, 0, second_group)
+    gamma_target = model.index(1, 0, second_group)
+
+    assert first_group.data(CompositionTreeRole.NODE_KIND) == TreeNodeKind.GROUP
+    assert "Không người Hoàng Sa" in first_group.data(Qt.ItemDataRole.DisplayRole)
+    assert "Không người Trường Sa" in second_group.data(Qt.ItemDataRole.DisplayRole)
+    group_font = first_group.data(Qt.ItemDataRole.FontRole)
+    group_foreground = first_group.data(Qt.ItemDataRole.ForegroundRole)
+    assert isinstance(group_font, QFont)
+    assert group_font.bold()
+    assert isinstance(group_foreground, QBrush)
+    assert group_foreground.color().name() == "#155e75"
+    assert beta_target.data(CompositionTreeRole.TARGET_ID) == "beta"
+    assert alpha_target.data(CompositionTreeRole.TARGET_ID) == "alpha"
+    assert gamma_target.data(CompositionTreeRole.TARGET_ID) == "gamma"
+    assert model.visible_composition_ids() == [
+        "beta__20260525",
+        "alpha__20260525",
+        "gamma__20260525",
+    ]
 
 
 def test_composition_tree_exposes_text_status_severity_counts_and_tooltips() -> None:
@@ -1754,6 +1818,61 @@ def test_review_edit_action_bar_includes_and_advances_on_passing_gate(
         "alpha__20260526"
     )
     assert mode.previous_button.isEnabled()
+
+
+def test_review_edit_actions_advance_by_visible_group_tree_order(
+    tmp_path: Path,
+) -> None:
+    qapp()
+    service = WorkspaceService(tmp_path / "workspace")
+    service.initialize(config_path="config.json")
+    service.write_composition(
+        composition("alpha__20260525", "alpha", date(2026, 5, 25), needs_revalidation=False)
+    )
+    service.write_composition(
+        composition("beta__20260525", "beta", date(2026, 5, 25), needs_revalidation=False)
+    )
+
+    mode = ReviewEditMode()
+    mode._request_canvas_render = lambda _composition: None  # noqa: SLF001
+    mode._request_target_preview = lambda _composition: None  # noqa: SLF001
+    mode.load_workspace(
+        service,
+        targets=[
+            target_config(
+                "alpha",
+                sort_order=1,
+                name="Alpha Target",
+                group=("1.2", "Không người Trường Sa"),
+            ),
+            target_config(
+                "beta",
+                sort_order=1,
+                name="Beta Target",
+                group=("1.1", "Không người Hoàng Sa"),
+            ),
+        ],
+    )
+    mode.tree_view.setCurrentIndex(mode.tree_model.index_for_composition_id("beta__20260525"))
+
+    assert service.load_manifest().composition_ids == [
+        "alpha__20260525",
+        "beta__20260525",
+    ]
+    assert mode.tree_model.visible_composition_ids() == [
+        "beta__20260525",
+        "alpha__20260525",
+    ]
+
+    mode.skip_button.click()
+
+    assert mode.tree_model.composition_id_for_index(mode.tree_view.currentIndex()) == (
+        "alpha__20260525"
+    )
+    mode.previous_button.click()
+    assert mode.tree_model.composition_id_for_index(mode.tree_view.currentIndex()) == (
+        "beta__20260525"
+    )
 
 
 def test_review_edit_include_persists_target_interval_and_scale_to_config(

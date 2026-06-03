@@ -70,6 +70,35 @@ def test_project_config_supports_target_specific_template_pptx() -> None:
     assert target.grid.interval.minutes == 1
 
 
+def test_project_config_accepts_inline_geojson_geometry_and_group() -> None:
+    data = valid_target_dict()
+    data.pop("geojson_file")
+    data.pop("title")
+    data["group"] = {"key": "2.2.1", "title": "Có người Trường Sa TQ"}
+    data["metadata"] = {
+        "geojson_geometry": {
+            "type": "Polygon",
+            "coordinates": [[
+                [106.0, 10.0],
+                [106.1, 10.0],
+                [106.1, 10.1],
+                [106.0, 10.1],
+                [106.0, 10.0],
+            ]],
+        }
+    }
+
+    config = ProjectConfig.model_validate({"targets": [data]})
+
+    target = config.targets[0]
+    assert target.group is not None
+    assert target.group.key == "2.2.1"
+    assert target.group.title == "Có người Trường Sa TQ"
+    assert target.geojson_file is None
+    assert target.title is None
+    assert target.metadata["geojson_geometry"]["type"] == "Polygon"
+
+
 def test_project_config_applies_shared_target_defaults() -> None:
     data = valid_target_dict()
     data["grid"] = {

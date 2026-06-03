@@ -128,6 +128,41 @@ def test_matching_records_intersections_for_enabled_targets(tmp_path: Path) -> N
     }
 
 
+def test_matching_uses_inline_target_geometry_when_geojson_file_is_absent(
+    tmp_path: Path,
+) -> None:
+    geotiff = tmp_path / "20260525_101112_scene.tif"
+    write_geotiff(geotiff)
+    target = target_config("inline").model_copy(
+        update={
+            "geojson_file": None,
+            "metadata": {
+                "geojson_geometry": {
+                    "type": "Polygon",
+                    "coordinates": [square(106.05, 10.85, 106.08, 10.88)],
+                }
+            },
+        }
+    )
+    config_result = ConfigLoadResult(
+        config_path=Path("config.json"),
+        config=None,
+        enabled_targets=[target],
+        target_paths={
+            "inline": ResolvedTargetPaths(
+                target_id="inline",
+                template_metadata_file=Path("inline.template.json"),
+            )
+        },
+    )
+
+    scan_result = scan_imagery_folder(tmp_path)
+    result = match_imagery_to_targets(scan_result.rasters, config_result)
+
+    assert result.issues == []
+    assert [match.image.path for match in result.matches["inline"]] == [geotiff]
+
+
 def test_matching_transforms_target_geometry_to_raster_crs(tmp_path: Path) -> None:
     geotiff = tmp_path / "20260525_101112_scene.tif"
     write_web_mercator_geotiff(geotiff)

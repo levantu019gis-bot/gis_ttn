@@ -77,7 +77,7 @@
           {
             "field": "title",
             "element_id": "66",
-            "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
+            "value": "Hiện trạng đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
           },
           {
             "field": "time",
@@ -149,14 +149,12 @@
       "scale": 50000,
       "grid": {
         "interval": {
-          "degrees": 0,
-          "minutes": 1,
-          "seconds": 0.0
+          "minutes": 1
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
-        "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
+        "template_txt_value": "Tại đá Cồn Cát Tây (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "placeholders": [
           {
             "field": "map_image",
@@ -165,7 +163,7 @@
           {
             "field": "title",
             "element_id": "66",
-            "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
+            "value": "Hiện trạng đá Cồn Cát Tây, quần đảo Hoàng Sa ngày {capture_date}"
           },
           {
             "field": "time",
@@ -242,7 +240,7 @@
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
-        "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
+        "template_txt_value": "Tại đá Cây (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "placeholders": [
           {
             "field": "map_image",
@@ -251,7 +249,7 @@
           {
             "field": "title",
             "element_id": "66",
-            "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
+            "value": "Hiện trạng đá Cây, quần đảo Hoàng Sa ngày {capture_date}"
           },
           {
             "field": "time",
@@ -320,17 +318,15 @@
         112.32662507414372,
         16.947233343731014
       ],
-      "scale": 50000,
+      "scale": 20000,
       "grid": {
         "interval": {
-          "degrees": 0,
-          "minutes": 1,
-          "seconds": 0.0
+          "minutes": 1
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
-        "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
+        "template_txt_value": "Tại đá Bắc, Trung, Nam, Cồn Cát Bắc, Cồn Cát Trung, Cồn Cát Nam/Cụm An Vĩnh (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "placeholders": [
           {
             "field": "map_image",
@@ -339,7 +335,7 @@
           {
             "field": "title",
             "element_id": "66",
-            "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
+            "value": "Hiện trạng một số thực thể thuộc Cụm An Vĩnh, quần đảo Hoàng Sa ngày {capture_date}"
           },
           {
             "field": "time",
@@ -424,17 +420,15 @@
         112.34197958414788,
         16.83539777421951
       ],
-      "scale": 50000,
+      "scale": 10000,
       "grid": {
         "interval": {
-          "degrees": 0,
-          "minutes": 1,
-          "seconds": 0.0
+          "seconds": 30
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
-        "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
+        "template_txt_value": "Tại đá Phú Lâm (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "placeholders": [
           {
             "field": "map_image",
@@ -443,7 +437,7 @@
           {
             "field": "title",
             "element_id": "66",
-            "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
+            "value": "Hiện trạng đá Phú Lâm, quần đảo Hoàng Sa ngày {capture_date}"
           },
           {
             "field": "time",
@@ -512,17 +506,15 @@
         112.72936459007214,
         16.667485341128206
       ],
-      "scale": 50000,
+      "scale": 10000,
       "grid": {
         "interval": {
-          "degrees": 0,
-          "minutes": 1,
-          "seconds": 0.0
+          "minutes": 1
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
-        "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
+        "template_txt_value": "Tại đá Linh Côn (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "placeholders": [
           {
             "field": "map_image",
@@ -531,7 +523,7 @@
           {
             "field": "title",
             "element_id": "66",
-            "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
+            "value": "Hiện trạng đá Linh Côn, quần đảo Hoàng Sa ngày {capture_date}"
           },
           {
             "field": "time",
@@ -608,17 +600,15 @@
         111.50775789293729,
         16.446708473794477
       ],
-      "scale": 50000,
+      "scale": 6000,
       "grid": {
         "interval": {
-          "degrees": 0,
-          "minutes": 1,
-          "seconds": 0.0
+          "seconds": 30
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
-        "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
+        "template_txt_value": "Tại đá Quang Ảnh (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "placeholders": [
           {
             "field": "map_image",
@@ -627,7 +617,7 @@
           {
             "field": "title",
             "element_id": "66",
-            "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
+            "value": "Hiện trạng đá Quang Ảnh, quần đảo Hoàng Sa ngày {capture_date}"
           },
           {
             "field": "time",
@@ -703,14 +693,12 @@
       "scale": 50000,
       "grid": {
         "interval": {
-          "degrees": 0,
-          "minutes": 1,
-          "seconds": 0.0
+          "minutes": 1
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
-        "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
+        "template_txt_value": "Tại đá Hải Sâm (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "placeholders": [
           {
             "field": "map_image",
@@ -719,16 +707,11 @@
           {
             "field": "title",
             "element_id": "66",
-            "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
+            "value": "Hiện trạng Đá Hải Sâm, quần đảo Hoàng Sa ngày {capture_date}"
           },
           {
             "field": "time",
             "element_id": "67"
-          },
-          {
-            "field": "comment",
-            "element_id": "68",
-            "value": "Không ghi nhận hoạt động tôn tạo, xây dựng công trình."
           }
         ]
       },
@@ -811,14 +794,12 @@
       "scale": 50000,
       "grid": {
         "interval": {
-          "degrees": 0,
-          "minutes": 1,
-          "seconds": 0.0
+          "minutes": 1
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
-        "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
+        "template_txt_value": "Tại đá Hữu Nhật (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "placeholders": [
           {
             "field": "map_image",
@@ -827,7 +808,7 @@
           {
             "field": "title",
             "element_id": "66",
-            "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
+            "value": "Hiện trạng đá Hữu Nhật, quần đảo Hoàng Sa ngày {capture_date}"
           },
           {
             "field": "time",
@@ -896,17 +877,15 @@
         111.60772314584855,
         16.533066414384205
       ],
-      "scale": 50000,
+      "scale": 10035,
       "grid": {
         "interval": {
-          "degrees": 0,
-          "minutes": 1,
-          "seconds": 0.0
+          "minutes": 1
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
-        "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
+        "template_txt_value": "Tại đá Hoàng Sa (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "placeholders": [
           {
             "field": "map_image",
@@ -915,7 +894,7 @@
           {
             "field": "title",
             "element_id": "66",
-            "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
+            "value": "Hiện trạng đá Hoàng Sa, quần đảo Hoàng Sa ngày {capture_date}"
           },
           {
             "field": "time",
@@ -987,14 +966,12 @@
       "scale": 50000,
       "grid": {
         "interval": {
-          "degrees": 0,
-          "minutes": 1,
-          "seconds": 0.0
+          "minutes": 1
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
-        "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
+        "template_txt_value": "Tại đá Ốc Hoa (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "placeholders": [
           {
             "field": "map_image",
@@ -1003,7 +980,7 @@
           {
             "field": "title",
             "element_id": "66",
-            "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
+            "value": "Hiện trạng đá Ốc Hoa, quần đảo Hoàng Sa ngày {capture_date}"
           },
           {
             "field": "time",
@@ -1082,7 +1059,7 @@
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
-        "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
+        "template_txt_value": "Tại đá Ba Ba (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "placeholders": [
           {
             "field": "map_image",
@@ -1091,16 +1068,11 @@
           {
             "field": "title",
             "element_id": "66",
-            "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
+            "value": "Hiện trạng đá Ba Ba, quần đảo Hoàng Sa ngày {capture_date}"
           },
           {
             "field": "time",
             "element_id": "67"
-          },
-          {
-            "field": "comment",
-            "element_id": "68",
-            "value": "Không ghi nhận hoạt động tôn tạo, xây dựng công trình."
           }
         ]
       },
@@ -1170,7 +1142,7 @@
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
-        "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
+        "template_txt_value": "Tại đá Xà Cừ (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "placeholders": [
           {
             "field": "map_image",
@@ -1179,7 +1151,7 @@
           {
             "field": "title",
             "element_id": "66",
-            "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
+            "value": "Hiện trạng đá Xà Cừ, quần đảo Hoàng Sa ngày {capture_date}"
           },
           {
             "field": "time",
@@ -1262,7 +1234,7 @@
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
-        "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
+        "template_txt_value": "Tại đá Quang Hòa (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "placeholders": [
           {
             "field": "map_image",
@@ -1271,16 +1243,11 @@
           {
             "field": "title",
             "element_id": "66",
-            "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
+            "value": "Hiện trạng đá Quang Hòa, quần đảo Hoàng Sa ngày {capture_date}"
           },
           {
             "field": "time",
             "element_id": "67"
-          },
-          {
-            "field": "comment",
-            "element_id": "68",
-            "value": "Không ghi nhận hoạt động tôn tạo, xây dựng công trình."
           }
         ]
       },
@@ -1343,14 +1310,12 @@
       "scale": 50000,
       "grid": {
         "interval": {
-          "degrees": 0,
-          "minutes": 1,
-          "seconds": 0.0
+          "minutes": 1
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
-        "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
+        "template_txt_value": "Tại đá Duy Mộng (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "placeholders": [
           {
             "field": "map_image",
@@ -1359,7 +1324,7 @@
           {
             "field": "title",
             "element_id": "66",
-            "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
+            "value": "Hiện trạng đá Duy Mộng, quần đảo Hoàng Sa ngày {capture_date}"
           },
           {
             "field": "time",
@@ -1431,14 +1396,12 @@
       "scale": 50000,
       "grid": {
         "interval": {
-          "degrees": 0,
-          "minutes": 1,
-          "seconds": 0.0
+          "minutes": 1
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
-        "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
+        "template_txt_value": "Tại đá Lớn (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "placeholders": [
           {
             "field": "map_image",
@@ -1447,7 +1410,7 @@
           {
             "field": "title",
             "element_id": "66",
-            "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
+            "value": "Hiện trạng đá Lớn, quần đảo Hoàng Sa ngày {capture_date}"
           },
           {
             "field": "time",
@@ -1527,14 +1490,12 @@
       "scale": 50000,
       "grid": {
         "interval": {
-          "degrees": 0,
-          "minutes": 1,
-          "seconds": 0.0
+          "minutes": 3
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
-        "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
+        "template_txt_value": "Tại đá Chim Én (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "placeholders": [
           {
             "field": "map_image",
@@ -1543,7 +1504,7 @@
           {
             "field": "title",
             "element_id": "66",
-            "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
+            "value": "Hiện trạng đá Chim Én, quần đảo Hoàng Sa ngày {capture_date}"
           },
           {
             "field": "time",
@@ -1638,7 +1599,7 @@
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
-        "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
+        "template_txt_value": "Tại đá Bạch Quy (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "placeholders": [
           {
             "field": "map_image",
@@ -1647,7 +1608,7 @@
           {
             "field": "title",
             "element_id": "66",
-            "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
+            "value": "Hiện trạng đá Bạch Quy, quần đảo Hoàng Sa ngày {capture_date}"
           },
           {
             "field": "time",
@@ -1734,7 +1695,7 @@
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
-        "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
+        "template_txt_value": "Tại đá Bông Bay (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "placeholders": [
           {
             "field": "map_image",
@@ -1743,7 +1704,7 @@
           {
             "field": "title",
             "element_id": "66",
-            "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
+            "value": "Hiện trạng đá Bông Bay, quần đảo Hoàng Sa ngày {capture_date}"
           },
           {
             "field": "time",
@@ -1834,7 +1795,7 @@
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
-        "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
+        "template_txt_value": "Tại đá Tri Tôn (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "placeholders": [
           {
             "field": "map_image",
@@ -1843,7 +1804,7 @@
           {
             "field": "title",
             "element_id": "66",
-            "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
+            "value": "Hiện trạng đá Tri Tôn, quần đảo Hoàng Sa ngày {capture_date}"
           },
           {
             "field": "time",
@@ -1934,7 +1895,7 @@
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
-        "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
+        "template_txt_value": "Tại bãi cạn Scarborough (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "placeholders": [
           {
             "field": "map_image",
@@ -1943,7 +1904,7 @@
           {
             "field": "title",
             "element_id": "66",
-            "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
+            "value": "Hiện trạng bãi cạn Scarborough, quần đảo Hoàng Sa ngày {capture_date}"
           },
           {
             "field": "time",
@@ -2030,7 +1991,7 @@
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
-        "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
+        "template_txt_value": "Tại đá Bắc/Cụm Song Tử (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "placeholders": [
           {
             "field": "map_image",
@@ -2039,7 +2000,7 @@
           {
             "field": "title",
             "element_id": "66",
-            "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
+            "value": "Hiện trạng đá Bắc/Cụm Song Tử, quần đảo Hoàng Sa ngày {capture_date}"
           },
           {
             "field": "time",
@@ -2126,7 +2087,7 @@
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
-        "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
+        "template_txt_value": "Tại đá Song Tử Đông (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "placeholders": [
           {
             "field": "map_image",
@@ -2135,7 +2096,7 @@
           {
             "field": "title",
             "element_id": "66",
-            "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
+            "value": "Hiện trạng đá Song Tử Đông, quần đảo Hoàng Sa ngày {capture_date}"
           },
           {
             "field": "time",
@@ -2234,7 +2195,7 @@
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
-        "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
+        "template_txt_value": "Tại bãi cạn Đinh Ba, Núi Cầu/Cụm Song Tử (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "placeholders": [
           {
             "field": "map_image",
@@ -2243,7 +2204,7 @@
           {
             "field": "title",
             "element_id": "66",
-            "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
+            "value": "Hiện trạng một số thực thể thuộc Cụm Song Tử, quần đảo Trường Sa ngày {capture_date}"
           },
           {
             "field": "time",
@@ -2336,9 +2297,9 @@
       "id": "CumThiTu",
       "enabled": true,
       "sort_order": 25,
-      "name": "Cụm Thị Tứ",
-      "alias": "Cụm Thị Tứ",
-      "title": "Cụm Thị Tứ",
+      "name": "Đá Hoài Ân, Tri Lễ, Cái Vung, Vĩnh Hảo, Trâm Đức/Cụm Thị Tứ",
+      "alias": "Đá Hoài Ân, Tri Lễ, Cái Vung, Vĩnh Hảo, Trâm Đức/Cụm Thị Tứ",
+      "title": "Đá Hoài Ân, Tri Lễ, Cái Vung, Vĩnh Hảo, Trâm Đức/Cụm Thị Tứ",
       "geojson_file": "webapp_geojson/output_geojson/CumThiTu.geojson",
       "coordinate": [
         114.28641332441897,
@@ -2354,7 +2315,7 @@
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
-        "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
+        "template_txt_value": "Tại đá Hoài Ân, Tri Lễ, Cái Vung, Vĩnh Hảo, Trâm Đức/Cụm Thị Tứ (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "placeholders": [
           {
             "field": "map_image",
@@ -2363,7 +2324,7 @@
           {
             "field": "title",
             "element_id": "66",
-            "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
+            "value": "Hiện trạng một số thực thể thuộc Cụm Thị Tứ, quần đảo Trường Sa ngày {capture_date}"
           },
           {
             "field": "time",
@@ -2386,7 +2347,7 @@
             11.063416731802578,
             114.28641332441897
           ],
-          "alias": "Cụm Thị Tứ",
+          "alias": "Đá Hoài Ân, Tri Lễ, Cái Vung, Vĩnh Hảo, Trâm Đức/Cụm Thị Tứ",
           "group": 1.2
         },
         "geojson_geometry": {
@@ -2458,7 +2419,7 @@
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
-        "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
+        "template_txt_value": "Tại đá Xu Bi (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "placeholders": [
           {
             "field": "map_image",
@@ -2467,16 +2428,11 @@
           {
             "field": "title",
             "element_id": "66",
-            "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
+            "value": "Hiện trạng đá Xu Bi, quần đảo Trường Sa ngày {capture_date}"
           },
           {
             "field": "time",
             "element_id": "67"
-          },
-          {
-            "field": "comment",
-            "element_id": "68",
-            "value": "Không ghi nhận hoạt động tôn tạo, xây dựng công trình."
           }
         ]
       },
@@ -2544,9 +2500,9 @@
       "id": "CumLoaiTa",
       "enabled": true,
       "sort_order": 27,
-      "name": "Cụm Loại Ta",
-      "alias": "Cụm Loại Ta",
-      "title": "Cụm Loại Ta",
+      "name": ".../Cụm Loại Ta",
+      "alias": ".../Cụm Loại Ta",
+      "title": ".../Cụm Loại Ta",
       "geojson_file": "webapp_geojson/output_geojson/CumLoaiTa.geojson",
       "coordinate": [
         114.56725369963456,
@@ -2562,7 +2518,7 @@
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
-        "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
+        "template_txt_value": "Tại đá .../Cụm Loại Ta (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "placeholders": [
           {
             "field": "map_image",
@@ -2571,7 +2527,7 @@
           {
             "field": "title",
             "element_id": "66",
-            "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
+            "value": "Hiện trạng một số thực thể  thuộc Cụm Loại Ta, quần đảo Trường Sa ngày {capture_date}"
           },
           {
             "field": "time",
@@ -2700,9 +2656,9 @@
       "id": "DaCaNham",
       "enabled": true,
       "sort_order": 28,
-      "name": "Đá Cá Nhám",
-      "alias": "Đá Cá Nhám",
-      "title": "Đá Cá Nhám",
+      "name": "Đá Cá Nhám/Cụm Loại Ta",
+      "alias": "Đá Cá Nhám/Cụm Loại Ta",
+      "title": "Đá Cá Nhám/Cụm Loại Ta",
       "geojson_file": "webapp_geojson/output_geojson/DaCaNham.geojson",
       "coordinate": [
         114.91146534470064,
@@ -2718,7 +2674,7 @@
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
-        "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
+        "template_txt_value": "Tại đá Cá Nhám/Cụm Loại Ta (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "placeholders": [
           {
             "field": "map_image",
@@ -2727,7 +2683,7 @@
           {
             "field": "title",
             "element_id": "66",
-            "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
+            "value": "Hiện trạng đá Cá Nhám/Cụm Loại Ta, quần đảo Trường Sa ngày {capture_date}"
           },
           {
             "field": "time",
@@ -2750,7 +2706,7 @@
             10.882706716996204,
             114.91146534470064
           ],
-          "alias": "Đá Cá Nhám",
+          "alias": "Đá Cá Nhám/Cụm Loại Ta",
           "group": 1.2
         },
         "geojson_geometry": {
@@ -2818,7 +2774,7 @@
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
-        "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
+        "template_txt_value": "Tại đá Bến Lạc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "placeholders": [
           {
             "field": "map_image",
@@ -2827,7 +2783,7 @@
           {
             "field": "title",
             "element_id": "66",
-            "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
+            "value": "Hiện trạng Đá Bến Lạc, quần đảo Trường Sa Sa ngày {capture_date}"
           },
           {
             "field": "time",
@@ -2910,7 +2866,7 @@
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
-        "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
+        "template_txt_value": "Tại đá Én Đất (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "placeholders": [
           {
             "field": "map_image",
@@ -2919,7 +2875,7 @@
           {
             "field": "title",
             "element_id": "66",
-            "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
+            "value": "Hiện trạng đá Én Đất, quần đảo Trường Sa ngày {capture_date}"
           },
           {
             "field": "time",
@@ -3010,7 +2966,7 @@
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
-        "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
+        "template_txt_value": "Tại đá Bàn Than (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "placeholders": [
           {
             "field": "map_image",
@@ -3019,7 +2975,7 @@
           {
             "field": "title",
             "element_id": "66",
-            "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
+            "value": "Hiện trạng đá Bàn Than, quần đảo Trường Sa ngày {capture_date}"
           },
           {
             "field": "time",
@@ -3102,7 +3058,7 @@
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
-        "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
+        "template_txt_value": "Tại đá Ba Bình (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "placeholders": [
           {
             "field": "map_image",
@@ -3111,7 +3067,7 @@
           {
             "field": "title",
             "element_id": "66",
-            "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
+            "value": "Hiện trạng đá Ba Bình, quần đảo Trường Sa ngày {capture_date}"
           },
           {
             "field": "time",
@@ -3202,7 +3158,7 @@
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
-        "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
+        "template_txt_value": "Tại đá Ga Ven (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "placeholders": [
           {
             "field": "map_image",
@@ -3211,7 +3167,7 @@
           {
             "field": "title",
             "element_id": "66",
-            "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
+            "value": "Hiện trạng đá Ga Ven, quần đảo Trường Sa ngày {capture_date}"
           },
           {
             "field": "time",
@@ -3298,7 +3254,7 @@
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
-        "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
+        "template_txt_value": "Tại đá Lạc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "placeholders": [
           {
             "field": "map_image",
@@ -3307,7 +3263,7 @@
           {
             "field": "title",
             "element_id": "66",
-            "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
+            "value": "Hiện trạng đá Lạc, quần đảo Trường Sa ngày {capture_date}"
           },
           {
             "field": "time",
@@ -3394,7 +3350,7 @@
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
-        "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
+        "template_txt_value": "Tại đá Đền Cây Cỏ (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "placeholders": [
           {
             "field": "map_image",
@@ -3403,7 +3359,7 @@
           {
             "field": "title",
             "element_id": "66",
-            "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
+            "value": "Hiện trạng đá Đền Cây Cỏ, quần đảo Trường Sa ngày {capture_date}"
           },
           {
             "field": "time",
@@ -3476,9 +3432,9 @@
       "id": "DaNho",
       "enabled": true,
       "sort_order": 36,
-      "name": "Đá Nhỏ",
-      "alias": "Đá Nhỏ",
-      "title": "Đá Nhỏ",
+      "name": "Đá Nhỏ/Cụm Nam Yết",
+      "alias": "Đá Nhỏ/Cụm Nam Yết",
+      "title": "Đá Nhỏ/Cụm Nam Yết",
       "geojson_file": "webapp_geojson/output_geojson/DaNho.geojson",
       "coordinate": [
         114.00432097418977,
@@ -3494,7 +3450,7 @@
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
-        "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
+        "template_txt_value": "Tại đá Nhỏ/Cụm Nam Yết (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "placeholders": [
           {
             "field": "map_image",
@@ -3503,7 +3459,7 @@
           {
             "field": "title",
             "element_id": "66",
-            "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
+            "value": "Hiện trạng Đá Nhỏ/Cụm Nam Yết, quần đảo Trường Sa ngày {capture_date}"
           },
           {
             "field": "time",
@@ -3568,9 +3524,9 @@
       "id": "CumSinhTon",
       "enabled": true,
       "sort_order": 37,
-      "name": "Cụm Sinh Tồn",
-      "alias": "Cụm Sinh Tồn",
-      "title": "Cụm Sinh Tồn",
+      "name": ".../Cụm Sinh Tồn",
+      "alias": ".../Cụm Sinh Tồn",
+      "title": ".../Cụm Sinh Tồn",
       "geojson_file": "webapp_geojson/output_geojson/CumSinhTon.geojson",
       "coordinate": [
         114.43816280254377,
@@ -3586,7 +3542,7 @@
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
-        "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
+        "template_txt_value": "Tại đá .../Cụm Sinh Tồn (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "placeholders": [
           {
             "field": "map_image",
@@ -3595,7 +3551,7 @@
           {
             "field": "title",
             "element_id": "66",
-            "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
+            "value": "Hiện trạng đá .../Cụm Sinh Tồn, quần đảo Trường Sa ngày {capture_date}"
           },
           {
             "field": "time",
@@ -3730,7 +3686,7 @@
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
-        "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
+        "template_txt_value": "Tại đá Lục Giang, Long Hải (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "placeholders": [
           {
             "field": "map_image",
@@ -3739,7 +3695,7 @@
           {
             "field": "title",
             "element_id": "66",
-            "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
+            "value": "Hiện trạng đá Lục Giang, Long Hải, quần đảo Trường Sa ngày {capture_date}"
           },
           {
             "field": "time",
@@ -3834,7 +3790,7 @@
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
-        "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
+        "template_txt_value": "Tại đá Bình Nguyên (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "placeholders": [
           {
             "field": "map_image",
@@ -3843,7 +3799,7 @@
           {
             "field": "title",
             "element_id": "66",
-            "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
+            "value": "Hiện trạng đá Bình Nguyên, quần đảo Trường Sa ngày {capture_date}"
           },
           {
             "field": "time",
@@ -3926,7 +3882,7 @@
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
-        "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
+        "template_txt_value": "Tại đá Vĩnh Viễn (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "placeholders": [
           {
             "field": "map_image",
@@ -3935,16 +3891,11 @@
           {
             "field": "title",
             "element_id": "66",
-            "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
+            "value": "Hiện trạng đá Vĩnh Viễn, quần đảo Trường Sa ngày {capture_date}"
           },
           {
             "field": "time",
             "element_id": "67"
-          },
-          {
-            "field": "comment",
-            "element_id": "68",
-            "value": "Không ghi nhận hoạt động tôn tạo, xây dựng công trình."
           }
         ]
       },
@@ -4000,9 +3951,9 @@
       "id": "CumHaiSam",
       "enabled": true,
       "sort_order": 41,
-      "name": "Cụm Hải Sâm",
-      "alias": "Cụm Hải Sâm",
-      "title": "Cụm Hải Sâm",
+      "name": ".../Cụm Hải Sâm",
+      "alias": ".../Cụm Hải Sâm",
+      "title": ".../Cụm Hải Sâm",
       "geojson_file": "webapp_geojson/output_geojson/CumHaiSam.geojson",
       "coordinate": [
         115.75898156135631,
@@ -4018,7 +3969,7 @@
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
-        "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
+        "template_txt_value": "Tại đá .../Cụm Hải Sâm (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "placeholders": [
           {
             "field": "map_image",
@@ -4027,7 +3978,7 @@
           {
             "field": "title",
             "element_id": "66",
-            "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
+            "value": "Hiện trạng một số thực thể thuộc Cụm Hải Sâm, quần đảo Trường Sa ngày {capture_date}"
           },
           {
             "field": "time",
@@ -4107,14 +4058,12 @@
       "scale": 50000,
       "grid": {
         "interval": {
-          "degrees": 0,
-          "minutes": 1,
-          "seconds": 0.0
+          "minutes": 1
         }
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
-        "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
+        "template_txt_value": "Tại đá Khúc Giác (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "placeholders": [
           {
             "field": "map_image",
@@ -4123,7 +4072,7 @@
           {
             "field": "title",
             "element_id": "66",
-            "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
+            "value": "Hiện trạng đá Khúc Giác, quần đảo Trường Sa ngày {capture_date}"
           },
           {
             "field": "time",
@@ -4210,7 +4159,7 @@
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
-        "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
+        "template_txt_value": "Tại đá Vành Khăn (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "placeholders": [
           {
             "field": "map_image",
@@ -4224,11 +4173,6 @@
           {
             "field": "time",
             "element_id": "67"
-          },
-          {
-            "field": "comment",
-            "element_id": "68",
-            "value": "Không ghi nhận hoạt động tôn tạo, xây dựng công trình."
           }
         ]
       },
@@ -4310,7 +4254,7 @@
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
-        "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
+        "template_txt_value": "Tại đá Phật Tự (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "placeholders": [
           {
             "field": "map_image",
@@ -4319,7 +4263,7 @@
           {
             "field": "title",
             "element_id": "66",
-            "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
+            "value": "Hiện trạng Đá Phật Tự, quần đảo Trường Sa ngày {capture_date}"
           },
           {
             "field": "time",
@@ -4398,7 +4342,7 @@
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
-        "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
+        "template_txt_value": "Tại bãi Cỏ Mây (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "placeholders": [
           {
             "field": "map_image",
@@ -4407,7 +4351,7 @@
           {
             "field": "title",
             "element_id": "66",
-            "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
+            "value": "Hiện trạng bãi Cỏ Mây, quần đảo Trường Sa ngày {capture_date}"
           },
           {
             "field": "time",
@@ -4490,7 +4434,7 @@
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
-        "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
+        "template_txt_value": "Tại bãi Sa Bin (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "placeholders": [
           {
             "field": "map_image",
@@ -4499,7 +4443,7 @@
           {
             "field": "title",
             "element_id": "66",
-            "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
+            "value": "Hiện trạng bãi Sa Bin, quần đảo Trường Sa ngày {capture_date}"
           },
           {
             "field": "time",
@@ -4598,7 +4542,7 @@
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
-        "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
+        "template_txt_value": "Tại đá Long Điền (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "placeholders": [
           {
             "field": "map_image",
@@ -4607,7 +4551,7 @@
           {
             "field": "title",
             "element_id": "66",
-            "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
+            "value": "Hiện trạng đá Long Điền, quần đảo Trường Sa ngày {capture_date}"
           },
           {
             "field": "time",
@@ -4690,7 +4634,7 @@
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
-        "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
+        "template_txt_value": "Tại đá Suối Ngà (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "placeholders": [
           {
             "field": "map_image",
@@ -4699,7 +4643,7 @@
           {
             "field": "title",
             "element_id": "66",
-            "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
+            "value": "Hiện trạng đá Suối Ngà, quần đảo Trường Sa ngày {capture_date}"
           },
           {
             "field": "time",
@@ -4782,7 +4726,7 @@
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
-        "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
+        "template_txt_value": "Tại đá Phú Mỹ (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "placeholders": [
           {
             "field": "map_image",
@@ -4791,7 +4735,7 @@
           {
             "field": "title",
             "element_id": "66",
-            "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
+            "value": "Hiện trạng đá Phú Mỹ, quần đảo Trường Sa ngày {capture_date}"
           },
           {
             "field": "time",
@@ -4874,7 +4818,7 @@
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
-        "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
+        "template_txt_value": "Tại đá Cái Mép (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "placeholders": [
           {
             "field": "map_image",
@@ -4883,7 +4827,7 @@
           {
             "field": "title",
             "element_id": "66",
-            "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
+            "value": "Hiện trạng đá Cái Mép, quần đảo Trường Sa ngày {capture_date}"
           },
           {
             "field": "time",
@@ -4966,7 +4910,7 @@
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
-        "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
+        "template_txt_value": "Tại đá Đồi Mồi (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "placeholders": [
           {
             "field": "map_image",
@@ -4975,7 +4919,7 @@
           {
             "field": "title",
             "element_id": "66",
-            "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
+            "value": "Hiện trạng Đá Đồi Mồi, quần đảo Trường Sa ngày {capture_date}"
           },
           {
             "field": "time",
@@ -5062,7 +5006,7 @@
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
-        "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
+        "template_txt_value": "Tại đá Trăng Khuyết (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "placeholders": [
           {
             "field": "map_image",
@@ -5071,7 +5015,7 @@
           {
             "field": "title",
             "element_id": "66",
-            "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
+            "value": "Hiện trạng đá Trăng Khuyết, quần đảo Trường Sa ngày {capture_date}"
           },
           {
             "field": "time",
@@ -5162,7 +5106,7 @@
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
-        "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
+        "template_txt_value": "Tại đá Suối Ngọc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "placeholders": [
           {
             "field": "map_image",
@@ -5171,7 +5115,7 @@
           {
             "field": "title",
             "element_id": "66",
-            "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
+            "value": "Hiện trạng đá Suối Ngọc, quần đảo Trường Sa ngày {capture_date}"
           },
           {
             "field": "time",
@@ -5262,7 +5206,7 @@
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
-        "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
+        "template_txt_value": "Tại đá Chữ Thập (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "placeholders": [
           {
             "field": "map_image",
@@ -5271,7 +5215,7 @@
           {
             "field": "title",
             "element_id": "66",
-            "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
+            "value": "Hiện trạng đá Chữ Thập, quần đảo Trường Sa ngày {capture_date}"
           },
           {
             "field": "time",
@@ -5354,7 +5298,7 @@
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
-        "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
+        "template_txt_value": "Tại đá Châu Viên (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "placeholders": [
           {
             "field": "map_image",
@@ -5363,7 +5307,7 @@
           {
             "field": "title",
             "element_id": "66",
-            "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
+            "value": "Hiện trạng đá Châu Viên, quần đảo Trường Sa ngày {capture_date}"
           },
           {
             "field": "time",
@@ -5446,7 +5390,7 @@
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
-        "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
+        "template_txt_value": "Tại đá Công Đo (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "placeholders": [
           {
             "field": "map_image",
@@ -5455,7 +5399,7 @@
           {
             "field": "title",
             "element_id": "66",
-            "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
+            "value": "Hiện trạng đá Công Đo, quần đảo Trường Sa ngày {capture_date}"
           },
           {
             "field": "time",
@@ -5516,9 +5460,9 @@
       "id": "CumThamHiem",
       "enabled": true,
       "sort_order": 57,
-      "name": "Cụm Thám Hiểm",
-      "alias": "Cụm Thám Hiểm",
-      "title": "Cụm Thám Hiểm",
+      "name": ".../Cụm Thám Hiểm",
+      "alias": ".../Cụm Thám Hiểm",
+      "title": ".../Cụm Thám Hiểm",
       "geojson_file": "webapp_geojson/output_geojson/CumThamHiem.geojson",
       "coordinate": [
         114.65303439812439,
@@ -5534,7 +5478,7 @@
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
-        "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
+        "template_txt_value": "Tại đá .../Cụm Thám Hiểm (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "placeholders": [
           {
             "field": "map_image",
@@ -5543,7 +5487,7 @@
           {
             "field": "title",
             "element_id": "66",
-            "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
+            "value": "Hiện trạng một số thực thể thuộc Cụm Thám Hiểm, quần đảo Hoàng Sa ngày {capture_date}"
           },
           {
             "field": "time",
@@ -5638,7 +5582,7 @@
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
-        "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
+        "template_txt_value": "Tại đá Thám Hiểm (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "placeholders": [
           {
             "field": "map_image",
@@ -5647,7 +5591,7 @@
           {
             "field": "title",
             "element_id": "66",
-            "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
+            "value": "Hiện trạng đá Thám Hiểm, quần đảo Trường Sa ngày {capture_date}"
           },
           {
             "field": "time",
@@ -5726,7 +5670,7 @@
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
-        "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
+        "template_txt_value": "Tại đá Én Ca (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "placeholders": [
           {
             "field": "map_image",
@@ -5735,7 +5679,7 @@
           {
             "field": "title",
             "element_id": "66",
-            "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
+            "value": "Hiện trạng đá Én Ca, quần đảo Trường Sa ngày {capture_date}"
           },
           {
             "field": "time",
@@ -5814,7 +5758,7 @@
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
-        "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
+        "template_txt_value": "Tại đá Kỳ Vân (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "placeholders": [
           {
             "field": "map_image",
@@ -5823,7 +5767,7 @@
           {
             "field": "title",
             "element_id": "66",
-            "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
+            "value": "Hiện trạng đá Kỳ Vân, quần đảo Trường Sa ngày {capture_date}"
           },
           {
             "field": "time",
@@ -5906,7 +5850,7 @@
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
-        "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
+        "template_txt_value": "Tại đá Kiêu Ngựa (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "placeholders": [
           {
             "field": "map_image",
@@ -5915,7 +5859,7 @@
           {
             "field": "title",
             "element_id": "66",
-            "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
+            "value": "Hiện trạng đá Kiêu Ngựa, quần đảo Trường Sa ngày {capture_date}"
           },
           {
             "field": "time",
@@ -5994,7 +5938,7 @@
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
-        "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
+        "template_txt_value": "Tại đá Suối Cát (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "placeholders": [
           {
             "field": "map_image",
@@ -6003,7 +5947,7 @@
           {
             "field": "title",
             "element_id": "66",
-            "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
+            "value": "Hiện trạng đá Suối Cát, quần đảo Trường Sa ngày {capture_date}"
           },
           {
             "field": "time",
@@ -6086,7 +6030,7 @@
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
-        "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
+        "template_txt_value": "Tại đá Hoa Lau (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "placeholders": [
           {
             "field": "map_image",
@@ -6095,7 +6039,7 @@
           {
             "field": "title",
             "element_id": "66",
-            "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
+            "value": "Hiện trạng đá Hoa Lau, quần đảo Trường Sa ngày {capture_date}"
           },
           {
             "field": "time",
@@ -6178,7 +6122,7 @@
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
-        "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
+        "template_txt_value": "Tại đá Sác Lốt (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "placeholders": [
           {
             "field": "map_image",
@@ -6187,7 +6131,7 @@
           {
             "field": "title",
             "element_id": "66",
-            "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
+            "value": "Hiện trạng đá Sác Lốt, quần đảo Trường Sa ngày {capture_date}"
           },
           {
             "field": "time",
@@ -6266,7 +6210,7 @@
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
-        "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
+        "template_txt_value": "Tại đá Lu-xi-a (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "placeholders": [
           {
             "field": "map_image",
@@ -6275,7 +6219,7 @@
           {
             "field": "title",
             "element_id": "66",
-            "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
+            "value": "Hiện trạng đá Lu-xi-a, quần đảo Trường Sa ngày {capture_date}"
           },
           {
             "field": "time",
@@ -6354,7 +6298,7 @@
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
-        "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
+        "template_txt_value": "Tại đá Loại Ta Tây (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "placeholders": [
           {
             "field": "map_image",
@@ -6363,7 +6307,7 @@
           {
             "field": "title",
             "element_id": "66",
-            "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
+            "value": "Hiện trạng đá Loại Ta Tây, quần đảo Trường Sa ngày {capture_date}"
           },
           {
             "field": "time",
@@ -6386,7 +6330,7 @@
             10.729737031970444,
             114.35436623112864
           ],
-          "alias": "Đá oại Ta Tây",
+          "alias": "Đá Loại Ta Tây",
           "group": "2.2.2"
         },
         "geojson_geometry": {
@@ -6442,7 +6386,7 @@
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
-        "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
+        "template_txt_value": "Tại đá Loại Ta (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "placeholders": [
           {
             "field": "map_image",
@@ -6451,7 +6395,7 @@
           {
             "field": "title",
             "element_id": "66",
-            "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
+            "value": "Hiện trạng đá Loại Ta, quần đảo Trường Sa ngày {capture_date}"
           },
           {
             "field": "time",
@@ -6530,7 +6474,7 @@
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
-        "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
+        "template_txt_value": "Tại đá Thị Tứ (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "placeholders": [
           {
             "field": "map_image",
@@ -6539,7 +6483,7 @@
           {
             "field": "title",
             "element_id": "66",
-            "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
+            "value": "Hiện trạng đá Thị Tứ, quần đảo Trường Sa ngày {capture_date}"
           },
           {
             "field": "time",
@@ -6618,7 +6562,7 @@
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
-        "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
+        "template_txt_value": "Tại đá Huy Gơ (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "placeholders": [
           {
             "field": "map_image",
@@ -6627,7 +6571,7 @@
           {
             "field": "title",
             "element_id": "66",
-            "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
+            "value": "Hiện trạng đá Huy Gơ, quần đảo Trường Sa ngày {capture_date}"
           },
           {
             "field": "time",
@@ -6706,7 +6650,7 @@
       },
       "export": {
         "template_pptx_file": "examples/templates/target_001.template.pptx",
-        "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
+        "template_txt_value": "Tại đá Gạc Ma (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "placeholders": [
           {
             "field": "map_image",
@@ -6715,7 +6659,7 @@
           {
             "field": "title",
             "element_id": "66",
-            "value": "Hiện trạng Đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
+            "value": "Hiện trạng đá Gạc Ma, quần đảo Trường Sa ngày {capture_date}"
           },
           {
             "field": "time",

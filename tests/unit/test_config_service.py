@@ -172,6 +172,57 @@ def test_load_project_config_filters_enabled_targets_and_resolves_paths(tmp_path
     )
 
 
+def test_load_project_config_sorts_enabled_targets_by_group_then_local_order(
+    tmp_path: Path,
+) -> None:
+    id_alpha = prepare_target_files(tmp_path, "alpha")
+    id_beta = prepare_target_files(tmp_path, "beta")
+    id_gamma = prepare_target_files(tmp_path, "gamma")
+    alpha = target_config("alpha", 1, map_element_id=id_alpha)
+    beta = target_config("beta", 1, map_element_id=id_beta)
+    gamma = target_config("gamma", 2, map_element_id=id_gamma)
+    alpha["group"] = {"key": "1.2", "title": "Không người Trường Sa"}
+    beta["group"] = {"key": "1.1", "title": "Không người Hoàng Sa"}
+    gamma["group"] = {"key": "1.2", "title": "Không người Trường Sa"}
+    write_json(tmp_path / "config.json", {"targets": [alpha, gamma, beta]})
+
+    result = load_project_config(tmp_path / "config.json")
+
+    assert result.ok is True
+    assert [target.id for target in result.enabled_targets] == ["beta", "alpha", "gamma"]
+
+
+def test_load_project_config_accepts_inline_target_geometry_without_geojson_file(
+    tmp_path: Path,
+) -> None:
+    element_id = write_template_pptx(tmp_path / "templates" / "target_a.pptx")
+    target = target_config("target_a", 1, map_element_id=element_id)
+    target.pop("geojson_file")
+    target["group"] = {"key": "2.2.1", "title": "Có người Trường Sa TQ"}
+    target["metadata"] = {
+        "geojson_geometry": {
+            "type": "Polygon",
+            "coordinates": [[
+                [106.0, 10.0],
+                [106.1, 10.0],
+                [106.1, 10.1],
+                [106.0, 10.1],
+                [106.0, 10.0],
+            ]],
+        }
+    }
+    write_json(tmp_path / "config.json", {"targets": [target]})
+
+    result = load_project_config(tmp_path / "config.json")
+
+    assert result.ok is True
+    assert result.enabled_targets[0].geojson_file is None
+    assert result.enabled_targets[0].group is not None
+    assert result.enabled_targets[0].group.key == "2.2.1"
+    assert result.enabled_targets[0].group.title == "Có người Trường Sa TQ"
+    assert result.target_paths["target_a"].geojson_file is None
+
+
 def test_load_project_config_accepts_export_contract_from_real_config_shape(
     tmp_path: Path,
 ) -> None:

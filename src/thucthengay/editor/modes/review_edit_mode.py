@@ -591,7 +591,7 @@ class ReviewEditMode(QWidget):
         if self._workspace_service is None or self.selected_composition is None:
             return
 
-        previous_id = self._workspace_service.previous_composition_id(
+        previous_id = self.tree_model.previous_visible_composition_id(
             self.selected_composition.composition_id
         )
         if previous_id is None:
@@ -1007,7 +1007,7 @@ class ReviewEditMode(QWidget):
     def _advance_after_transition(self, composition_id: str) -> None:
         next_id = None
         if self._workspace_service is not None:
-            next_id = self._workspace_service.next_composition_id(composition_id)
+            next_id = self.tree_model.next_visible_composition_id(composition_id)
         self._refresh_workspace_projection(next_id or composition_id)
 
     def _update_review_action_state(self) -> None:
@@ -1017,7 +1017,7 @@ class ReviewEditMode(QWidget):
         previous_available = False
         if has_selection and self._workspace_service is not None and self.selected_composition:
             previous_available = (
-                self._workspace_service.previous_composition_id(
+                self.tree_model.previous_visible_composition_id(
                     self.selected_composition.composition_id
                 )
                 is not None

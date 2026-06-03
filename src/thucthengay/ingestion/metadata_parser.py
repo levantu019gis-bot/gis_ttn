@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import re
 from dataclasses import dataclass, field
-from datetime import date, datetime, time
+from datetime import date, datetime, time, timedelta
 from json import JSONDecodeError
 from pathlib import Path
 from typing import Any
@@ -19,6 +19,7 @@ _CLOUD_TOKEN_RE = re.compile(
     r"(?:cloud(?:[_-]?cover)?|cc)[_-]?(?P<value>\d+(?:\.\d+)?)p?",
     re.IGNORECASE,
 )
+_FILENAME_UTC_TO_LOCAL_OFFSET = timedelta(hours=7)
 
 
 @dataclass(frozen=True)
@@ -96,8 +97,10 @@ def _parse_filename_metadata(
     field_sources: dict[str, MetadataSource] = {}
 
     if match:
-        capture_date = datetime.strptime(match.group("date"), "%Y%m%d").date()
-        capture_time = datetime.strptime(match.group("time"), "%H%M%S").time()
+        capture_date, capture_time = _filename_utc_to_local_capture(
+            datetime.strptime(match.group("date"), "%Y%m%d").date(),
+            datetime.strptime(match.group("time"), "%H%M%S").time(),
+        )
         field_sources["capture_date"] = MetadataSource.FILENAME
         field_sources["capture_time"] = MetadataSource.FILENAME
 
@@ -157,6 +160,11 @@ def _try_pattern_match(
     source_identifier = stem if field_sources else None
     if source_identifier:
         field_sources["source_identifier"] = MetadataSource.FILENAME
+    if capture_date is not None and capture_time is not None:
+        capture_date, capture_time = _filename_utc_to_local_capture(
+            capture_date,
+            capture_time,
+        )
 
     return ParsedBusinessMetadata(
         capture_date=capture_date,
@@ -231,6 +239,11 @@ def _parse_mapping_metadata(raw: dict[str, Any], source: MetadataSource) -> Pars
         source_identifier=source_identifier,
         field_sources=field_sources,
     )
+
+
+def _filename_utc_to_local_capture(capture_date: date, capture_time: time) -> tuple[date, time]:
+    local_dt = datetime.combine(capture_date, capture_time) + _FILENAME_UTC_TO_LOCAL_OFFSET
+    return local_dt.date(), local_dt.time()
 
 
 def _candidate_sidecars(path: Path) -> tuple[Path, ...]:

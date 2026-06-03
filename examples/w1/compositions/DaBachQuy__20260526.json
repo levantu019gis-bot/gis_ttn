@@ -13,7 +13,7 @@
     {
       "cache_path": "cache/DaBachQuy/20260526/PSScene_20260526_041543_16_24fb_cloud_28.000000000000004__a3617ff119a6.tif",
       "capture_date": "2026-05-26",
-      "capture_time": "04:15:43",
+      "capture_time": "11:15:43",
       "cloud_percent": 28.000000000000004,
       "layer_id": "PSScene_20260526_041543_16_24fb_cloud_28.000000000000004__a3617ff119a6",
       "metadata_source": "filename",
@@ -25,7 +25,7 @@
     {
       "cache_path": "cache/DaBachQuy/20260526/PSScene_20260526_041541_33_24fb_cloud_9.0__59537de2c3d2.tif",
       "capture_date": "2026-05-26",
-      "capture_time": "04:15:41",
+      "capture_time": "11:15:41",
       "cloud_percent": 9.0,
       "layer_id": "PSScene_20260526_041541_33_24fb_cloud_9.0__59537de2c3d2",
       "metadata_source": "filename",
@@ -37,7 +37,7 @@
     {
       "cache_path": "cache/DaBachQuy/20260526/PSScene_20260526_030642_28_2562_cloud_6.0__169d9ffd3816.tif",
       "capture_date": "2026-05-26",
-      "capture_time": "03:06:42",
+      "capture_time": "10:06:42",
       "cloud_percent": 6.0,
       "layer_id": "PSScene_20260526_030642_28_2562_cloud_6.0__169d9ffd3816",
       "metadata_source": "filename",
@@ -49,7 +49,7 @@
     {
       "cache_path": "cache/DaBachQuy/20260526/PSScene_20260526_030639_92_2562_cloud_10.0__d2abeebfc0cd.tif",
       "capture_date": "2026-05-26",
-      "capture_time": "03:06:39",
+      "capture_time": "10:06:39",
       "cloud_percent": 10.0,
       "layer_id": "PSScene_20260526_030639_92_2562_cloud_10.0__d2abeebfc0cd",
       "metadata_source": "filename",
