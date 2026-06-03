@@ -8,7 +8,7 @@
   "capture_date": "2026-05-26",
   "composition_id": "DaHaiSam__20260526",
   "grid_override": null,
-  "include": true,
+  "include": false,
   "layers": [
     {
       "cache_path": "cache/DaHaiSam/20260526/PSScene_20260526_030642_20_2575_cloud_8.0__e61078c7967c.tif",
@@ -47,11 +47,11 @@
       "visible": true
     }
   ],
-  "needs_revalidation": false,
+  "needs_revalidation": true,
   "notes": "",
-  "ready": true,
-  "review_order": 3,
-  "reviewed": true,
+  "ready": false,
+  "review_order": null,
+  "reviewed": false,
   "target_id": "DaHaiSam",
   "validation_summary": {
     "error_count": 0,

@@ -8,7 +8,7 @@
   "capture_date": "2026-05-26",
   "composition_id": "DaKhucGiac__20260526",
   "grid_override": null,
-  "include": true,
+  "include": false,
   "layers": [
     {
       "cache_path": "cache/DaKhucGiac/20260526/PSScene_20260526_031808_79_2531_cloud_30.0__a949480ecef5.tif",
@@ -23,11 +23,11 @@
       "visible": true
     }
   ],
-  "needs_revalidation": false,
+  "needs_revalidation": true,
   "notes": "",
-  "ready": true,
-  "review_order": 6,
-  "reviewed": true,
+  "ready": false,
+  "review_order": null,
+  "reviewed": false,
   "target_id": "DaKhucGiac",
   "validation_summary": {
     "error_count": 0,

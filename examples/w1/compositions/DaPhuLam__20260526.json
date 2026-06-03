@@ -8,7 +8,7 @@
   "capture_date": "2026-05-26",
   "composition_id": "DaPhuLam__20260526",
   "grid_override": null,
-  "include": true,
+  "include": false,
   "layers": [
     {
       "cache_path": "cache/DaPhuLam/20260526/PSScene_20260526_034545_19_24da_cloud_0__742c42990b0d.tif",
@@ -71,11 +71,11 @@
       "visible": true
     }
   ],
-  "needs_revalidation": false,
+  "needs_revalidation": true,
   "notes": "",
-  "ready": true,
-  "review_order": 10,
-  "reviewed": true,
+  "ready": false,
+  "review_order": null,
+  "reviewed": false,
   "target_id": "DaPhuLam",
   "validation_summary": {
     "error_count": 0,

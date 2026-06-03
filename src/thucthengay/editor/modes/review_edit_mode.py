@@ -1182,8 +1182,18 @@ class ReviewEditMode(QWidget):
             return
 
         self.selected_composition = updated
+        try:
+            self._persist_included_target_alignment(updated)
+        except (ConfigUpdateError, WorkspaceError) as error:
+            self._update_detail_panels(updated)
+            self._refresh_workspace_projection(updated.composition_id, validate_selection=False)
+            self.grid_validation_label.setText(
+                f"Đã lưu grid composition, nhưng không cập nhật được config target: {error}"
+            )
+            return
         self._update_detail_panels(updated)
         self._refresh_workspace_projection(updated.composition_id, validate_selection=False)
+        self.action_summary.setText("Đã lưu grid và cập nhật config target.")
 
     def _export_canvas_image(self) -> None:
         if self._workspace_service is None or self.selected_composition is None:

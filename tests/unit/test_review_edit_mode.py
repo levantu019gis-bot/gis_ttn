@@ -1443,8 +1443,10 @@ def test_review_edit_grid_controls_show_defaults_save_override_and_mark_stale(
     tmp_path: Path,
 ) -> None:
     qapp()
+    config_path = tmp_path / "config.json"
+    write_project_config(config_path)
     service = WorkspaceService(tmp_path / "workspace")
-    service.initialize(config_path="config.json")
+    service.initialize(config_path=config_path)
     service.write_composition(
         composition(
             "alpha__20260525",
@@ -1501,6 +1503,14 @@ def test_review_edit_grid_controls_show_defaults_save_override_and_mark_stale(
     assert mode.tree_model.index_for_composition_id("alpha__20260525").data(
         CompositionTreeRole.STATUS_TEXT
     ) == "Cần kiểm tra lại"
+    raw = json.loads(config_path.read_text(encoding="utf-8"))
+    raw_target = raw["targets"][0]
+    assert raw_target["scale"] == 25000
+    assert raw_target["grid"]["interval"] == {"minutes": 2, "seconds": 30}
+    assert mode._targets is not None  # noqa: SLF001
+    assert mode._targets[0].scale == 25000  # noqa: SLF001
+    assert mode._targets[0].grid.interval.minutes == 2  # noqa: SLF001
+    assert "Đã lưu grid và cập nhật config target" in mode.action_summary.text()
 
 
 def test_review_edit_target_preview_loads_once_and_stays_fixed_after_view_edits(
