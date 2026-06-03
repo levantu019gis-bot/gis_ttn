@@ -7,41 +7,7 @@
   },
   "capture_date": "2026-05-26",
   "composition_id": "DaChimEn__20260526",
-  "grid_override": {
-    "interval": {
-      "degrees": 0,
-      "minutes": 3,
-      "seconds": 0.0
-    },
-    "label_format": "dms_full",
-    "style": {
-      "default_label_font": "fonts/arial-bold/Arial Bold/Arial Bold.ttf",
-      "epsilon": 1e-10,
-      "frame_color": "#000000",
-      "label_color": "#000000",
-      "label_font_size": 24,
-      "max_frame_ticks_per_axis": 2000,
-      "reference_frame_gap": 42,
-      "reference_height": 2340,
-      "reference_label_font_size": 72,
-      "reference_outer_frame": [
-        244,
-        144,
-        3272,
-        2286
-      ],
-      "reference_width": 3306,
-      "supported_label_formats": [
-        "dms_full",
-        "dms_short"
-      ],
-      "surround_inner_stroke_width": 4,
-      "surround_outer_stroke_width": 6,
-      "surround_tick_length": 14,
-      "surround_tick_stroke_width": 4,
-      "tick_length_px": 8
-    }
-  },
+  "grid_override": null,
   "include": false,
   "layers": [
     {
@@ -54,7 +20,7 @@
       "metadata_status": "valid",
       "order": 0,
       "source_path": "/home/ongtu/Working/3.ThucTheNgay/examples/20260526/PSScene_20260526_041541_33_24fb_cloud_9.0.tif",
-      "visible": false
+      "visible": true
     },
     {
       "cache_path": "cache/DaChimEn/20260526/PSScene_20260526_041539_50_24fb_cloud_1.0__5c8c637d917e.tif",
@@ -78,7 +44,7 @@
       "metadata_status": "valid",
       "order": 2,
       "source_path": "/home/ongtu/Working/3.ThucTheNgay/examples/20260526/PSScene_20260526_041537_66_24fb_cloud_1.0.tif",
-      "visible": false
+      "visible": true
     },
     {
       "cache_path": "cache/DaChimEn/20260526/PSScene_20260526_033800_01_2515_cloud_0__82975f334834.tif",
@@ -90,7 +56,7 @@
       "metadata_status": "valid",
       "order": 3,
       "source_path": "/home/ongtu/Working/3.ThucTheNgay/examples/20260526/PSScene_20260526_033800_01_2515_cloud_0.tif",
-      "visible": false
+      "visible": true
     },
     {
       "cache_path": "cache/DaChimEn/20260526/PSScene_20260526_033757_89_2515_cloud_0__0684a9621318.tif",
@@ -102,7 +68,7 @@
       "metadata_status": "valid",
       "order": 4,
       "source_path": "/home/ongtu/Working/3.ThucTheNgay/examples/20260526/PSScene_20260526_033757_89_2515_cloud_0.tif",
-      "visible": false
+      "visible": true
     },
     {
       "cache_path": "cache/DaChimEn/20260526/PSScene_20260526_030637_57_2562_cloud_3.0__2538d212140f.tif",
@@ -114,7 +80,7 @@
       "metadata_status": "valid",
       "order": 5,
       "source_path": "/home/ongtu/Working/3.ThucTheNgay/examples/20260526/PSScene_20260526_030637_57_2562_cloud_3.0.tif",
-      "visible": false
+      "visible": true
     },
     {
       "cache_path": "cache/DaChimEn/20260526/PSScene_20260526_030635_21_2562_cloud_0__22e120b5fa56.tif",
@@ -126,7 +92,7 @@
       "metadata_status": "valid",
       "order": 6,
       "source_path": "/home/ongtu/Working/3.ThucTheNgay/examples/20260526/PSScene_20260526_030635_21_2562_cloud_0.tif",
-      "visible": false
+      "visible": true
     }
   ],
   "needs_revalidation": true,

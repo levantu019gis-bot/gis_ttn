@@ -7,41 +7,7 @@
   },
   "capture_date": "2026-05-26",
   "composition_id": "DaBac_Trung_Nam_ConCatBac_ConCatTrung_ConCatNam__20260526",
-  "grid_override": {
-    "interval": {
-      "degrees": 0,
-      "minutes": 1,
-      "seconds": 0.0
-    },
-    "label_format": "dms_full",
-    "style": {
-      "default_label_font": "fonts/arial-bold/Arial Bold/Arial Bold.ttf",
-      "epsilon": 1e-10,
-      "frame_color": "#000000",
-      "label_color": "#000000",
-      "label_font_size": 24,
-      "max_frame_ticks_per_axis": 2000,
-      "reference_frame_gap": 42,
-      "reference_height": 2340,
-      "reference_label_font_size": 72,
-      "reference_outer_frame": [
-        244,
-        144,
-        3272,
-        2286
-      ],
-      "reference_width": 3306,
-      "supported_label_formats": [
-        "dms_full",
-        "dms_short"
-      ],
-      "surround_inner_stroke_width": 4,
-      "surround_outer_stroke_width": 6,
-      "surround_tick_length": 14,
-      "surround_tick_stroke_width": 4,
-      "tick_length_px": 8
-    }
-  },
+  "grid_override": null,
   "include": false,
   "layers": [
     {
@@ -129,7 +95,7 @@
       "visible": true
     }
   ],
-  "needs_revalidation": false,
+  "needs_revalidation": true,
   "notes": "",
   "ready": false,
   "review_order": null,
@@ -143,8 +109,8 @@
   },
   "view": {
     "center": [
-      112.32818353,
-      16.94615443
+      112.32662507414372,
+      16.947233343731014
     ],
     "rotation": 0,
     "scale": 20000

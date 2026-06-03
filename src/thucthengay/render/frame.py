@@ -564,11 +564,21 @@ def _draw_rotated_text_with_halo(
     angle: int,
 ) -> None:
     bbox = ImageDraw.Draw(Image.new("RGB", (1, 1))).textbbox((0, 0), text, font=font)
-    text_w = bbox[2] - bbox[0]
-    text_h = bbox[3] - bbox[1]
-    layer = Image.new("RGBA", (text_w + 4, text_h + 4), (255, 255, 255, 0))
+    padding = 2
+    layer = Image.new(
+        "RGBA",
+        (bbox[2] - bbox[0] + 2 * padding, bbox[3] - bbox[1] + 2 * padding),
+        (255, 255, 255, 0),
+    )
     layer_draw = ImageDraw.Draw(layer)
-    _draw_text_with_halo(layer_draw, (2, 2), text, font=font, fill=fill, halo=halo)
+    _draw_text_with_halo(
+        layer_draw,
+        (padding - bbox[0], padding - bbox[1]),
+        text,
+        font=font,
+        fill=fill,
+        halo=halo,
+    )
     rotated = layer.rotate(angle, expand=True)
     x = max(0, min(image.width - rotated.width, center[0] - rotated.width // 2))
     y = max(0, min(image.height - rotated.height, center[1] - rotated.height // 2))

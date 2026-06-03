@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import numpy as np
 import pytest
+from PIL import Image
 
+import thucthengay.render.frame as frame
 from thucthengay.models.config import GridConfig, GridInterval
 from thucthengay.models.template import MapFrame
 from thucthengay.render import (
@@ -391,6 +393,38 @@ class TestMapSurroundFrame:
             & (left_gap[:, :, 1] < 100)
             & (left_gap[:, :, 2] < 100)
         ).any()
+
+    def test_rotated_label_layer_keeps_font_bbox_offsets_inside_padding(self, monkeypatch) -> None:
+        captured_alpha: dict[str, np.ndarray] = {}
+        original_rotate = Image.Image.rotate
+
+        def capture_rotate(self, *args, **kwargs):  # noqa: ANN001, ANN002, ANN003
+            captured_alpha["value"] = np.asarray(self.getchannel("A")).copy()
+            return original_rotate(self, *args, **kwargs)
+
+        monkeypatch.setattr(Image.Image, "rotate", capture_rotate)
+        font = frame._label_font(
+            72,
+            {"default_label_font": "fonts/arial-bold/Arial Bold/Arial Bold.ttf"},
+        )
+
+        frame._draw_rotated_text_with_halo(
+            Image.new("RGB", (500, 500), (255, 255, 255)),
+            (250, 250),
+            "16°40'00\"N",
+            font=font,
+            fill=(0, 0, 0),
+            halo=(255, 255, 255),
+            angle=90,
+        )
+
+        alpha = captured_alpha["value"]
+        rows_with_ink = np.flatnonzero(alpha.max(axis=1) > 0)
+        cols_with_ink = np.flatnonzero(alpha.max(axis=0) > 0)
+        assert rows_with_ink[0] > 0
+        assert rows_with_ink[-1] < alpha.shape[0] - 1
+        assert cols_with_ink[0] > 0
+        assert cols_with_ink[-1] < alpha.shape[1] - 1
 
     def test_reference_frame_widths_match_template_sample(self) -> None:
         spec = _spec(width=3306, height=2340, interval=GridInterval(degrees=1))
