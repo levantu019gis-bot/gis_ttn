@@ -187,7 +187,10 @@ def test_export_mode_runs_full_export_pipeline(tmp_path: Path) -> None:
 
     mode.preflight_button.click()
     mode.export_button.click()
-    _wait_until(app, lambda: "Export xong" in mode.status_label.text())
+    _wait_until(
+        app,
+        lambda: "Export xong" in mode.status_label.text() and mode._export_thread is None,
+    )
 
     assert mode.export_button.isEnabled() is True
     assert (service.paths.exports / "report.pptx").is_file()
@@ -216,7 +219,10 @@ def test_export_mode_uses_persisted_output_stem(tmp_path: Path) -> None:
     assert mode.output_stem_input.text() == "custom_report"
     mode.preflight_button.click()
     mode.export_button.click()
-    _wait_until(app, lambda: "Export xong" in mode.status_label.text())
+    _wait_until(
+        app,
+        lambda: "Export xong" in mode.status_label.text() and mode._export_thread is None,
+    )
 
     assert (service.paths.exports / "custom_report.pptx").is_file()
     assert preferences.preferences.export.output_stem == "custom_report"
@@ -285,8 +291,9 @@ def test_app_shell_exposes_export_mode_and_jump_switches_to_review(tmp_path: Pat
     qapp()
     shell = AppShell(preferences_service=PreferencesService(tmp_path / "preferences.json"))
 
-    assert shell.mode_tabs.count() == 3
+    assert shell.mode_tabs.count() == 4
     assert shell.mode_tabs.tabText(2) == "Export"
+    assert shell.mode_tabs.tabText(3) == "Config"
 
     shell.mode_tabs.setCurrentWidget(shell.export_mode)
     shell._jump_to_review_context("alpha", "", "")

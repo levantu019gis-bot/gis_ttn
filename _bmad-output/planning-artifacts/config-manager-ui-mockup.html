@@ -1,0 +1,1398 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>3.ThucTheNgay - Config Manager Mockup</title>
+  <style>
+    :root {
+      --bg: #f4f5f7;
+      --surface: #ffffff;
+      --surface-muted: #f8fafc;
+      --line: #d8dde6;
+      --line-strong: #b9c2cf;
+      --text: #20242c;
+      --muted: #5f6b7a;
+      --subtle: #7d8796;
+      --accent: #0f766e;
+      --accent-soft: #e4f3f1;
+      --accent-line: #9bd0ca;
+      --warn: #b45309;
+      --warn-soft: #fff4df;
+      --error: #be123c;
+      --error-soft: #fff1f3;
+      --ok: #15803d;
+      --ok-soft: #ecfdf3;
+      --focus: #1d4ed8;
+      --shadow: 0 10px 28px rgba(31, 41, 55, 0.08);
+      font-family: "Segoe UI", Arial, sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      height: 100%;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-size: 13px;
+      letter-spacing: 0;
+    }
+
+    button,
+    input,
+    select,
+    textarea {
+      font: inherit;
+    }
+
+    button {
+      height: 30px;
+      border: 1px solid var(--line-strong);
+      background: var(--surface);
+      color: var(--text);
+      border-radius: 4px;
+      padding: 0 10px;
+      cursor: default;
+      white-space: nowrap;
+    }
+
+    button.primary {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: white;
+      font-weight: 600;
+    }
+
+    button.danger {
+      background: var(--error);
+      border-color: var(--error);
+      color: white;
+      font-weight: 600;
+    }
+
+    button.ghost {
+      background: transparent;
+    }
+
+    input,
+    select,
+    textarea {
+      width: 100%;
+      min-width: 0;
+      border: 1px solid var(--line);
+      border-radius: 4px;
+      background: var(--surface);
+      color: var(--text);
+      padding: 6px 8px;
+    }
+
+    textarea {
+      resize: vertical;
+      min-height: 68px;
+      line-height: 1.45;
+    }
+
+    .app {
+      min-height: 100%;
+      display: grid;
+      grid-template-rows: auto auto 1fr;
+    }
+
+    .topbar {
+      height: 44px;
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      align-items: center;
+      gap: 16px;
+      padding: 0 14px;
+      background: #2c3038;
+      color: white;
+      border-bottom: 1px solid #1c2028;
+    }
+
+    .brand {
+      font-weight: 700;
+      font-size: 15px;
+    }
+
+    .tabs {
+      display: flex;
+      align-items: stretch;
+      height: 100%;
+      gap: 2px;
+    }
+
+    .tab {
+      display: flex;
+      align-items: center;
+      padding: 0 14px;
+      color: #d6dbe4;
+      border-left: 1px solid transparent;
+      border-right: 1px solid transparent;
+    }
+
+    .tab.active {
+      background: var(--bg);
+      color: var(--text);
+      font-weight: 700;
+    }
+
+    .session {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: #d6dbe4;
+      min-width: 0;
+    }
+
+    .path {
+      max-width: 420px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      background: var(--ok);
+      display: inline-block;
+      flex: 0 0 auto;
+    }
+
+    .toolbar {
+      display: grid;
+      grid-template-columns: auto minmax(220px, 1fr) auto;
+      gap: 12px;
+      align-items: center;
+      padding: 10px 14px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--line);
+    }
+
+    .button-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      min-width: 0;
+    }
+
+    .searchbox {
+      display: grid;
+      grid-template-columns: 22px 1fr;
+      align-items: center;
+      max-width: 460px;
+      border: 1px solid var(--line);
+      border-radius: 4px;
+      background: var(--surface-muted);
+      overflow: hidden;
+    }
+
+    .searchbox span {
+      color: var(--subtle);
+      text-align: center;
+    }
+
+    .searchbox input {
+      border: 0;
+      background: transparent;
+      padding-left: 2px;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      min-height: 24px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: var(--surface-muted);
+      color: var(--muted);
+      white-space: nowrap;
+    }
+
+    .pill.ok {
+      color: var(--ok);
+      background: var(--ok-soft);
+      border-color: #badfc5;
+      font-weight: 600;
+    }
+
+    .pill.warn {
+      color: var(--warn);
+      background: var(--warn-soft);
+      border-color: #f2cf9b;
+      font-weight: 600;
+    }
+
+    .workspace {
+      display: grid;
+      grid-template-columns: 260px minmax(460px, 1fr) 360px;
+      grid-template-rows: auto minmax(0, 1fr) 168px;
+      gap: 10px;
+      padding: 10px 14px 14px;
+      min-height: 0;
+    }
+
+    .stats {
+      grid-column: 1 / -1;
+      display: grid;
+      grid-template-columns: repeat(6, minmax(120px, 1fr));
+      gap: 8px;
+    }
+
+    .stat {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 8px 10px;
+      min-width: 0;
+    }
+
+    .stat-label {
+      color: var(--muted);
+      font-size: 12px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .stat-value {
+      margin-top: 2px;
+      font-size: 18px;
+      font-weight: 750;
+    }
+
+    .panel {
+      min-height: 0;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .panel-header {
+      height: 38px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 0 10px;
+      border-bottom: 1px solid var(--line);
+      background: var(--surface-muted);
+      font-weight: 700;
+      min-width: 0;
+    }
+
+    .panel-title {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .groups {
+      display: grid;
+      grid-template-rows: auto 1fr;
+    }
+
+    .group-filter {
+      padding: 8px 10px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .group-list {
+      overflow: auto;
+      padding: 6px;
+    }
+
+    .group-item {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 8px;
+      align-items: center;
+      min-height: 40px;
+      padding: 6px 8px;
+      border-radius: 5px;
+      border: 1px solid transparent;
+    }
+
+    .group-item.active {
+      background: var(--accent-soft);
+      border-color: var(--accent-line);
+      color: #0c4d48;
+    }
+
+    .group-title {
+      font-weight: 700;
+      line-height: 1.25;
+    }
+
+    .group-key {
+      color: var(--muted);
+      font-size: 12px;
+      margin-top: 2px;
+    }
+
+    .count {
+      min-width: 28px;
+      text-align: center;
+      padding: 2px 6px;
+      border-radius: 999px;
+      background: #edf0f5;
+      color: var(--muted);
+      font-weight: 700;
+    }
+
+    .workarea {
+      display: grid;
+      grid-template-rows: auto 1fr;
+      min-height: 0;
+    }
+
+    .subtabs {
+      display: flex;
+      align-items: center;
+      gap: 2px;
+      padding: 7px 8px 0;
+      background: var(--surface-muted);
+      border-bottom: 1px solid var(--line);
+    }
+
+    .subtab {
+      height: 30px;
+      padding: 0 10px;
+      border: 1px solid transparent;
+      border-bottom: 0;
+      border-radius: 5px 5px 0 0;
+      display: flex;
+      align-items: center;
+      color: var(--muted);
+      font-weight: 600;
+    }
+
+    .subtab.active {
+      background: var(--surface);
+      color: var(--text);
+      border-color: var(--line);
+      position: relative;
+      top: 1px;
+    }
+
+    .view {
+      min-height: 0;
+      overflow: hidden;
+      display: none;
+    }
+
+    .view.active {
+      display: grid;
+    }
+
+    .target-view {
+      grid-template-rows: auto 1fr;
+    }
+
+    .list-actions {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 8px 10px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .table-wrap {
+      min-height: 0;
+      overflow: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed;
+    }
+
+    th,
+    td {
+      border-bottom: 1px solid var(--line);
+      padding: 7px 8px;
+      vertical-align: middle;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    th {
+      position: sticky;
+      top: 0;
+      z-index: 1;
+      background: #eef2f7;
+      color: #3b4452;
+      font-size: 12px;
+      text-align: left;
+      font-weight: 750;
+    }
+
+    tr.selected td {
+      background: #e9f5f3;
+      border-bottom-color: #c4ddd9;
+    }
+
+    tr:hover td {
+      background: #f6faf9;
+    }
+
+    .col-enabled {
+      width: 58px;
+      text-align: center;
+    }
+
+    .col-order {
+      width: 70px;
+    }
+
+    .col-id {
+      width: 154px;
+    }
+
+    .col-scale {
+      width: 92px;
+    }
+
+    .col-grid {
+      width: 92px;
+    }
+
+    .col-status {
+      width: 112px;
+    }
+
+    .status {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      min-width: 0;
+      max-width: 100%;
+      height: 22px;
+      padding: 0 7px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .status::before {
+      content: "";
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      flex: 0 0 auto;
+    }
+
+    .status.ok {
+      color: var(--ok);
+      background: var(--ok-soft);
+    }
+
+    .status.ok::before {
+      background: var(--ok);
+    }
+
+    .status.warn {
+      color: var(--warn);
+      background: var(--warn-soft);
+    }
+
+    .status.warn::before {
+      background: var(--warn);
+    }
+
+    .status.error {
+      color: var(--error);
+      background: var(--error-soft);
+    }
+
+    .status.error::before {
+      background: var(--error);
+    }
+
+    .inspector {
+      display: grid;
+      grid-template-rows: auto 1fr;
+      min-height: 0;
+    }
+
+    .inspector-body {
+      min-height: 0;
+      overflow: auto;
+    }
+
+    .target-heading {
+      padding: 12px 12px 10px;
+      border-bottom: 1px solid var(--line);
+      background: #fbfcfe;
+    }
+
+    .target-name {
+      font-size: 18px;
+      font-weight: 800;
+      line-height: 1.25;
+    }
+
+    .target-sub {
+      margin-top: 4px;
+      color: var(--muted);
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .section {
+      border-bottom: 1px solid var(--line);
+      padding: 10px 12px 12px;
+    }
+
+    .section-title {
+      font-weight: 800;
+      margin-bottom: 8px;
+      color: #303641;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: minmax(86px, 0.42fr) minmax(0, 1fr);
+      gap: 8px 10px;
+      align-items: center;
+    }
+
+    .field-label {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .inline-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 6px;
+    }
+
+    .placeholder-table th,
+    .placeholder-table td {
+      padding: 6px;
+    }
+
+    .defaults-view,
+    .patterns-view,
+    .raw-view {
+      overflow: auto;
+      padding: 12px;
+      align-content: start;
+      gap: 12px;
+    }
+
+    .settings-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(280px, 1fr));
+      gap: 12px;
+      align-items: start;
+    }
+
+    .settings-grid.wide-first {
+      grid-template-columns: minmax(360px, 1.3fr) minmax(280px, 0.9fr);
+    }
+
+    .settings-block {
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      overflow: hidden;
+      background: var(--surface);
+    }
+
+    .settings-block h3 {
+      margin: 0;
+      padding: 9px 10px;
+      border-bottom: 1px solid var(--line);
+      background: var(--surface-muted);
+      font-size: 13px;
+    }
+
+    .settings-block .form-grid {
+      padding: 10px;
+    }
+
+    .grid-visual {
+      margin: 10px;
+      height: 150px;
+      border: 1px solid var(--line);
+      border-radius: 5px;
+      background:
+        linear-gradient(90deg, rgba(15, 118, 110, 0.24) 1px, transparent 1px),
+        linear-gradient(0deg, rgba(15, 118, 110, 0.24) 1px, transparent 1px),
+        linear-gradient(135deg, #eef4f8, #d8e4ea);
+      background-size: 34px 34px, 34px 34px, auto;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .grid-visual::before {
+      content: "Default grid preview";
+      position: absolute;
+      left: 10px;
+      top: 10px;
+      padding: 3px 7px;
+      border-radius: 4px;
+      background: rgba(255, 255, 255, 0.84);
+      border: 1px solid var(--line);
+      color: var(--muted);
+      font-weight: 700;
+    }
+
+    .grid-visual::after {
+      content: "label_format: dms_full";
+      position: absolute;
+      right: 10px;
+      bottom: 10px;
+      padding: 3px 7px;
+      border-radius: 4px;
+      background: rgba(15, 118, 110, 0.88);
+      color: white;
+      font-weight: 700;
+    }
+
+    .raw-code {
+      min-height: 480px;
+      margin: 0;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #20242c;
+      color: #dbe4ef;
+      padding: 12px;
+      overflow: auto;
+      font: 12px/1.55 "Cascadia Mono", "Consolas", monospace;
+    }
+
+    .issues {
+      grid-column: 1 / -1;
+      display: grid;
+      grid-template-rows: auto 1fr;
+      min-height: 0;
+    }
+
+    .issue-list {
+      overflow: auto;
+    }
+
+    .issue-row {
+      display: grid;
+      grid-template-columns: 86px 160px 1fr 240px;
+      gap: 8px;
+      align-items: center;
+      min-height: 34px;
+      padding: 7px 10px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .issue-row strong {
+      color: #333a45;
+    }
+
+    .muted {
+      color: var(--muted);
+    }
+
+    .mono {
+      font-family: "Cascadia Mono", "Consolas", monospace;
+      font-size: 12px;
+    }
+
+    .split-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .switch {
+      width: 34px;
+      height: 18px;
+      border-radius: 999px;
+      background: var(--accent);
+      position: relative;
+      display: inline-block;
+      vertical-align: middle;
+    }
+
+    .switch::after {
+      content: "";
+      position: absolute;
+      width: 14px;
+      height: 14px;
+      top: 2px;
+      right: 2px;
+      border-radius: 50%;
+      background: white;
+    }
+
+    .switch.off {
+      background: #aab3bf;
+    }
+
+    .switch.off::after {
+      left: 2px;
+      right: auto;
+    }
+
+    @media (max-width: 1180px) {
+      .workspace {
+        grid-template-columns: 230px minmax(420px, 1fr);
+        grid-template-rows: auto minmax(420px, 1fr) 440px 168px;
+      }
+
+      .inspector {
+        grid-column: 1 / -1;
+      }
+
+      .stats {
+        grid-template-columns: repeat(3, minmax(130px, 1fr));
+      }
+    }
+
+    @media (max-width: 760px) {
+      .topbar,
+      .toolbar {
+        grid-template-columns: 1fr;
+        height: auto;
+      }
+
+      .tabs {
+        height: 36px;
+        overflow-x: auto;
+      }
+
+      .workspace {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto 300px 520px 520px 190px;
+      }
+
+      .stats {
+        grid-template-columns: repeat(2, minmax(120px, 1fr));
+      }
+
+      .issue-row {
+        grid-template-columns: 72px 1fr;
+      }
+
+      .issue-row .hide-mobile {
+        display: none;
+      }
+
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <header class="topbar">
+      <div class="brand">3.ThucTheNgay</div>
+      <nav class="tabs" aria-label="App tabs">
+        <div class="tab">Setup</div>
+        <div class="tab active">Config</div>
+        <div class="tab">Review/Edit</div>
+        <div class="tab">Export</div>
+      </nav>
+      <div class="session">
+        <span class="dot"></span>
+        <span class="path">/home/ongtu/Working/3.ThucTheNgay/config.json</span>
+      </div>
+    </header>
+
+    <section class="toolbar">
+      <div class="button-row">
+        <button>Mở config</button>
+        <button>Tải lại</button>
+        <button>Backup</button>
+        <button class="primary">Lưu</button>
+        <button>Lưu thành</button>
+      </div>
+      <label class="searchbox">
+        <span>⌕</span>
+        <input type="search" value="" placeholder="Tìm target, group, template, geometry">
+      </label>
+      <div class="button-row" style="justify-content: end;">
+        <span class="pill warn">Có thay đổi chưa lưu</span>
+        <span class="pill ok">Config hợp lệ</span>
+        <button class="primary">Validate</button>
+      </div>
+    </section>
+
+    <section class="workspace">
+      <div class="stats">
+        <div class="stat">
+          <div class="stat-label">Targets</div>
+          <div class="stat-value">70</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">Enabled</div>
+          <div class="stat-value">70</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">Groups</div>
+          <div class="stat-value">7 + 1</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">Template PPTX</div>
+          <div class="stat-value">1</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">Geometry</div>
+          <div class="stat-value">70</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">Warnings</div>
+          <div class="stat-value" style="color: var(--warn);">2</div>
+        </div>
+      </div>
+
+      <aside class="panel groups">
+        <div class="panel-header">
+          <span class="panel-title">Groups</span>
+          <button class="ghost">+</button>
+        </div>
+        <div class="group-filter">
+          <select aria-label="Filter groups">
+            <option>Tất cả target</option>
+            <option>Enabled only</option>
+            <option>Có cảnh báo</option>
+          </select>
+        </div>
+        <div class="group-list">
+          <div class="group-item active" data-group="1.1">
+            <div>
+              <div class="group-title">Không người Hoàng Sa</div>
+              <div class="group-key">key 1.1</div>
+            </div>
+            <span class="count">6</span>
+          </div>
+          <div class="group-item" data-group="1.2">
+            <div>
+              <div class="group-title">Không người Trường Sa</div>
+              <div class="group-key">key 1.2</div>
+            </div>
+            <span class="count">23</span>
+          </div>
+          <div class="group-item" data-group="2.1">
+            <div>
+              <div class="group-title">Có người Hoàng Sa</div>
+              <div class="group-key">key 2.1</div>
+            </div>
+            <span class="count">15</span>
+          </div>
+          <div class="group-item" data-group="2.2.1">
+            <div>
+              <div class="group-title">Có người Trường Sa TQ</div>
+              <div class="group-key">key 2.2.1</div>
+            </div>
+            <span class="count">7</span>
+          </div>
+          <div class="group-item" data-group="2.2.2">
+            <div>
+              <div class="group-title">Có người Trường Sa PLP</div>
+              <div class="group-key">key 2.2.2</div>
+            </div>
+            <span class="count">9</span>
+          </div>
+          <div class="group-item" data-group="2.2.3">
+            <div>
+              <div class="group-title">Có người Trường Sa Malaysia</div>
+              <div class="group-key">key 2.2.3</div>
+            </div>
+            <span class="count">8</span>
+          </div>
+          <div class="group-item" data-group="2.2.4">
+            <div>
+              <div class="group-title">Có người Trường Sa ĐL</div>
+              <div class="group-key">key 2.2.4</div>
+            </div>
+            <span class="count">0</span>
+          </div>
+          <div class="group-item" data-group="0">
+            <div>
+              <div class="group-title">Chưa phân nhóm</div>
+              <div class="group-key">key 0</div>
+            </div>
+            <span class="count">2</span>
+          </div>
+        </div>
+      </aside>
+
+      <section class="panel workarea">
+        <div class="subtabs">
+          <div class="subtab active" data-view-tab="targets">Targets</div>
+          <div class="subtab" data-view-tab="defaults">Defaults</div>
+          <div class="subtab" data-view-tab="patterns">Filename Patterns</div>
+          <div class="subtab" data-view-tab="raw">Raw JSON</div>
+        </div>
+
+        <div class="view target-view active" id="view-targets">
+          <div class="list-actions">
+            <div class="button-row">
+              <button>Thêm target</button>
+            </div>
+            <div class="button-row">
+              <span class="pill">Group 1.1</span>
+              <span class="pill">sort_order theo group</span>
+            </div>
+          </div>
+          <div class="table-wrap">
+            <table aria-label="Target list">
+              <thead>
+                <tr>
+                  <th class="col-enabled">Bật</th>
+                  <th class="col-order">Order</th>
+                  <th class="col-id">ID</th>
+                  <th>Tên hiển thị</th>
+                  <th>Alias</th>
+                  <th class="col-scale">Scale</th>
+                  <th class="col-grid">Grid</th>
+                  <th class="col-status">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr class="selected" data-target="DaBac" data-name="Đá Bắc" data-group="Không người Hoàng Sa" data-scale="50000" data-grid="1 phút">
+                  <td class="col-enabled"><span class="switch"></span></td>
+                  <td>1</td>
+                  <td class="mono">DaBac</td>
+                  <td>Đá Bắc</td>
+                  <td>Đá Bắc</td>
+                  <td>1:50,000</td>
+                  <td>1 phút</td>
+                  <td><span class="status ok">OK</span></td>
+                </tr>
+                <tr data-target="DaLon" data-name="Đá Lớn" data-group="Không người Hoàng Sa" data-scale="50000" data-grid="1 phút">
+                  <td class="col-enabled"><span class="switch"></span></td>
+                  <td>2</td>
+                  <td class="mono">DaLon</td>
+                  <td>Đá Lớn</td>
+                  <td>Đá Lớn</td>
+                  <td>1:50,000</td>
+                  <td>1 phút</td>
+                  <td><span class="status ok">OK</span></td>
+                </tr>
+                <tr data-target="DaChimEn" data-name="Đá Chim Én" data-group="Không người Hoàng Sa" data-scale="50000" data-grid="3 phút">
+                  <td class="col-enabled"><span class="switch"></span></td>
+                  <td>3</td>
+                  <td class="mono">DaChimEn</td>
+                  <td>Đá Chim Én</td>
+                  <td>Đá Chim Én</td>
+                  <td>1:50,000</td>
+                  <td>3 phút</td>
+                  <td><span class="status warn">Review</span></td>
+                </tr>
+                <tr data-target="DaBachQuy" data-name="Đá Bạch Quy" data-group="Không người Hoàng Sa" data-scale="50000" data-grid="1 phút">
+                  <td class="col-enabled"><span class="switch"></span></td>
+                  <td>4</td>
+                  <td class="mono">DaBachQuy</td>
+                  <td>Đá Bạch Quy</td>
+                  <td>Đá Bạch Quy</td>
+                  <td>1:50,000</td>
+                  <td>1 phút</td>
+                  <td><span class="status ok">OK</span></td>
+                </tr>
+                <tr data-target="DaBongBay" data-name="Đá Bông Bay" data-group="Không người Hoàng Sa" data-scale="50000" data-grid="1 phút">
+                  <td class="col-enabled"><span class="switch"></span></td>
+                  <td>5</td>
+                  <td class="mono">DaBongBay</td>
+                  <td>Đá Bông Bay</td>
+                  <td>Đá Bông Bay</td>
+                  <td>1:50,000</td>
+                  <td>1 phút</td>
+                  <td><span class="status ok">OK</span></td>
+                </tr>
+                <tr data-target="BaicanScarborough" data-name="Bãi cạn Scarborough" data-group="Không người Hoàng Sa" data-scale="50000" data-grid="1 phút">
+                  <td class="col-enabled"><span class="switch"></span></td>
+                  <td>6</td>
+                  <td class="mono">BaicanScarborough</td>
+                  <td>Bãi cạn Scarborough</td>
+                  <td>Bãi cạn Scarborough</td>
+                  <td>1:50,000</td>
+                  <td>1 phút</td>
+                  <td><span class="status ok">OK</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="view defaults-view" id="view-defaults">
+          <div class="settings-grid wide-first">
+            <section class="settings-block">
+              <h3>Quản lý Default Grid</h3>
+              <div class="form-grid">
+                <label class="field-label">label_format</label>
+                <select>
+                  <option>dms_full</option>
+                  <option>dms_short</option>
+                </select>
+                <label class="field-label">supported_formats</label>
+                <input value="dms_full, dms_short">
+                <label class="field-label">default_label_font</label>
+                <input value="fonts/arial-bold/Arial Bold/Arial Bold.ttf">
+                <label class="field-label">frame_color</label>
+                <input value="#000000">
+                <label class="field-label">label_color</label>
+                <input value="#000000">
+                <label class="field-label">label_font_size</label>
+                <input value="24">
+                <label class="field-label">tick_length_px</label>
+                <input value="8">
+                <label class="field-label">reference_label_font_size</label>
+                <input value="72">
+              </div>
+              <div class="grid-visual"></div>
+            </section>
+            <section class="settings-block">
+              <h3>Target Grid Override Policy</h3>
+              <div class="form-grid">
+                <label class="field-label">target interval</label>
+                <input value="Mỗi target vẫn có grid.interval riêng">
+                <label class="field-label">target style</label>
+                <input value="Merge với defaults.grid.style nếu có override">
+                <label class="field-label">save behavior</label>
+                <input value="Chỉ ghi field khác default khi tối ưu config">
+                <label class="field-label">bulk action</label>
+                <select>
+                  <option>Không thay đổi target interval</option>
+                  <option>Set 1 phút cho target đang chọn</option>
+                  <option>Set 30 giây cho target đang chọn</option>
+                  <option>Xóa style override ở target</option>
+                </select>
+              </div>
+            </section>
+            <section class="settings-block">
+              <h3>Frame Reference</h3>
+              <div class="form-grid">
+                <label class="field-label">reference_width</label>
+                <input value="3306">
+                <label class="field-label">reference_height</label>
+                <input value="2340">
+                <label class="field-label">reference_outer_frame</label>
+                <input value="[244, 144, 3272, 2286]">
+                <label class="field-label">reference_frame_gap</label>
+                <input value="42">
+              </div>
+            </section>
+            <section class="settings-block">
+              <h3>Advanced Grid Style</h3>
+              <div class="form-grid">
+                <label class="field-label">max_frame_ticks</label>
+                <input value="2000">
+                <label class="field-label">epsilon</label>
+                <input value="1e-10">
+                <label class="field-label">surround_tick_length</label>
+                <input value="14">
+                <label class="field-label">surround_stroke</label>
+                <input value="6 / 4">
+              </div>
+            </section>
+            <section class="settings-block">
+              <h3>Export Defaults</h3>
+              <div class="form-grid">
+                <label class="field-label">date_format</label>
+                <input value="dd.MM.yy">
+                <label class="field-label">time_format</label>
+                <input value="HH.mm/dd.MM.yy">
+                <label class="field-label">map_background_color</label>
+                <input value="#000000">
+              </div>
+            </section>
+          </div>
+        </div>
+
+        <div class="view patterns-view" id="view-patterns">
+          <div class="list-actions" style="padding: 0 0 10px;">
+            <div class="button-row">
+              <button>Thêm pattern</button>
+              <button>Kiểm tra pattern</button>
+            </div>
+            <span class="pill">UTC filename + 7 giờ</span>
+          </div>
+          <div class="table-wrap" style="max-height: 180px; border: 1px solid var(--line); border-radius: 6px;">
+            <table>
+              <thead>
+                <tr>
+                  <th>Tên</th>
+                  <th>Pattern</th>
+                  <th style="width: 100px;">Separator</th>
+                  <th style="width: 160px;">Trích xuất</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>PlanetScope PSScene</td>
+                  <td class="mono">*_yyyyMMdd_HHmmss_*_*_cloud_cloud-percent</td>
+                  <td class="mono">_</td>
+                  <td>date, time, cloud</td>
+                </tr>
+                <tr>
+                  <td>PlanetScope simple</td>
+                  <td class="mono">yyyyMMdd_HHmmss_*</td>
+                  <td class="mono">_</td>
+                  <td>date, time</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <section class="settings-block">
+            <h3>Test Filename</h3>
+            <div class="form-grid">
+              <label class="field-label">filename</label>
+              <input value="20260525_230000_abc_cloud_12.tif">
+              <label class="field-label">capture_date</label>
+              <input value="2026-05-26">
+              <label class="field-label">capture_time</label>
+              <input value="06:00:00">
+              <label class="field-label">cloud_percent</label>
+              <input value="12">
+            </div>
+          </section>
+        </div>
+
+        <div class="view raw-view" id="view-raw">
+          <pre class="raw-code">{
+  "schema_version": "1.0",
+  "defaults": {
+    "grid": {
+      "label_format": "dms_full",
+      "style": {
+        "reference_width": 3306,
+        "reference_height": 2340,
+        "frame_color": "#000000"
+      }
+    },
+    "export": {
+      "date_format": "dd.MM.yy",
+      "time_format": "HH.mm/dd.MM.yy",
+      "map_background_color": "#000000"
+    }
+  },
+  "filename_patterns": [
+    {
+      "name": "PlanetScope simple",
+      "pattern": "yyyyMMdd_HHmmss_*"
+    }
+  ],
+  "targets": [
+    {
+      "id": "DaBac",
+      "enabled": true,
+      "group": {
+        "key": 1.1,
+        "title": "Không người Hoàng Sa"
+      },
+      "sort_order": 1,
+      "name": "Đá Bắc"
+    }
+  ]
+}</pre>
+        </div>
+      </section>
+
+      <aside class="panel inspector">
+        <div class="panel-header">
+          <span class="panel-title">Target Inspector</span>
+          <div class="button-row">
+            <button class="danger">Xóa target</button>
+            <button>Reset</button>
+            <button class="primary">Apply</button>
+          </div>
+        </div>
+        <div class="inspector-body">
+          <div class="target-heading">
+            <div class="target-name" id="inspector-name">Đá Bắc</div>
+            <div class="target-sub">
+              <span class="mono" id="inspector-id">DaBac</span>
+              <span id="inspector-group">Không người Hoàng Sa</span>
+              <span class="pill ok">enabled</span>
+            </div>
+          </div>
+
+          <section class="section">
+            <div class="section-title">Thông tin</div>
+            <div class="form-grid">
+              <label class="field-label">id</label>
+              <input id="field-id" value="DaBac">
+              <label class="field-label">enabled</label>
+              <select>
+                <option>true</option>
+                <option>false</option>
+              </select>
+              <label class="field-label">group.key</label>
+              <select>
+                <option>1.1</option>
+                <option>1.2</option>
+                <option>2.1</option>
+                <option>2.2.1</option>
+                <option>2.2.2</option>
+                <option>2.2.3</option>
+                <option>2.2.4</option>
+                <option>0</option>
+              </select>
+              <label class="field-label">sort_order</label>
+              <input value="1">
+              <label class="field-label">name</label>
+              <input id="field-name" value="Đá Bắc">
+              <label class="field-label">alias</label>
+              <input value="Đá Bắc">
+              <label class="field-label">coordinate</label>
+              <input value="[111.499926, 17.093149]">
+              <label class="field-label">scale</label>
+              <input id="field-scale" value="50000">
+            </div>
+          </section>
+
+          <section class="section">
+            <div class="section-title">Grid</div>
+            <div class="inline-grid">
+              <input value="0" aria-label="degrees">
+              <input value="1" aria-label="minutes">
+              <input value="0" aria-label="seconds">
+            </div>
+          </section>
+
+          <section class="section">
+            <div class="section-title">Export</div>
+            <div class="form-grid">
+              <label class="field-label">template</label>
+              <input value="examples/templates/target_001.template.pptx">
+              <label class="field-label">TXT</label>
+              <textarea>Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.</textarea>
+              <label class="field-label">date/time</label>
+              <input value="dd.MM.yy / HH.mm/dd.MM.yy">
+            </div>
+          </section>
+
+          <section class="section">
+            <div class="section-title">Placeholders</div>
+            <table class="placeholder-table">
+              <thead>
+                <tr>
+                  <th>field</th>
+                  <th>value</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td class="mono">map_image</td>
+                  <td><input value="required" aria-label="map_image value"></td>
+                </tr>
+                <tr>
+                  <td class="mono">title</td>
+                  <td><input value="Hiện trạng đá Bắc, quần đảo Hoàng Sa ngày {capture_date}" aria-label="title value"></td>
+                </tr>
+                <tr>
+                  <td class="mono">time</td>
+                  <td><input value="auto" aria-label="time value"></td>
+                </tr>
+                <tr>
+                  <td class="mono">comment</td>
+                  <td><input value="Không ghi nhận hoạt động tôn tạo, xây dựng công trình." aria-label="comment value"></td>
+                </tr>
+              </tbody>
+            </table>
+          </section>
+
+          <section class="section">
+            <div class="section-title">Geometry</div>
+            <div class="button-row">
+              <button>Import GeoJSON</button>
+              <button>Export GeoJSON</button>
+            </div>
+          </section>
+        </div>
+      </aside>
+
+      <section class="panel issues">
+        <div class="panel-header">
+          <span class="panel-title">Validation Issues</span>
+          <div class="button-row">
+            <span class="pill ok">68 OK</span>
+            <span class="pill warn">2 warning</span>
+            <span class="pill">0 error</span>
+          </div>
+        </div>
+        <div class="issue-list">
+          <div class="issue-row">
+            <span class="status warn">WARN</span>
+            <strong class="hide-mobile">group.unknown</strong>
+            <span>Group 2.2.4 chưa có target trong config hiện tại.</span>
+            <span class="muted hide-mobile">Có người Trường Sa ĐL</span>
+          </div>
+          <div class="issue-row">
+            <span class="status warn">WARN</span>
+            <strong class="hide-mobile">target.group.0</strong>
+            <span>2 target đang ở nhóm Chưa phân nhóm.</span>
+            <span class="muted hide-mobile">DaBaBinh, DaChuThap</span>
+          </div>
+          <div class="issue-row">
+            <span class="status ok">OK</span>
+            <strong class="hide-mobile">template.loaded</strong>
+            <span>PPTX template dùng chung đã parse được map_image, title, time, comment.</span>
+            <span class="muted hide-mobile">target_001.template.pptx</span>
+          </div>
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <script>
+    const tabs = document.querySelectorAll("[data-view-tab]");
+    const views = {
+      targets: document.querySelector("#view-targets"),
+      defaults: document.querySelector("#view-defaults"),
+      patterns: document.querySelector("#view-patterns"),
+      raw: document.querySelector("#view-raw")
+    };
+
+    tabs.forEach((tab) => {
+      tab.addEventListener("click", () => {
+        tabs.forEach((item) => item.classList.remove("active"));
+        Object.values(views).forEach((view) => view.classList.remove("active"));
+        tab.classList.add("active");
+        views[tab.dataset.viewTab].classList.add("active");
+      });
+    });
+
+    document.querySelectorAll(".group-item").forEach((group) => {
+      group.addEventListener("click", () => {
+        document.querySelectorAll(".group-item").forEach((item) => {
+          item.classList.remove("active");
+        });
+        group.classList.add("active");
+      });
+    });
+
+    document.querySelectorAll("tbody tr[data-target]").forEach((row) => {
+      row.addEventListener("click", () => {
+        document.querySelectorAll("tbody tr[data-target]").forEach((item) => {
+          item.classList.remove("selected");
+        });
+        row.classList.add("selected");
+        document.querySelector("#inspector-name").textContent = row.dataset.name;
+        document.querySelector("#inspector-id").textContent = row.dataset.target;
+        document.querySelector("#inspector-group").textContent = row.dataset.group;
+        document.querySelector("#field-id").value = row.dataset.target;
+        document.querySelector("#field-name").value = row.dataset.name;
+        document.querySelector("#field-scale").value = row.dataset.scale;
+      });
+    });
+
+  </script>
+</body>
+</html>

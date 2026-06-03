@@ -29,6 +29,9 @@ class AppShell(QMainWindow):
         self.setup_mode = SetupMode()
         self.review_edit_mode = ReviewEditMode(preferences_service=self.preferences_service)
         self.export_mode = ExportMode(preferences_service=self.preferences_service)
+        from thucthengay.editor.modes.config_mode import ConfigMode
+
+        self.config_mode = ConfigMode()
         self._ingestion_thread: QThread | None = None
         self._ingestion_worker: IngestionWorker | None = None
         self._ingestion_control: JobControl | None = None
@@ -39,6 +42,7 @@ class AppShell(QMainWindow):
         self.mode_tabs.addTab(self.setup_mode, "Setup")
         self.mode_tabs.addTab(self.review_edit_mode, "Review/Edit")
         self.mode_tabs.addTab(self.export_mode, "Export")
+        self.mode_tabs.addTab(self.config_mode, "Config")
         self.setup_mode.ingestRequested.connect(self._run_ingestion)
         self.setup_mode.openWorkspaceRequested.connect(self._open_existing_workspace)
         self.setup_mode.pauseRequested.connect(self._pause_ingestion)
@@ -46,6 +50,7 @@ class AppShell(QMainWindow):
         self.setup_mode.stopRequested.connect(self._stop_ingestion)
         self.setup_mode.recentProjectRemoveRequested.connect(self._remove_recent_project)
         self.export_mode.jumpRequested.connect(self._jump_to_review_context)
+        self.config_mode.configSaved.connect(self._config_saved)
 
         self.setCentralWidget(self.mode_tabs)
         self.setup_mode.set_recent_projects(self.preferences_service.preferences.recent_projects)
@@ -204,6 +209,9 @@ class AppShell(QMainWindow):
             workspace_folder=workspace_folder,
         )
         self.setup_mode.set_recent_projects(self.preferences_service.preferences.recent_projects)
+
+    def _config_saved(self, config_path: Path) -> None:
+        self.setup_mode.config_row.set_path(config_path)
 
     def _remove_recent_project(self, project: RecentProjectEntry) -> None:
         self.preferences_service.remove_recent_project(project.workspace_folder)

@@ -52,7 +52,7 @@
       "id": "DaBac",
       "enabled": true,
       "group": {
-        "key": 1.1,
+        "key": "1.1",
         "title": "Không người Hoàng Sa"
       },
       "sort_order": 1,
@@ -65,30 +65,38 @@
       "scale": 50000,
       "grid": {
         "interval": {
-          "minutes": 1
+          "minutes": 1,
+          "degrees": 0,
+          "seconds": 0
         }
       },
       "export": {
-        "template_pptx_file": "examples/templates/target_001.template.pptx",
+        "template_pptx_file": "data/templates/target_001.template.pptx",
         "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "placeholders": [
           {
             "field": "map_image",
-            "element_id": "65"
+            "element_id": "65",
+            "kind": "map_image",
+            "value": ""
           },
           {
             "field": "title",
             "element_id": "66",
-            "value": "Hiện trạng đá Bắc, quần đảo Hoàng Sa ngày {capture_date}"
+            "value": "Hiện trạng đá Bắc, quần đảo Hoàng Sa ngày {capture_date}",
+            "kind": "text"
           },
           {
             "field": "time",
-            "element_id": "67"
+            "element_id": "67",
+            "kind": "text",
+            "value": ""
           },
           {
             "field": "comment",
             "element_id": "68",
-            "value": "Không ghi nhận hoạt động tôn tạo, xây dựng công trình."
+            "value": "Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
+            "kind": "text"
           }
         ]
       },
@@ -225,7 +233,7 @@
         }
       },
       "export": {
-        "template_pptx_file": "examples/templates/target_001.template.pptx",
+        "template_pptx_file": "data/templates/target_001.template.pptx",
         "template_txt_value": "Tại đá Chim Én (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "placeholders": [
           {
@@ -315,7 +323,7 @@
         }
       },
       "export": {
-        "template_pptx_file": "examples/templates/target_001.template.pptx",
+        "template_pptx_file": "data/templates/target_001.template.pptx",
         "template_txt_value": "Tại đá Bạch Quy (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "placeholders": [
           {

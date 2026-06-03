@@ -4,6 +4,8 @@ inputDocuments:
   - /home/ongtu/Working/3.ThucTheNgay/_bmad-output/planning-artifacts/prds/prd-3.ThucTheNgay-2026-05-23/prd.md
   - /home/ongtu/Working/3.ThucTheNgay/_bmad-output/planning-artifacts/architecture.md
   - /home/ongtu/Working/3.ThucTheNgay/_bmad-output/planning-artifacts/ux-design-specification.md
+  - /home/ongtu/Working/3.ThucTheNgay/_bmad-output/planning-artifacts/config-manager-tab-design.md
+  - /home/ongtu/Working/3.ThucTheNgay/_bmad-output/planning-artifacts/config-manager-ui-mockup.html
 ---
 
 # 3.ThucTheNgay - Epic Breakdown
@@ -152,6 +154,34 @@ UX-DR15: Enforce accessibility/keyboard patterns: icon tooltips, status not colo
 
 UX-DR16: Enforce desktop adaptive layout: splitter min/max sizes, no viewport font scaling, elide+tooltip for long text, stable row heights, no nested cards.
 
+### Config Manager Requirements Addendum
+
+CM-FR1: Provide a dedicated `Config` tab in the main app flow so the Operator can create, open, inspect, edit, validate, back up, save, and save-as a project `config.json` without editing raw JSON as the primary workflow.
+
+CM-FR2: Maintain persisted, draft, and validated config states separately; show dirty/valid/warning/error status clearly; protect reload, save, and destructive operations with appropriate confirmation.
+
+CM-FR3: Display config summary metrics, group navigation, target filtering, and a target table grouped by `group.key`/`group.title`, preserving the local per-group `sort_order` model already used by Review/Edit.
+
+CM-FR4: Allow editing target fields through an inspector: `id`, `enabled`, `group.key`, `sort_order`, `name`, `alias`, `coordinate`, `scale`, `grid.interval`, export template/TXT fields, and placeholder values.
+
+CM-FR5: Allow deleting the selected target from the inspector with a danger confirmation, including a warning when an open workspace may contain compositions for that target.
+
+CM-FR6: Allow importing and exporting target geometry as GeoJSON through exactly two geometry actions: `Import GeoJSON` and `Export GeoJSON`, persisted as `metadata.geojson_geometry`.
+
+CM-FR7: Provide editable views for default grid/frame/export settings and filename patterns, including a filename pattern test area that makes the UTC filename plus 7-hour local-time behavior visible.
+
+CM-FR8: Provide a read-only Raw JSON view and a Validation Issues panel with severity, issue id, Vietnamese message/remediation, and navigation to the affected target or group where possible.
+
+CM-AR1: Implement config editing behind a `ConfigEditorService` in `src/thucthengay/config/`; PySide UI in `src/thucthengay/editor/` must not read or write config JSON directly.
+
+CM-AR2: Save operations must use atomic writes and config-relative path resolution consistent with existing `ConfigService`; validation should reuse existing models and issue patterns rather than duplicating schema logic in widgets.
+
+CM-UX1: Match the approved mockup layout: top app tabs, config toolbar, summary stats, left group sidebar, central workarea tabs, right target inspector, and bottom validation issues panel.
+
+CM-UX2: Keep the target toolbar intentionally narrow with `Thêm target`; removed bulk actions `Nhân bản`, `Đánh lại sort_order`, and `Di chuyển group` must not appear in the MVP.
+
+CM-UX3: In the inspector, `Placeholders` shows only `field` and editable `value`; geometry shows only `Import GeoJSON` and `Export GeoJSON`, with no geometry preview or copy button.
+
 ### FR Coverage Map
 
 FR1: Epic 1 - Load target config.
@@ -180,6 +210,9 @@ FR23: Epic 6 - Export summary and logs.
 AR15: Epic 7 - Map-surround render hardening.
 AR16: Epic 7 - PPTX placeholder auto-match hardening.
 AR17: Epic 7 - Windows packaging readiness.
+CM-FR1-CM-FR8: Epic 8 - Config Manager tab.
+CM-AR1-CM-AR2: Epic 8 - Config editing service and UI boundary.
+CM-UX1-CM-UX3: Epic 8 - Approved Config Manager layout and interactions.
 
 
 ## Epic List
@@ -232,6 +265,13 @@ Operator có output bản đồ khớp template thực tế hơn, config kiểm 
 
 **FRs covered:** FR15, FR16, FR20, FR21
 **Key architecture/UX coverage:** AR15, AR16, AR17, NFR1, NFR4
+
+### Epic 8: Config Manager Tab
+
+Operator có thể tạo, mở, kiểm tra, chỉnh sửa, backup và lưu `config.json` bằng giao diện trong app, quản lý target/group/defaults/patterns/geometry an toàn, và không cần sửa JSON thô cho các thao tác thường ngày.
+
+**FRs covered:** CM-FR1, CM-FR2, CM-FR3, CM-FR4, CM-FR5, CM-FR6, CM-FR7, CM-FR8
+**Key architecture/UX coverage:** CM-AR1, CM-AR2, CM-UX1, CM-UX2, CM-UX3, NFR2, NFR6, NFR7, NFR9
 
 ## Epic 1: Project Setup, Schemas, and Workspace Foundation
 
@@ -1513,3 +1553,220 @@ So that the desktop app can be prepared for use outside the development shell.
 **Then** bundled PROJ/GDAL data and relevant native DLL paths are configured before runtime imports.
 
 **Current Status:** review. Tooling exists, but final Windows `.exe` build and packaged smoke verification must be run on Windows before this story can be marked `done`.
+
+## Epic 8: Config Manager Tab
+
+**Goal:** Operator có thể tạo, mở, kiểm tra, chỉnh sửa, backup và lưu `config.json` bằng giao diện trong app, quản lý target/group/defaults/patterns/geometry an toàn, và không cần sửa JSON thô cho các thao tác thường ngày.
+
+### Story 8.1: Build Config Editor Service and Draft State
+
+As an Operator,
+I want config editing to go through a safe service layer,
+So that UI changes can be validated, saved, backed up, or discarded without corrupting `config.json`.
+
+**Requirement References:** CM-FR1, CM-FR2, CM-AR1, CM-AR2, NFR2, NFR6, NFR9
+
+**Acceptance Criteria:**
+
+**Given** an existing `config.json`
+**When** `ConfigEditorService` loads it
+**Then** the service exposes persisted config, draft config, validation result, source path, dirty state, and summary metrics
+**And** config-relative paths continue to resolve consistently with existing `ConfigService`.
+
+**Given** no config is loaded
+**When** the Operator creates a new config
+**Then** the service creates a valid minimal draft with defaults, filename patterns, and an empty target list
+**And** the draft is marked dirty until saved.
+
+**Given** a draft has been edited
+**When** save, save-as, or backup is requested
+**Then** writes are atomic
+**And** backup filenames use a timestamped pattern such as `config.backup.YYYYMMDD-HHMMSS.json`
+**And** failed writes leave the previous persisted file intact.
+
+**Given** a draft has validation issues
+**When** validation runs
+**Then** the service returns structured issues with severity, issue id, Vietnamese message/remediation, and target/group context where available
+**And** the UI can distinguish blocking errors from warnings.
+
+### Story 8.2: Add Config Tab Shell, Toolbar, and Status Summary
+
+As an Operator,
+I want a dedicated Config tab with clear file actions and status,
+So that I know which config is loaded and whether changes are safe to use downstream.
+
+**Requirement References:** CM-FR1, CM-FR2, CM-FR8, CM-UX1, UX-DR1, UX-DR14, UX-DR16
+
+**Acceptance Criteria:**
+
+**Given** the app shell is shown
+**When** the main tabs are rendered
+**Then** `Config` appears in the main flow between `Setup` and `Review/Edit`
+**And** the tab uses the approved layout from `config-manager-ui-mockup.html`.
+
+**Given** the Config tab is active
+**When** no config is loaded
+**Then** the toolbar offers `Tạo mới`, `Mở config`, and disabled save-dependent actions
+**And** the page explains the empty state through concise labels rather than raw JSON.
+
+**Given** a config is loaded
+**When** the Operator edits, validates, reloads, saves, saves-as, or backs up
+**Then** toolbar buttons and status pills reflect loaded path, dirty state, validation state, warnings, and blocking errors
+**And** reload prompts before discarding unsaved changes.
+
+**Given** summary stats are visible
+**When** targets, groups, geometry, templates, or validation issues change
+**Then** stats update for target count, enabled count, group count, unique PPTX templates, geometry count, and warning/error count.
+
+### Story 8.3: Implement Group Sidebar and Target Table
+
+As an Operator,
+I want to browse config targets by group and inspect their status in a table,
+So that large configs remain easy to scan and adjust.
+
+**Requirement References:** CM-FR3, CM-UX1, CM-UX2, UX-DR14, UX-DR15, UX-DR16
+
+**Acceptance Criteria:**
+
+**Given** a config has target groups
+**When** the Config tab loads
+**Then** the left sidebar lists groups by `group.key` order with `group.title`, key, and target count
+**And** group rows provide visible selected state without relying on color alone.
+
+**Given** the Operator selects a group or filter
+**When** the target table refreshes
+**Then** it shows only matching targets
+**And** targets within the selected group are sorted by their local `sort_order`.
+
+**Given** the target table is shown
+**When** rows are rendered
+**Then** the columns are `Bật`, `Order`, `ID`, `Tên hiển thị`, `Alias`, `Scale`, `Grid`, and `Status`
+**And** the target toolbar contains `Thêm target` without `Nhân bản`, `Đánh lại sort_order`, or `Di chuyển group`.
+
+**Given** the Operator selects a target row
+**When** the selection changes
+**Then** the Target Inspector displays that target
+**And** related validation issues can be highlighted or navigated to.
+
+### Story 8.4: Implement Target Inspector Editing and Delete
+
+As an Operator,
+I want to edit the selected target in an inspector,
+So that target details can be corrected without touching JSON.
+
+**Requirement References:** CM-FR4, CM-FR5, CM-UX1, CM-UX2, CM-UX3, NFR6, NFR9
+
+**Acceptance Criteria:**
+
+**Given** a target is selected
+**When** the inspector opens
+**Then** it shows editable fields for `id`, `enabled`, `group.key`, `sort_order`, `name`, `alias`, `coordinate`, `scale`, target grid interval, export template/TXT, and placeholder values
+**And** it offers `Xóa target`, `Reset`, and `Apply`.
+
+**Given** the Operator edits target information
+**When** `Apply` is clicked
+**Then** changes update the in-memory draft only
+**And** target-level validation runs for id uniqueness, coordinate range, positive scale, valid grid interval, group mapping, template path, TXT placeholders, and local group sort order.
+
+**Given** the Operator clicks `Reset`
+**When** unsaved inspector edits exist
+**Then** the inspector reverts to the target state from the draft before those inspector edits
+**And** the whole config is not reloaded from disk.
+
+**Given** the Operator clicks `Xóa target`
+**When** the target may have existing workspace compositions
+**Then** a danger confirmation identifies the target id/name and warns about downstream reload/review/export impact
+**And** deletion proceeds only after explicit confirmation.
+
+**Given** the inspector shows `Placeholders`
+**When** the placeholder table is rendered
+**Then** it has only `field` and editable `value`
+**And** it does not show an `id` column.
+
+### Story 8.5: Implement GeoJSON Import and Export for Target Geometry
+
+As an Operator,
+I want to import and export target geometry from the inspector,
+So that target boundaries can be maintained without exposing raw geometry text.
+
+**Requirement References:** CM-FR6, CM-UX3, CM-AR1, CM-AR2, NFR6, NFR9
+
+**Acceptance Criteria:**
+
+**Given** a target is selected
+**When** the Geometry section is rendered
+**Then** it contains only `Import GeoJSON` and `Export GeoJSON`
+**And** it does not show a geometry preview, geometry text box, or copy geometry button.
+
+**Given** the Operator imports a GeoJSON file
+**When** the file contains a single Geometry or single Feature
+**Then** the geometry is stored in `metadata.geojson_geometry` on the draft target
+**And** the target is validated immediately.
+
+**Given** the selected target already has geometry
+**When** the Operator imports a replacement geometry
+**Then** the app asks for confirmation before replacing it.
+
+**Given** the Operator exports geometry
+**When** the selected target has `metadata.geojson_geometry`
+**Then** the app writes a valid GeoJSON file with a suggested filename based on `target.id`
+**And** export is disabled or reports a clear issue when geometry is missing.
+
+### Story 8.6: Implement Defaults, Filename Patterns, and Raw JSON Views
+
+As an Operator,
+I want dedicated views for shared config sections,
+So that default grid/export behavior and filename parsing can be managed consistently.
+
+**Requirement References:** CM-FR7, CM-FR8, CM-UX1, UX-DR14, UX-DR16
+
+**Acceptance Criteria:**
+
+**Given** the Operator opens the `Defaults` sub-tab
+**When** config defaults are loaded
+**Then** the UI exposes default grid label format/style, frame reference values, advanced grid style values, date format, time format, and map background color
+**And** changes update the draft through the config editor service.
+
+**Given** target grid overrides exist
+**When** defaults are edited
+**Then** the UI clearly distinguishes shared defaults from per-target `grid.interval`
+**And** it does not silently overwrite target overrides.
+
+**Given** the Operator opens `Filename Patterns`
+**When** a sample filename is tested
+**Then** parsed date, parsed time, and cloud percent are shown
+**And** the UI makes the `UTC filename + 7 giờ` conversion visible for filename-derived capture time.
+
+**Given** the Operator opens `Raw JSON`
+**When** the draft changes
+**Then** the read-only JSON view reflects the current draft
+**And** raw JSON editing is not available in the MVP.
+
+### Story 8.7: Wire Config Validation Issues and Downstream Refresh Cues
+
+As an Operator,
+I want config problems and downstream impacts to be visible,
+So that changes to targets, groups, geometry, templates, or defaults do not surprise Review/Edit and Export.
+
+**Requirement References:** CM-FR2, CM-FR8, CM-AR1, CM-AR2, UX-DR9, UX-DR14, NFR6, NFR7
+
+**Acceptance Criteria:**
+
+**Given** validation issues exist
+**When** the Validation Issues panel is shown
+**Then** each issue row includes severity, issue id, Vietnamese message/remediation, and context
+**And** blocking errors are distinguishable from warnings by text/icon as well as styling.
+
+**Given** an issue references a target or group
+**When** the Operator activates that issue
+**Then** the Config tab selects the affected target or group where possible
+**And** the inspector/table scrolls to the relevant item when available.
+
+**Given** the Operator saves config changes
+**When** an open workspace may be affected by changed enabled status, deleted targets, group/sort order, geometry, template, placeholders, defaults, or filename patterns
+**Then** the app shows a concise refresh cue explaining which downstream area should be reloaded, re-ingested, revalidated, or preflighted.
+
+**Given** Review/Edit or Export uses config after a Config tab save
+**When** downstream code refreshes config
+**Then** it receives the saved config through existing config service boundaries
+**And** no downstream UI reads the config JSON file directly.

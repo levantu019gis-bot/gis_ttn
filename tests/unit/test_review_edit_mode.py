@@ -2107,10 +2107,11 @@ def test_review_edit_layout_and_app_shell_expose_review_mode(tmp_path: Path) -> 
 
     shell = AppShell(preferences_service=PreferencesService(tmp_path / "preferences.json"))
 
-    assert shell.mode_tabs.count() == 3
+    assert shell.mode_tabs.count() == 4
     assert shell.mode_tabs.tabText(0) == "Setup"
     assert shell.mode_tabs.tabText(1) == "Review/Edit"
     assert shell.mode_tabs.tabText(2) == "Export"
+    assert shell.mode_tabs.tabText(3) == "Config"
     assert isinstance(shell.review_edit_mode.tree_view, QTreeView)
     assert QueueFilter.ALL in shell.review_edit_mode.filter_buttons
     assert isinstance(shell.review_edit_mode.layer_table, QTableView)
