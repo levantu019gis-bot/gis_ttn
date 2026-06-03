@@ -1193,6 +1193,7 @@ class ReviewEditMode(QWidget):
             return
         self._update_detail_panels(updated)
         self._refresh_workspace_projection(updated.composition_id, validate_selection=False)
+        self._request_canvas_render(updated)
         self.action_summary.setText("Đã lưu grid và cập nhật config target.")
 
     def _export_canvas_image(self) -> None:

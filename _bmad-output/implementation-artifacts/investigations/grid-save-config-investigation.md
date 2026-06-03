@@ -61,17 +61,23 @@ Người dùng cần kiểm tra sau khi điều chỉnh Grid Interval và Scale 
 
 **Detail:** `_save_grid_override()` now calls `_persist_included_target_alignment(updated)` after workspace save succeeds, then refreshes UI and reports "Đã lưu grid và cập nhật config target."
 
+### Finding 6: Updated Save Grid now requests canvas rerender
+
+**Evidence:** `src/thucthengay/editor/modes/review_edit_mode.py:1196`
+
+**Detail:** `_save_grid_override()` now calls `_request_canvas_render(updated)` after the detail panels and workspace tree refresh. This mirrors the pan/zoom path, which already requested a render after persisting the updated view.
+
 ## Conclusion
 
 **Confidence:** High
 
-Hiện trạng sau fix: bấm "Lưu Grid" cập nhật `grid_override`/`view.scale` trong workspace và đồng thời ghi `scale` + `grid.interval` vào đúng target trong `config.json`. Include/Validate vẫn tiếp tục gọi cùng cơ chế ghi config, nên cả hai thao tác đều chốt thông tin target.
+Hiện trạng sau fix: bấm "Lưu Grid" cập nhật `grid_override`/`view.scale` trong workspace, ghi `scale` + `grid.interval` vào đúng target trong `config.json`, rồi yêu cầu GIS canvas render lại ngay. Include/Validate vẫn tiếp tục gọi cùng cơ chế ghi config, nên cả hai thao tác đều chốt thông tin target.
 
 ## Recommended Next Steps
 
 ### Fix direction
 
-Done: bổ sung call `_persist_included_target_alignment()` vào sau `_save_grid_override()` thành công, kèm thông báo UI rõ rằng target config đã được cập nhật.
+Done: bổ sung call `_persist_included_target_alignment()` vào sau `_save_grid_override()` thành công, kèm thông báo UI rõ rằng target config đã được cập nhật. Done: bổ sung `_request_canvas_render(updated)` để canvas tự render lại sau khi lưu grid.
 
 ### Diagnostic
 

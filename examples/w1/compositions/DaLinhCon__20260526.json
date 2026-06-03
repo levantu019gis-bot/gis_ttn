@@ -42,7 +42,7 @@
       "tick_length_px": 8
     }
   },
-  "include": false,
+  "include": true,
   "layers": [
     {
       "cache_path": "cache/DaLinhCon/20260526/PSScene_20260526_033522_72_252e_cloud_0__d15aee90ae47.tif",
@@ -81,11 +81,11 @@
       "visible": true
     }
   ],
-  "needs_revalidation": true,
+  "needs_revalidation": false,
   "notes": "",
-  "ready": false,
-  "review_order": null,
-  "reviewed": false,
+  "ready": true,
+  "review_order": 1,
+  "reviewed": true,
   "target_id": "DaLinhCon",
   "validation_summary": {
     "error_count": 0,

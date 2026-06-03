@@ -1473,6 +1473,8 @@ def test_review_edit_grid_controls_show_defaults_save_override_and_mark_stale(
     target_index = mode.tree_model.index(0, 0)
     mode.tree_view.setCurrentIndex(mode.tree_model.index(0, 0, target_index))
     target_preview_generation = mode.target_preview.generation
+    canvas_render_requests: list[Composition] = []
+    mode._request_canvas_render = canvas_render_requests.append  # type: ignore[method-assign]  # noqa: SLF001
 
     assert mode.grid_degrees_input.text() == "0"
     assert mode.grid_minutes_input.text() == "1"
@@ -1510,6 +1512,13 @@ def test_review_edit_grid_controls_show_defaults_save_override_and_mark_stale(
     assert mode._targets is not None  # noqa: SLF001
     assert mode._targets[0].scale == 25000  # noqa: SLF001
     assert mode._targets[0].grid.interval.minutes == 2  # noqa: SLF001
+    assert len(canvas_render_requests) == 1
+    requested = canvas_render_requests[0]
+    assert requested.composition_id == "alpha__20260525"
+    assert requested.grid_override is not None
+    assert requested.grid_override.interval.minutes == 2
+    assert requested.grid_override.interval.seconds == 30
+    assert requested.view.scale == 25000
     assert "Đã lưu grid và cập nhật config target" in mode.action_summary.text()
 
 
