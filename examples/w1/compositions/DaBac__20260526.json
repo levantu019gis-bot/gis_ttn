@@ -71,7 +71,7 @@
       "visible": true
     }
   ],
-  "needs_revalidation": true,
+  "needs_revalidation": false,
   "notes": "",
   "ready": false,
   "review_order": null,

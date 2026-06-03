@@ -656,6 +656,7 @@ def test_gis_canvas_exports_current_displayed_image(tmp_path: Path) -> None:
     rendered[:, :, 1] = 180
 
     assert canvas.apply_render_result(token, "preview render", canvas=rendered) is True
+    assert canvas.rendered_image_size == (160, 120)
 
     output_path = tmp_path / "gis-editor.jpg"
     assert canvas.export_displayed_image(output_path) is True
@@ -669,6 +670,30 @@ def test_gis_canvas_exports_current_displayed_image(tmp_path: Path) -> None:
         dpi = saved.info["dpi"]
         assert round(dpi[0]) == GisCanvasWidget.EXPORT_DPI
         assert round(dpi[1]) == GisCanvasWidget.EXPORT_DPI
+
+
+def test_gis_canvas_downscales_large_render_for_display() -> None:
+    qapp()
+    canvas = GisCanvasWidget()
+    canvas.set_composition(
+        composition(
+            "alpha__20260525",
+            "alpha",
+            date(2026, 5, 25),
+            needs_revalidation=False,
+        )
+    )
+    token = canvas.begin_render_request()
+    rendered = np.zeros((2340, 3306, 3), dtype=np.uint8)
+
+    assert canvas.apply_render_result(token, "final-layout preview", canvas=rendered) is True
+
+    display_size = canvas.rendered_image_size
+    assert display_size is not None
+    assert display_size[0] <= GisCanvasWidget.DISPLAY_IMAGE_MAX_WIDTH
+    assert display_size[0] < rendered.shape[1]
+    assert display_size[1] < rendered.shape[0]
+    assert abs((display_size[0] / display_size[1]) - (3306 / 2340)) < 0.01
 
 
 def test_gis_canvas_export_requires_rendered_map_image(tmp_path: Path) -> None:

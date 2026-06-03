@@ -8,7 +8,7 @@
   "capture_date": "2026-05-26",
   "composition_id": "DaConCatTay__20260526",
   "grid_override": null,
-  "include": false,
+  "include": true,
   "layers": [
     {
       "cache_path": "cache/DaConCatTay/20260526/PSScene_20260526_041530_33_24fb_cloud_0__edf82d46b8eb.tif",
@@ -59,11 +59,11 @@
       "visible": true
     }
   ],
-  "needs_revalidation": true,
+  "needs_revalidation": false,
   "notes": "",
-  "ready": false,
-  "review_order": null,
-  "reviewed": false,
+  "ready": true,
+  "review_order": 1,
+  "reviewed": true,
   "target_id": "DaConCatTay",
   "validation_summary": {
     "error_count": 0,

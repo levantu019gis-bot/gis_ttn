@@ -8,7 +8,7 @@
   "capture_date": "2026-05-26",
   "composition_id": "DaOcHoa__20260526",
   "grid_override": null,
-  "include": false,
+  "include": true,
   "layers": [
     {
       "cache_path": "cache/DaOcHoa/20260526/PSScene_20260526_030639_84_2575_cloud_0__487e9bf90e04.tif",
@@ -47,11 +47,11 @@
       "visible": true
     }
   ],
-  "needs_revalidation": true,
+  "needs_revalidation": false,
   "notes": "",
-  "ready": false,
-  "review_order": null,
-  "reviewed": false,
+  "ready": true,
+  "review_order": 9,
+  "reviewed": true,
   "target_id": "DaOcHoa",
   "validation_summary": {
     "error_count": 0,

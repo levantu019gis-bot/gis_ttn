@@ -8,7 +8,7 @@
   "capture_date": "2026-05-26",
   "composition_id": "DaLon__20260526",
   "grid_override": null,
-  "include": false,
+  "include": true,
   "layers": [
     {
       "cache_path": "cache/DaLon/20260526/PSScene_20260526_030644_56_2575_cloud_26.0__9ca09a000efc.tif",
@@ -71,11 +71,11 @@
       "visible": true
     }
   ],
-  "needs_revalidation": true,
+  "needs_revalidation": false,
   "notes": "",
-  "ready": false,
-  "review_order": null,
-  "reviewed": false,
+  "ready": true,
+  "review_order": 8,
+  "reviewed": true,
   "target_id": "DaLon",
   "validation_summary": {
     "error_count": 0,

@@ -43,6 +43,7 @@ class GisCanvasWidget(QGraphicsView):
     DEFAULT_FRAME_ASPECT = 16 / 9
     EXPORT_DPI = 200
     EXPORT_JPEG_QUALITY = 90
+    DISPLAY_IMAGE_MAX_WIDTH = 960
     MAP_FRAME_FILL_RATIO = 0.90
     MIN_SCALE = 1000
     MAX_SCALE = 20_000_000
@@ -72,6 +73,7 @@ class GisCanvasWidget(QGraphicsView):
         self._last_frame_rect = QRectF()
         self._last_applied_render_label: str | None = None
         self._rendered_pixmap: QPixmap | None = None
+        self._rendered_export_image: QImage | None = None
         self._redraw()
 
     @property
@@ -94,6 +96,12 @@ class GisCanvasWidget(QGraphicsView):
     def last_applied_render_label(self) -> str | None:
         return self._last_applied_render_label
 
+    @property
+    def rendered_image_size(self) -> tuple[int, int] | None:
+        if self._rendered_pixmap is None:
+            return None
+        return self._rendered_pixmap.width(), self._rendered_pixmap.height()
+
     def state(self) -> GisCanvasState:
         return self._state
 
@@ -115,11 +123,11 @@ class GisCanvasWidget(QGraphicsView):
 
     def export_displayed_image(self, output_path: str | Path) -> bool:
         """Save the current rendered map image, excluding the editor scene chrome."""
-        if self._rendered_pixmap is None:
+        if self._rendered_export_image is None:
             return False
         path = Path(output_path)
         path.parent.mkdir(parents=True, exist_ok=True)
-        image = self._rendered_pixmap.toImage().convertToFormat(QImage.Format.Format_RGB888)
+        image = self._rendered_export_image.convertToFormat(QImage.Format.Format_RGB888)
         dots_per_meter = round(self.EXPORT_DPI / 0.0254)
         image.setDotsPerMeterX(dots_per_meter)
         image.setDotsPerMeterY(dots_per_meter)
@@ -136,6 +144,7 @@ class GisCanvasWidget(QGraphicsView):
         """Load the selected composition into the canvas without emitting edits."""
         self._last_applied_render_label = None
         self._rendered_pixmap = None
+        self._rendered_export_image = None
         if composition is None:
             self._composition_id = None
             self._visible_layers = []
@@ -197,7 +206,11 @@ class GisCanvasWidget(QGraphicsView):
             return False
 
         if canvas is not None:
-            self._rendered_pixmap = _numpy_to_pixmap(canvas)
+            self._rendered_export_image = _numpy_to_image(canvas)
+            self._rendered_pixmap = _image_to_pixmap(
+                self._rendered_export_image,
+                max_width=self.DISPLAY_IMAGE_MAX_WIDTH,
+            )
         self._state = GisCanvasState.READY
         self._state_message = f"Canvas đã cập nhật: {label}"
         self._last_applied_render_label = label
@@ -287,6 +300,7 @@ class GisCanvasWidget(QGraphicsView):
             self._state_message = "Không có layer đang bật để hiển thị trên canvas."
         self._last_applied_render_label = None
         self._rendered_pixmap = None
+        self._rendered_export_image = None
         self._bump_generation()
 
     def _bump_generation(self) -> None:
@@ -395,7 +409,7 @@ def _short_layer_name(layer: ImageLayer) -> str:
     return name if len(name) <= 42 else f"{name[:18]}...{name[-18:]}"
 
 
-def _numpy_to_pixmap(canvas: np.ndarray) -> QPixmap:
+def _numpy_to_image(canvas: np.ndarray) -> QImage:
     height, width = canvas.shape[:2]
     if canvas.ndim == 2:
         image = QImage(canvas.data, width, height, width, QImage.Format.Format_Grayscale8)
@@ -407,7 +421,21 @@ def _numpy_to_pixmap(canvas: np.ndarray) -> QPixmap:
         image = QImage(
             rgba.data, width, height, 4 * width, QImage.Format.Format_RGBA8888
         )
-    return QPixmap.fromImage(image.copy())
+    owned = image.copy()
+    return owned
+
+
+def _image_to_pixmap(image: QImage, *, max_width: int | None = None) -> QPixmap:
+    display = image
+    if max_width is not None and max_width > 0 and image.width() > max_width:
+        scaled_height = max(1, int(round(image.height() * max_width / image.width())))
+        display = image.scaled(
+            max_width,
+            scaled_height,
+            Qt.AspectRatioMode.KeepAspectRatio,
+            Qt.TransformationMode.SmoothTransformation,
+        )
+    return QPixmap.fromImage(display)
 
 
 def _clamp(value: float, minimum: float, maximum: float) -> float:
