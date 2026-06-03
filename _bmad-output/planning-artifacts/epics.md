@@ -110,7 +110,13 @@ AR12: Paths in config resolve relative to config file; workspace stores workspac
 
 AR13: Tests must include fixtures for configs, GeoJSON, GeoTIFF, templates, and workspaces; integration tests cover ingest->workspace, final PNG render, one-slide export.
 
-AR14: Packaging/distribution, exact render latency budgets, metadata override reuse, and automated UI testing are deferred.
+AR14: Exact render latency budgets, metadata override reuse, and automated UI testing are deferred.
+
+AR15: Map-surround rendering must match the operator's PPTX map panel structure: full white surround, outer coordinate frame, DMS labels, and an inset raster panel; preview and final render should share this layout contract.
+
+AR16: PPTX template placeholder mapping must tolerate volatile PowerPoint shape ids by resolving configured placeholders from stable template metadata when available, especially shape names such as `ttn:map_image`, while preserving element-id replacement for export.
+
+AR17: Windows executable packaging uses PyInstaller tooling run on Windows/Miniconda; one-folder output is the preferred default for PySide6/GDAL/rasterio stability, and a packaged smoke check is required before marking distribution ready.
 
 ### UX Design Requirements
 
@@ -171,6 +177,9 @@ FR20: Epic 6 - Target-specific one-slide PPTX template and element-id replacemen
 FR21: Epic 6 - Combined PPTX export.
 FR22: Epic 6 - TXT export.
 FR23: Epic 6 - Export summary and logs.
+AR15: Epic 7 - Map-surround render hardening.
+AR16: Epic 7 - PPTX placeholder auto-match hardening.
+AR17: Epic 7 - Windows packaging readiness.
 
 
 ## Epic List
@@ -216,6 +225,13 @@ Operator có thể chạy preflight, xem export plan, xuất một PPTX tổng h
 
 **FRs covered:** FR20, FR21, FR22, FR23
 **Key architecture/UX coverage:** AR10, UX-DR12, UX-DR13, NFR4
+
+### Epic 7: Post-MVP Hardening and Distribution Readiness
+
+Operator có output bản đồ khớp template thực tế hơn, config kiểm soát được các tham số frame mặc định, template PPTX bền hơn khi PowerPoint đổi shape id, và dự án có tooling đóng gói `.exe` Windows để chuẩn bị bàn giao.
+
+**FRs covered:** FR15, FR16, FR20, FR21
+**Key architecture/UX coverage:** AR15, AR16, AR17, NFR1, NFR4
 
 ## Epic 1: Project Setup, Schemas, and Workspace Foundation
 
@@ -1408,3 +1424,92 @@ So that I can verify what was generated and diagnose skipped or failed items.
 **Then** output paths are recorded in workspace/export state or export log as appropriate
 **And** the Operator can inspect the files outside the application
 
+## Epic 7: Post-MVP Hardening and Distribution Readiness
+
+**Goal:** Operator có output bản đồ và export template ổn định hơn theo dữ liệu thực tế, đồng thời dự án có bước chuẩn bị đóng gói Windows executable.
+
+### Story 7.1: Implement Map Surround Layout
+
+As an Operator,
+I want preview and final map output to use the same map-surround structure as the PPTX template,
+So that exported map images align visually with the intended report design.
+
+**Requirement References:** FR13, FR15, FR16, AR15, NFR1
+
+**Acceptance Criteria:**
+
+**Given** a valid render spec
+**When** `render_map()` returns an image
+**Then** the canvas dimensions remain `spec.output_width x spec.output_height`
+**And** the output includes a white surround, outer frame, inner raster panel, and DMS coordinate labels.
+
+**Given** GIS Editor displays a completed render
+**When** the render pixmap is shown
+**Then** it displays the full map-surround image without adding a second decorative frame.
+
+**Current Status:** done. Implementation tracked in `_bmad-output/implementation-artifacts/spec-map-surround-layout.md`.
+
+### Story 7.2: Expose Frame Render Defaults in Config
+
+As an Operator,
+I want frame layout and label defaults visible in `config.json`,
+So that render defaults can be reviewed and tuned without editing private Python constants.
+
+**Requirement References:** FR12, FR15, AR15
+
+**Acceptance Criteria:**
+
+**Given** `config.json` has `defaults.grid.style`
+**When** target grid style is resolved
+**Then** the renderer receives configured defaults for supported label formats, frame tick limits, reference geometry, stroke widths, tick lengths, label font size, and label font path.
+
+**Given** a minimal test config omits those style values
+**When** render code resolves frame settings
+**Then** safe fallback defaults preserve existing behavior.
+
+**Current Status:** done. Implementation tracked in `_bmad-output/implementation-artifacts/spec-configurable-frame-defaults.md`.
+
+### Story 7.3: Auto-Resolve PPTX Placeholders from Shape Metadata
+
+As an Operator,
+I want the app to recover template placeholder mappings when PowerPoint changes shape ids,
+So that changing a PPTX template does not require manually repairing every target config id.
+
+**Requirement References:** FR20, FR21, AR16, NFR6
+
+**Acceptance Criteria:**
+
+**Given** config contains stale element ids and the PPTX shapes are named `ttn:<field>`
+**When** project config loads
+**Then** target template metadata resolves placeholders to current PPTX element ids before export validation.
+
+**Given** two shapes match the same required placeholder
+**When** config loads
+**Then** the loader emits a blocking ambiguity issue instead of guessing.
+
+**Given** a legacy template still has valid configured ids
+**When** no stable selector/name match exists
+**Then** the configured element ids remain supported.
+
+**Current Status:** done. Implementation tracked in `_bmad-output/implementation-artifacts/spec-pptx-placeholder-auto-match.md`.
+
+### Story 7.4: Package Windows Executable Tooling
+
+As an Operator,
+I want a repeatable Windows `.exe` packaging command,
+So that the desktop app can be prepared for use outside the development shell.
+
+**Requirement References:** AR17, NFR5
+
+**Acceptance Criteria:**
+
+**Given** the project is checked out on Windows with Miniconda
+**When** `scripts/build_windows_exe.ps1` runs in `ttn-env`
+**Then** PyInstaller builds `dist\ThucTheNgay\ThucTheNgay.exe` by default
+**And** the script runs `ThucTheNgay.exe --smoke` unless `-SkipSmoke` is provided.
+
+**Given** the app depends on PySide6/GDAL/rasterio
+**When** the executable starts
+**Then** bundled PROJ/GDAL data and relevant native DLL paths are configured before runtime imports.
+
+**Current Status:** review. Tooling exists, but final Windows `.exe` build and packaged smoke verification must be run on Windows before this story can be marked `done`.

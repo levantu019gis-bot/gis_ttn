@@ -107,7 +107,7 @@ Issue schema:
 
 - Each target points directly to its own one-slide PPTX template.
 - Target export config stores the PowerPoint element-id replacement mapping for map image and text/image placeholders.
-- Shape replacement uses configured PPTX element id as the authoritative lookup key; shape names are diagnostic only.
+- Shape replacement uses the resolved PPTX element id as the authoritative lookup key. Configured ids remain supported, and stable selectors/shape names such as `ttn:<field>` may be used during template load to repair volatile PowerPoint ids before export.
 - Output remains one combined PPTX sorted by composition review order.
 - MVP constraint: all target templates are created from the same compatible base/theme/master.
 

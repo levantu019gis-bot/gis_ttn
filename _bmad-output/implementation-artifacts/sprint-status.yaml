@@ -1,5 +1,5 @@
 # generated: 2026-05-24
-# last_updated: 2026-05-26  # epic 6 done
+# last_updated: 2026-06-03  # epic 7 hardening/release-readiness opened
 # project: 3.ThucTheNgay
 # project_key: NOKEY
 # tracking_system: file-system
@@ -35,7 +35,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-05-24
-last_updated: 2026-05-26
+last_updated: 2026-06-03
 project: 3.ThucTheNgay
 project_key: NOKEY
 tracking_system: file-system
@@ -92,3 +92,9 @@ development_status:
   6-5-export-txt-report-lines: done
   6-6-write-export-summary-and-trace-log: done
   epic-6-retrospective: optional
+  epic-7: in-progress
+  7-1-implement-map-surround-layout: done
+  7-2-expose-frame-render-defaults-in-config: done
+  7-3-auto-resolve-pptx-placeholders-from-shape-metadata: done
+  7-4-package-windows-executable-tooling: review
+  epic-7-retrospective: optional

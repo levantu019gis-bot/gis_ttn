@@ -421,8 +421,11 @@ AppShell / QMainWindow
 
 **Template Rule:**
 
-- Shape lookup uses configured PPTX element id as the authoritative key; shape names are diagnostic only.
+- Export replacement uses the resolved PPTX element id as the authoritative key.
+- Configured element ids remain supported, but the loader may repair volatile ids from stable selector metadata before export uses them.
+- Preferred stable shape-name convention is `ttn:<field>`, for example `ttn:map_image`, `ttn:title`, `ttn:time`, and `ttn:comment`.
 - Required placeholders missing = blocking error.
+- Ambiguous selector/name matches = blocking error; the app must not guess.
 - MVP requires all target PPTX templates share compatible base/theme/master.
 
 **Implementation Note:**
@@ -443,7 +446,10 @@ AppShell / QMainWindow
 
 **Packaging:**
 
-- Defer PyInstaller/Nuitka/installer decision until vertical slice proves dependencies.
+- Windows executable tooling uses PyInstaller from the conda environment.
+- One-folder output is the preferred default for PySide6/GDAL/rasterio stability: `dist\ThucTheNgay\ThucTheNgay.exe`.
+- One-file output is optional but should be treated as higher risk until tested with representative GIS/template workflows.
+- PyInstaller must be run on Windows; Windows `.exe` cross-compilation from Linux is not supported.
 - GDAL/rasterio packaging is a known risk; architecture should keep packaging concerns separate from domain modules.
 
 ### Decision Impact Analysis
@@ -999,8 +1005,9 @@ Config + imagery folder
 
 **Build/Deployment**
 
-- Packaging deferred.
-- Architecture keeps runtime code separate from packaging scripts.
+- Runtime code remains separate from packaging scripts.
+- Windows packaging scripts live under `scripts/` and `scripts/pyinstaller/`.
+- Packaged executable validation is not complete until `ThucTheNgay.exe --smoke` passes on Windows.
 
 ## Architecture Validation Results
 
@@ -1084,7 +1091,7 @@ Naming, JSON format, service boundaries, issue handling, job progress, state tra
 
 **Nice-to-Have Gaps:**
 
-- Packaging strategy remains deferred.
+- Packaging strategy has an initial PyInstaller path, but Windows build verification remains pending.
 - Automated UI testing remains deferred.
 - Metadata override reuse across re-ingest remains deferred.
 
@@ -1139,7 +1146,7 @@ No blocking validation issues found. The user project data layout question was a
 
 **Areas for Future Enhancement:**
 
-- Packaging/distribution.
+- Packaging/distribution hardening after Windows build verification.
 - UI automation.
 - Advanced render cache tuning.
 - Metadata override persistence across re-ingest.
