@@ -97,7 +97,10 @@ def _close_rgb(
     *,
     tolerance: int = 2,
 ) -> bool:
-    return all(abs(channel - reference) <= tolerance for channel, reference in zip(actual, expected))
+    return all(
+        abs(channel - reference) <= tolerance
+        for channel, reference in zip(actual, expected, strict=True)
+    )
 
 
 @pytest.fixture

@@ -32,6 +32,7 @@ from thucthengay.editor.models.composition_tree_model import (
     queue_filter_label,
 )
 from thucthengay.editor.models.layer_stack_model import LayerStackColumn, LayerStackModel
+from thucthengay.editor.preferences import PreferencesService
 from thucthengay.editor.render_worker import RenderWorker
 from thucthengay.editor.widgets import (
     GisCanvasWidget,
@@ -73,10 +74,16 @@ class ReviewEditMode(QWidget):
     compositionSelected = Signal(object)
     CANVAS_VIEW_PERSIST_DEBOUNCE_MS = 250
 
-    def __init__(self, parent: QWidget | None = None) -> None:
+    def __init__(
+        self,
+        parent: QWidget | None = None,
+        *,
+        preferences_service: PreferencesService | None = None,
+    ) -> None:
         super().__init__(parent)
         self.setObjectName("reviewEditMode")
         self.setMinimumSize(960, 560)
+        self._preferences_service = preferences_service
         self._workspace_service: WorkspaceService | None = None
         self._targets: list[TargetConfig] | None = None
         self.selected_composition: Composition | None = None
@@ -243,7 +250,13 @@ class ReviewEditMode(QWidget):
         self.main_splitter.addWidget(right_panel)
         self.main_splitter.setCollapsible(0, False)
         self.main_splitter.setCollapsible(1, False)
-        self.main_splitter.setSizes([360, 920])
+        saved_splitter_sizes = (
+            self._preferences_service.preferences.ui.review_main_splitter_sizes
+            if self._preferences_service is not None
+            else None
+        )
+        self.main_splitter.setSizes(saved_splitter_sizes or [360, 920])
+        self.main_splitter.splitterMoved.connect(self._persist_main_splitter_sizes)
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(12, 12, 12, 12)
@@ -258,6 +271,11 @@ class ReviewEditMode(QWidget):
         if layer_selection is not None:
             layer_selection.currentChanged.connect(self._update_metadata_edit_button)
         self._update_review_action_state()
+
+    def _persist_main_splitter_sizes(self, _position: int, _index: int) -> None:
+        if self._preferences_service is None:
+            return
+        self._preferences_service.update_review_splitter_sizes(self.main_splitter.sizes())
 
     def load_workspace(
         self,

@@ -18,6 +18,7 @@ from PySide6.QtWidgets import QApplication
 from thucthengay.editor.app_shell import AppShell
 from thucthengay.editor.models.export_plan_model import ExportPlanRole
 from thucthengay.editor.modes.export_mode import ExportMode
+from thucthengay.editor.preferences import PreferencesService
 from thucthengay.export import ensure_final_renders_for_export, run_full_export
 from thucthengay.models import (
     Composition,
@@ -194,6 +195,33 @@ def test_export_mode_runs_full_export_pipeline(tmp_path: Path) -> None:
     assert (service.paths.exports / "report.export-log.json").is_file()
 
 
+def test_export_mode_uses_persisted_output_stem(tmp_path: Path) -> None:
+    app = qapp()
+    map_id, _text_id = _write_template(tmp_path / "templates" / "alpha.pptx")
+    target = target_config_for_template(tmp_path / "templates" / "alpha.pptx", map_id)
+    service = workspace(tmp_path, final_render_path=None)
+    preferences = PreferencesService(tmp_path / "preferences.json")
+    preferences.update_export_output_stem("custom_report")
+    mode = ExportMode(
+        preferences_service=preferences,
+        export_runner=lambda workspace_service, targets, **kwargs: run_full_export(
+            workspace_service,
+            targets,
+            render=success_render,
+            **kwargs,
+        ),
+    )
+    mode.load_workspace(service, targets=[target])
+
+    assert mode.output_stem_input.text() == "custom_report"
+    mode.preflight_button.click()
+    mode.export_button.click()
+    _wait_until(app, lambda: "Export xong" in mode.status_label.text())
+
+    assert (service.paths.exports / "custom_report.pptx").is_file()
+    assert preferences.preferences.export.output_stem == "custom_report"
+
+
 def _write_template(path: Path) -> tuple[int, int]:
     path.parent.mkdir(parents=True, exist_ok=True)
     presentation = Presentation()
@@ -253,9 +281,9 @@ def _wait_until(app: QApplication, predicate, *, timeout: float = 5.0) -> None: 
     raise AssertionError(msg)
 
 
-def test_app_shell_exposes_export_mode_and_jump_switches_to_review() -> None:
+def test_app_shell_exposes_export_mode_and_jump_switches_to_review(tmp_path: Path) -> None:
     qapp()
-    shell = AppShell()
+    shell = AppShell(preferences_service=PreferencesService(tmp_path / "preferences.json"))
 
     assert shell.mode_tabs.count() == 3
     assert shell.mode_tabs.tabText(2) == "Export"

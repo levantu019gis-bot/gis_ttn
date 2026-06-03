@@ -5,9 +5,18 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
-from PySide6.QtCore import Signal
-from PySide6.QtWidgets import QFormLayout, QHBoxLayout, QLabel, QPushButton, QVBoxLayout, QWidget
+from PySide6.QtCore import Qt, Signal
+from PySide6.QtWidgets import (
+    QComboBox,
+    QFormLayout,
+    QHBoxLayout,
+    QLabel,
+    QPushButton,
+    QVBoxLayout,
+    QWidget,
+)
 
+from thucthengay.editor.preferences import RecentProjectEntry, SetupPreferences
 from thucthengay.editor.widgets.ingestion_progress import IngestionProgressWidget
 from thucthengay.editor.widgets.ingestion_summary import IngestionSummaryWidget
 from thucthengay.editor.widgets.path_picker import PathKind, PathPickerRow
@@ -33,12 +42,21 @@ class SetupMode(QWidget):
     pauseRequested = Signal()
     resumeRequested = Signal()
     stopRequested = Signal()
+    recentProjectRemoveRequested = Signal(object)
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
+        self._recent_projects: list[RecentProjectEntry] = []
         self.config_row = PathPickerRow("Config JSON", PathKind.CONFIG_FILE)
         self.imagery_row = PathPickerRow("Thư mục ảnh", PathKind.INPUT_FOLDER)
         self.workspace_row = PathPickerRow("Workspace", PathKind.WORKSPACE_FOLDER)
+        self.recent_project_combo = QComboBox()
+        self.recent_project_combo.setObjectName("setupRecentProjectCombo")
+        self.recent_project_combo.setMinimumWidth(260)
+        self.apply_recent_button = QPushButton("Áp dụng")
+        self.apply_recent_button.setObjectName("setupApplyRecentProject")
+        self.remove_recent_button = QPushButton("Xóa")
+        self.remove_recent_button.setObjectName("setupRemoveRecentProject")
         self.ingest_button = QPushButton("Lấy dữ liệu")
         self.ingest_button.setObjectName("setupIngestButton")
         self.open_workspace_button = QPushButton("Mở workspace")
@@ -59,6 +77,7 @@ class SetupMode(QWidget):
         form = QFormLayout()
         form.setContentsMargins(0, 0, 0, 0)
         form.setSpacing(10)
+        form.addRow("Dự án gần đây", self._build_recent_project_row())
         form.addRow(self.config_row)
         form.addRow(self.imagery_row)
         form.addRow(self.workspace_row)
@@ -84,8 +103,11 @@ class SetupMode(QWidget):
             row.validationChanged.connect(self._update_action_state)
         self.ingest_button.clicked.connect(self._emit_ingest_requested)
         self.open_workspace_button.clicked.connect(self._emit_open_workspace_requested)
+        self.apply_recent_button.clicked.connect(self._apply_current_recent_project)
+        self.remove_recent_button.clicked.connect(self._emit_remove_current_recent_project)
         self.pause_button.clicked.connect(self._toggle_pause_requested)
         self.stop_button.clicked.connect(self._emit_stop_requested)
+        self.set_recent_projects([])
         self._update_action_state()
 
     @property
@@ -120,6 +142,43 @@ class SetupMode(QWidget):
         """Return the selected workspace folder when it is valid."""
         return self.workspace_row.selected_path
 
+    def set_recent_projects(self, recent_projects: list[RecentProjectEntry]) -> None:
+        """Refresh the recent project picker from persisted user preferences."""
+        self._recent_projects = list(recent_projects)
+        self.recent_project_combo.blockSignals(True)
+        self.recent_project_combo.clear()
+        for index, project in enumerate(self._recent_projects):
+            self.recent_project_combo.addItem(project.label, index)
+            self.recent_project_combo.setItemData(
+                index,
+                _recent_project_tooltip(project),
+                Qt.ItemDataRole.ToolTipRole,
+            )
+        self.recent_project_combo.blockSignals(False)
+
+        has_projects = bool(self._recent_projects)
+        if not has_projects:
+            self.recent_project_combo.addItem("Không có")
+        self.recent_project_combo.setEnabled(has_projects)
+        self.apply_recent_button.setEnabled(has_projects)
+        self.remove_recent_button.setEnabled(has_projects)
+
+    def apply_recent_project(self, project: RecentProjectEntry) -> None:
+        """Fill Setup path pickers from a recent project entry."""
+        self.config_row.set_path(project.config_path)
+        if project.imagery_folder:
+            self.imagery_row.set_path(project.imagery_folder)
+        self.workspace_row.set_path(project.workspace_folder)
+
+    def apply_recent_parameters(self, parameters: SetupPreferences) -> None:
+        """Fill Setup path pickers from the most recently used raw parameters."""
+        if parameters.last_config_path:
+            self.config_row.set_path(parameters.last_config_path)
+        if parameters.last_imagery_folder:
+            self.imagery_row.set_path(parameters.last_imagery_folder)
+        if parameters.last_workspace_folder:
+            self.workspace_row.set_path(parameters.last_workspace_folder)
+
     def _update_action_state(self, *_args: object) -> None:
         self.ingest_button.setEnabled(self.is_ready and not self._ingestion_running)
         self.open_workspace_button.setEnabled(
@@ -152,6 +211,36 @@ class SetupMode(QWidget):
 
         first_blocker = self.blockers[0] if self.blockers else "Chưa đủ đường dẫn hợp lệ."
         self.ingest_button.setToolTip(first_blocker)
+
+    def _build_recent_project_row(self) -> QWidget:
+        row = QWidget()
+        layout = QHBoxLayout(row)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(8)
+        layout.addWidget(self.recent_project_combo, 1)
+        layout.addWidget(self.apply_recent_button)
+        layout.addWidget(self.remove_recent_button)
+        return row
+
+    def _current_recent_project(self) -> RecentProjectEntry | None:
+        data = self.recent_project_combo.currentData()
+        if not isinstance(data, int):
+            return None
+        if data < 0 or data >= len(self._recent_projects):
+            return None
+        return self._recent_projects[data]
+
+    def _apply_current_recent_project(self) -> None:
+        project = self._current_recent_project()
+        if project is None:
+            return
+        self.apply_recent_project(project)
+
+    def _emit_remove_current_recent_project(self) -> None:
+        project = self._current_recent_project()
+        if project is None:
+            return
+        self.recentProjectRemoveRequested.emit(project)
 
     def _emit_ingest_requested(self) -> None:
         selected_paths = self.selected_paths()
@@ -247,3 +336,13 @@ class SetupMode(QWidget):
         self.workspace_status_label.setText(
             f"Không mở được workspace: {message.strip() or 'Lỗi chưa xác định.'}"
         )
+
+
+def _recent_project_tooltip(project: RecentProjectEntry) -> str:
+    parts = [
+        f"Config: {project.config_path}",
+        f"Workspace: {project.workspace_folder}",
+    ]
+    if project.imagery_folder:
+        parts.append(f"Ảnh: {project.imagery_folder}")
+    return "\n".join(parts)

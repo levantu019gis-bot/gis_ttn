@@ -14,6 +14,7 @@ from thucthengay.editor.ingestion_worker import IngestionWorker
 from thucthengay.editor.modes.export_mode import ExportMode
 from thucthengay.editor.modes.review_edit_mode import ReviewEditMode
 from thucthengay.editor.modes.setup_mode import SetupMode, SetupPaths
+from thucthengay.editor.preferences import PreferencesService, RecentProjectEntry
 from thucthengay.jobs import IngestionJobResult, IngestionSummary, JobControl, JobState
 from thucthengay.workspace import WorkspaceError, WorkspaceService
 
@@ -21,15 +22,17 @@ from thucthengay.workspace import WorkspaceError, WorkspaceService
 class AppShell(QMainWindow):
     """Top-level desktop window for the application."""
 
-    def __init__(self) -> None:
+    def __init__(self, *, preferences_service: PreferencesService | None = None) -> None:
         super().__init__()
         self.setWindowTitle("3.ThucTheNgay")
+        self.preferences_service = preferences_service or PreferencesService()
         self.setup_mode = SetupMode()
-        self.review_edit_mode = ReviewEditMode()
-        self.export_mode = ExportMode()
+        self.review_edit_mode = ReviewEditMode(preferences_service=self.preferences_service)
+        self.export_mode = ExportMode(preferences_service=self.preferences_service)
         self._ingestion_thread: QThread | None = None
         self._ingestion_worker: IngestionWorker | None = None
         self._ingestion_control: JobControl | None = None
+        self._active_setup_paths: SetupPaths | None = None
 
         self.mode_tabs = QTabWidget()
         self.mode_tabs.setObjectName("modeTabs")
@@ -41,15 +44,25 @@ class AppShell(QMainWindow):
         self.setup_mode.pauseRequested.connect(self._pause_ingestion)
         self.setup_mode.resumeRequested.connect(self._resume_ingestion)
         self.setup_mode.stopRequested.connect(self._stop_ingestion)
+        self.setup_mode.recentProjectRemoveRequested.connect(self._remove_recent_project)
         self.export_mode.jumpRequested.connect(self._jump_to_review_context)
 
         self.setCentralWidget(self.mode_tabs)
-        self.resize(1280, 720)
+        self.setup_mode.set_recent_projects(self.preferences_service.preferences.recent_projects)
+        self._restore_setup_parameters()
+        for row in self.setup_mode.path_rows:
+            row.validationChanged.connect(self._persist_setup_parameters)
+        saved_window_size = self.preferences_service.preferences.ui.window_size
+        if saved_window_size and len(saved_window_size) == 2:
+            self.resize(saved_window_size[0], saved_window_size[1])
+        else:
+            self.resize(1280, 720)
 
     def _run_ingestion(self, setup_paths: SetupPaths) -> None:
         if self._ingestion_thread is not None:
             return
 
+        self._active_setup_paths = setup_paths
         workspace_service = WorkspaceService(setup_paths.workspace_folder)
         job_id = f"ingestion-{uuid4().hex}"
         control = JobControl()
@@ -99,6 +112,7 @@ class AppShell(QMainWindow):
         self._ingestion_thread = None
         self._ingestion_worker = None
         self._ingestion_control = None
+        self._active_setup_paths = None
 
     def _finish_ingestion(
         self,
@@ -113,6 +127,13 @@ class AppShell(QMainWindow):
         self.setup_mode.show_ingestion_summary(summary)
         if result.state not in {JobState.SUCCESS, JobState.WARNING}:
             return
+
+        if self._active_setup_paths is not None:
+            self._record_recent_project(
+                config_path=self._active_setup_paths.config_file,
+                imagery_folder=self._active_setup_paths.imagery_input_folder,
+                workspace_folder=workspace_service.paths.root,
+            )
 
         self.review_edit_mode.load_workspace(
             workspace_service,
@@ -132,9 +153,8 @@ class AppShell(QMainWindow):
             self.setup_mode.show_workspace_open_error(str(error))
             return
 
-        config_result = load_project_config(
-            _manifest_config_path(manifest.config_path, workspace_service.paths.root)
-        )
+        config_path = _manifest_config_path(manifest.config_path, workspace_service.paths.root)
+        config_result = load_project_config(config_path)
         if not config_result.ok:
             self.setup_mode.show_workspace_open_error(_config_issue_summary(config_result))
             return
@@ -153,7 +173,13 @@ class AppShell(QMainWindow):
             workspace_service,
             targets=config_result.enabled_targets,
         )
+        self.setup_mode.config_row.set_path(config_path)
         self.setup_mode.show_workspace_opened(workspace_service.paths.root, composition_count)
+        self._record_recent_project(
+            config_path=config_path,
+            imagery_folder=self.setup_mode.imagery_row.selected_path,
+            workspace_folder=workspace_service.paths.root,
+        )
         self.mode_tabs.setCurrentWidget(self.review_edit_mode)
 
     def _jump_to_review_context(
@@ -164,6 +190,38 @@ class AppShell(QMainWindow):
     ) -> None:
         self.mode_tabs.setCurrentWidget(self.review_edit_mode)
         self.review_edit_mode._handle_issue_jump(target_id, composition_id, layer_id)
+
+    def _record_recent_project(
+        self,
+        *,
+        config_path: Path,
+        workspace_folder: Path,
+        imagery_folder: Path | None = None,
+    ) -> None:
+        self.preferences_service.record_recent_project(
+            config_path=config_path,
+            imagery_folder=imagery_folder,
+            workspace_folder=workspace_folder,
+        )
+        self.setup_mode.set_recent_projects(self.preferences_service.preferences.recent_projects)
+
+    def _remove_recent_project(self, project: RecentProjectEntry) -> None:
+        self.preferences_service.remove_recent_project(project.workspace_folder)
+        self.setup_mode.set_recent_projects(self.preferences_service.preferences.recent_projects)
+
+    def _restore_setup_parameters(self) -> None:
+        self.setup_mode.apply_recent_parameters(self.preferences_service.preferences.setup)
+
+    def _persist_setup_parameters(self, *_args: object) -> None:
+        self.preferences_service.update_setup_parameters(
+            config_path=self.setup_mode.config_row.path_field.full_text,
+            imagery_folder=self.setup_mode.imagery_row.path_field.full_text,
+            workspace_folder=self.setup_mode.workspace_row.path_field.full_text,
+        )
+
+    def closeEvent(self, event) -> None:  # noqa: ANN001, N802
+        self.preferences_service.update_window_size(self.width(), self.height())
+        super().closeEvent(event)
 
 
 def run_gui(argv: list[str] | None = None) -> int:

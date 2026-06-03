@@ -12,6 +12,7 @@ from PySide6.QtWidgets import QApplication
 from thucthengay.config import ConfigLoadResult
 from thucthengay.editor.app_shell import AppShell
 from thucthengay.editor.modes.setup_mode import SetupMode
+from thucthengay.editor.preferences import PreferencesService, RecentProjectEntry
 from thucthengay.editor.widgets.path_picker import (
     PathKind,
     PathPickerRow,
@@ -25,6 +26,10 @@ from thucthengay.workspace import WorkspaceService
 
 def qapp() -> QApplication:
     return QApplication.instance() or QApplication([])
+
+
+def preferences_service(tmp_path: Path) -> PreferencesService:
+    return PreferencesService(tmp_path / "preferences.json")
 
 
 def test_validate_selected_config_path_requires_json_file(tmp_path: Path) -> None:
@@ -106,6 +111,77 @@ def test_setup_mode_can_request_opening_existing_workspace_with_workspace_only(
     setup.open_workspace_button.click()
 
     assert emitted == [workspace_folder.resolve()]
+
+
+def test_setup_mode_applies_recent_project_paths(tmp_path: Path) -> None:
+    qapp()
+    config_file = tmp_path / "project.json"
+    config_file.write_text("{}", encoding="utf-8")
+    imagery_folder = tmp_path / "imagery"
+    imagery_folder.mkdir()
+    workspace_folder = tmp_path / "workspace"
+    workspace_folder.mkdir()
+    setup = SetupMode()
+    recent = RecentProjectEntry(
+        label="workspace",
+        config_path=str(config_file),
+        imagery_folder=str(imagery_folder),
+        workspace_folder=str(workspace_folder),
+        last_opened_at="2026-06-03T00:00:00+00:00",
+    )
+
+    setup.set_recent_projects([recent])
+    setup.apply_recent_button.click()
+
+    assert setup.selected_paths() is not None
+    assert setup.selected_paths().config_file == config_file.resolve()
+    assert setup.selected_paths().imagery_input_folder == imagery_folder.resolve()
+    assert setup.selected_paths().workspace_folder == workspace_folder.resolve()
+
+
+def test_app_shell_restores_recent_setup_parameters(tmp_path: Path) -> None:
+    qapp()
+    config_file = tmp_path / "project.json"
+    config_file.write_text("{}", encoding="utf-8")
+    imagery_folder = tmp_path / "imagery"
+    imagery_folder.mkdir()
+    workspace_folder = tmp_path / "workspace"
+    workspace_folder.mkdir()
+    preferences = preferences_service(tmp_path)
+    preferences.update_setup_parameters(
+        config_path=config_file,
+        imagery_folder=imagery_folder,
+        workspace_folder=workspace_folder,
+    )
+
+    shell = AppShell(preferences_service=PreferencesService(tmp_path / "preferences.json"))
+
+    selected_paths = shell.setup_mode.selected_paths()
+    assert selected_paths is not None
+    assert selected_paths.config_file == config_file.resolve()
+    assert selected_paths.imagery_input_folder == imagery_folder.resolve()
+    assert selected_paths.workspace_folder == workspace_folder.resolve()
+
+
+def test_app_shell_persists_recent_setup_parameter_changes(tmp_path: Path) -> None:
+    qapp()
+    config_file = tmp_path / "project.json"
+    config_file.write_text("{}", encoding="utf-8")
+    imagery_folder = tmp_path / "imagery"
+    imagery_folder.mkdir()
+    workspace_folder = tmp_path / "workspace"
+    workspace_folder.mkdir()
+    preferences = preferences_service(tmp_path)
+    shell = AppShell(preferences_service=preferences)
+
+    shell.setup_mode.config_row.set_path(config_file)
+    shell.setup_mode.imagery_row.set_path(imagery_folder)
+    shell.setup_mode.workspace_row.set_path(workspace_folder)
+
+    reloaded = PreferencesService(tmp_path / "preferences.json")
+    assert reloaded.preferences.setup.last_config_path == str(config_file.resolve())
+    assert reloaded.preferences.setup.last_imagery_folder == str(imagery_folder.resolve())
+    assert reloaded.preferences.setup.last_workspace_folder == str(workspace_folder.resolve())
 
 
 def test_setup_mode_reports_first_blocker_in_ingest_tooltip(tmp_path: Path) -> None:
@@ -329,7 +405,7 @@ def test_app_shell_runs_ingestion_when_setup_requests_it(
         fake_run_ingestion_job,
     )
 
-    shell = AppShell()
+    shell = AppShell(preferences_service=preferences_service(tmp_path))
     loaded_modes: list[tuple[str, WorkspaceService, list[TargetConfig] | None]] = []
 
     def capture_review_load(self, service, *, targets=None) -> None:
@@ -372,6 +448,9 @@ def test_app_shell_runs_ingestion_when_setup_requests_it(
         ("export", job_kwargs["workspace_service"], [target]),
     ]
     assert shell.mode_tabs.currentWidget() is shell.review_edit_mode
+    assert shell.preferences_service.preferences.recent_projects[0].workspace_folder == str(
+        workspace_folder.resolve()
+    )
 
 
 def test_app_shell_opens_existing_workspace_from_manifest(
@@ -408,7 +487,7 @@ def test_app_shell_opens_existing_workspace_from_manifest(
         fake_load_project_config,
     )
 
-    shell = AppShell()
+    shell = AppShell(preferences_service=preferences_service(tmp_path))
     loaded_modes: list[tuple[str, WorkspaceService, list[TargetConfig] | None]] = []
 
     def capture_review_load(self, loaded_service, *, targets=None) -> None:
@@ -437,3 +516,6 @@ def test_app_shell_opens_existing_workspace_from_manifest(
     assert loaded_modes[0][1].paths.root == workspace_folder.resolve()
     assert "Đã mở workspace" in shell.setup_mode.workspace_status_label.text()
     assert shell.mode_tabs.currentWidget() is shell.review_edit_mode
+    assert shell.preferences_service.preferences.recent_projects[0].config_path == str(
+        config_file.resolve()
+    )

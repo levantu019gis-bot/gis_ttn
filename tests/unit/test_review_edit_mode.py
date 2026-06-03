@@ -35,6 +35,7 @@ from thucthengay.editor.models.layer_stack_model import (
     LayerStackRole,
 )
 from thucthengay.editor.modes.review_edit_mode import ReviewEditMode
+from thucthengay.editor.preferences import PreferencesService
 from thucthengay.editor.widgets import (
     GisCanvasState,
     GisCanvasWidget,
@@ -371,6 +372,17 @@ def test_review_edit_mode_loads_selected_composition_through_workspace_service(
     assert "alpha__20260525" in mode.composition_title.text()
     assert mode.layer_model.rowCount() == 1
     assert mode.warnings_panel._list.count() >= 0  # panel is wired up
+
+
+def test_review_edit_mode_persists_splitter_sizes(tmp_path: Path) -> None:
+    qapp()
+    preferences = PreferencesService(tmp_path / "preferences.json")
+    mode = ReviewEditMode(preferences_service=preferences)
+
+    mode.main_splitter.setSizes([420, 960])
+    mode._persist_main_splitter_sizes(0, 0)  # noqa: SLF001
+
+    assert preferences.preferences.ui.review_main_splitter_sizes == mode.main_splitter.sizes()
 
 
 def test_review_edit_uses_template_metadata_map_frame_aspect(
@@ -1927,10 +1939,10 @@ def test_review_edit_keyboard_shortcuts_respect_text_input_arrow_guard(
     assert service.read_composition("alpha__20260525").include is True
 
 
-def test_review_edit_layout_and_app_shell_expose_review_mode() -> None:
+def test_review_edit_layout_and_app_shell_expose_review_mode(tmp_path: Path) -> None:
     qapp()
 
-    shell = AppShell()
+    shell = AppShell(preferences_service=PreferencesService(tmp_path / "preferences.json"))
 
     assert shell.mode_tabs.count() == 3
     assert shell.mode_tabs.tabText(0) == "Setup"

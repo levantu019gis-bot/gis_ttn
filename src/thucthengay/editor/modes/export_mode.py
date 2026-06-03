@@ -8,6 +8,7 @@ from PySide6.QtWidgets import (
     QFrame,
     QHBoxLayout,
     QLabel,
+    QLineEdit,
     QPushButton,
     QTableView,
     QVBoxLayout,
@@ -16,6 +17,7 @@ from PySide6.QtWidgets import (
 
 from thucthengay.editor.export_worker import ExportRunner, ExportWorker
 from thucthengay.editor.models.export_plan_model import ExportPlanModel
+from thucthengay.editor.preferences import PreferencesService
 from thucthengay.editor.widgets.export_summary import ExportSummaryWidget
 from thucthengay.export import (
     FullExportResult,
@@ -36,11 +38,13 @@ class ExportMode(QWidget):
         self,
         parent: QWidget | None = None,
         *,
+        preferences_service: PreferencesService | None = None,
         export_runner: ExportRunner = run_full_export,
     ) -> None:
         super().__init__(parent)
         self.setObjectName("exportMode")
         self.setMinimumSize(960, 560)
+        self._preferences_service = preferences_service
         self._workspace_service: WorkspaceService | None = None
         self._targets: list[TargetConfig] = []
         self._last_plan: ExportPreflightPlan | None = None
@@ -52,6 +56,16 @@ class ExportMode(QWidget):
         self.preflight_button = QPushButton("Preflight")
         self.preflight_button.setObjectName("exportPreflight")
         self.preflight_button.clicked.connect(self.run_preflight)
+        output_stem = (
+            self._preferences_service.preferences.export.output_stem
+            if self._preferences_service is not None
+            else "report"
+        )
+        self.output_stem_input = QLineEdit(output_stem)
+        self.output_stem_input.setObjectName("exportOutputStem")
+        self.output_stem_input.setMinimumWidth(180)
+        self.output_stem_input.setToolTip("Tên file export trong workspace/exports")
+        self.output_stem_input.editingFinished.connect(self._persist_output_stem)
         self.export_button = QPushButton("Export PPTX/TXT")
         self.export_button.setObjectName("exportFinal")
         self.export_button.setProperty("primaryAction", True)
@@ -76,6 +90,8 @@ class ExportMode(QWidget):
 
         toolbar = QHBoxLayout()
         toolbar.addWidget(self.preflight_button)
+        toolbar.addWidget(QLabel("Tên file"))
+        toolbar.addWidget(self.output_stem_input)
         toolbar.addWidget(self.export_button)
         toolbar.addStretch(1)
         toolbar.addWidget(self.status_label)
@@ -145,12 +161,14 @@ class ExportMode(QWidget):
 
         self.preflight_button.setEnabled(False)
         self.export_button.setEnabled(False)
+        output_stem = self._current_output_stem()
+        self._persist_output_stem()
         self.status_label.setText("Dang tao anh final va export PPTX/TXT...")
         thread = QThread(self)
         worker = ExportWorker(
             self._workspace_service,
             list(self._targets),
-            output_stem="report",
+            output_stem=output_stem,
             runner=self._export_runner,
         )
         worker.moveToThread(thread)
@@ -189,6 +207,17 @@ class ExportMode(QWidget):
     def _clear_export_worker(self) -> None:
         self._export_thread = None
         self._export_worker = None
+
+    def _current_output_stem(self) -> str:
+        output_stem = self.output_stem_input.text().strip() or "report"
+        if output_stem != self.output_stem_input.text():
+            self.output_stem_input.setText(output_stem)
+        return output_stem
+
+    def _persist_output_stem(self) -> None:
+        if self._preferences_service is None:
+            return
+        self._preferences_service.update_export_output_stem(self._current_output_stem())
 
     def closeEvent(self, event) -> None:  # noqa: ANN001, N802
         if self._export_worker is not None:
