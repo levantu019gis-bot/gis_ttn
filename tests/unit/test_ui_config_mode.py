@@ -50,13 +50,17 @@ def test_config_mode_widget_smoke_runs_in_isolated_qt_process(tmp_path: Path) ->
     template_path = tmp_path / "templates" / "target_a.pptx"
     template_path.parent.mkdir()
     template_path.write_bytes(b"pptx")
+    source_font = tmp_path / "incoming" / "custom-label.ttf"
+    source_font.parent.mkdir()
+    source_font.write_bytes(b"font")
     copied_template_path = tmp_path / "data" / "templates" / "target_a.pptx"
+    copied_font_path = tmp_path / "fonts" / "custom-label.ttf"
     write_json(config_path, {"targets": [target_config()]})
     code = f"""
 import os
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 from pathlib import Path
-from PySide6.QtWidgets import QApplication, QTableWidgetItem
+from PySide6.QtWidgets import QApplication, QFileDialog, QTableWidgetItem
 from thucthengay.editor.modes.config_mode import ConfigMode
 app = QApplication.instance() or QApplication([])
 mode = ConfigMode()
@@ -70,11 +74,53 @@ assert mode.template_browse_button.text() == "Browse"
 assert mode.target_fields["export.template_pptx_file"].isReadOnly()
 assert mode.target_fields["export.template_pptx_file"].text() == "data/templates/target_a.pptx"
 assert Path(r"{copied_template_path}").is_file()
+assert "grid.label_format" not in mode.defaults_fields
+assert "grid.style.reference_width" not in mode.defaults_fields
+assert "grid.style.reference_height" not in mode.defaults_fields
+assert "grid.style.max_frame_ticks" not in mode.defaults_fields
+assert mode.defaults_fields["grid.style.default_label_font"].isReadOnly()
+QFileDialog.getOpenFileName = staticmethod(lambda *args, **kwargs: (r"{source_font}", ""))
+mode.default_label_font_browse_button.click()
+assert Path(r"{copied_font_path}").read_bytes() == b"font"
+assert mode.defaults_fields["grid.style.default_label_font"].text() == "fonts/custom-label.ttf"
+assert (
+    mode._service.state.draft["defaults"]["grid"]["style"]["default_label_font"]
+    == "fonts/custom-label.ttf"
+)
+minimum_placeholder_height = (
+    mode.placeholder_table.horizontalHeader().sizeHint().height()
+    + mode.placeholder_table.verticalHeader().defaultSectionSize() * 5
+)
+assert mode.placeholder_table.minimumHeight() >= minimum_placeholder_height
 mode.placeholder_table.setItem(1, 1, QTableWidgetItem("Doi {{target_name}}"))
 mode.apply_button.click()
 target = mode._service.target("target_a")
+assert "value" not in target["export"]["placeholders"][0]
 assert target["export"]["placeholders"][1]["value"] == "Doi {{target_name}}"
 assert target["export"]["placeholders"][1]["element_id"] == 13
+mode.add_placeholder_button.click()
+new_placeholder_row = mode.placeholder_table.rowCount() - 1
+mode.placeholder_table.setItem(new_placeholder_row, 0, QTableWidgetItem("custom_comment"))
+mode.placeholder_table.setItem(new_placeholder_row, 1, QTableWidgetItem("Ghi chu rieng"))
+mode.apply_button.click()
+target = mode._service.target("target_a")
+assert any(
+    placeholder["field"] == "custom_comment" and placeholder["value"] == "Ghi chu rieng"
+    for placeholder in target["export"]["placeholders"]
+)
+for row in range(mode.placeholder_table.rowCount()):
+    if mode.placeholder_table.item(row, 0).text() == "custom_comment":
+        mode.placeholder_table.selectRow(row)
+        break
+else:
+    raise AssertionError("custom_comment row not found")
+mode.delete_placeholder_button.click()
+mode.apply_button.click()
+target = mode._service.target("target_a")
+assert all(
+    placeholder["field"] != "custom_comment"
+    for placeholder in target["export"]["placeholders"]
+)
 mode.group_list.setCurrentRow(1)
 mode.add_target_button.click()
 assert len(mode._service.targets_for_group("1.1")) == 2

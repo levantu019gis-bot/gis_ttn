@@ -13,11 +13,17 @@ def write_json(path: Path, data: dict[str, object]) -> None:
     path.write_text(json.dumps(data), encoding="utf-8")
 
 
-def target_config(target_id: str, sort_order: int = 1) -> dict[str, object]:
+def target_config(
+    target_id: str,
+    sort_order: int = 1,
+    *,
+    group_key: str = "1.1",
+    group_title: str = "Không người Hoàng Sa",
+) -> dict[str, object]:
     return {
         "id": target_id,
         "enabled": True,
-        "group": {"key": "1.1", "title": "Không người Hoàng Sa"},
+        "group": {"key": group_key, "title": group_title},
         "sort_order": sort_order,
         "name": target_id,
         "alias": target_id,
@@ -100,6 +106,61 @@ def test_config_editor_detects_duplicate_id_and_sort_order(tmp_path: Path) -> No
     assert state.ok is False
 
 
+def test_config_editor_reorders_old_and_new_groups_when_target_moves(
+    tmp_path: Path,
+) -> None:
+    (tmp_path / "templates").mkdir()
+    (tmp_path / "templates" / "target.pptx").write_bytes(b"placeholder")
+    write_json(
+        tmp_path / "config.json",
+        {
+            "targets": [
+                target_config("alpha", 1),
+                target_config("beta", 2),
+                target_config("gamma", 3),
+                target_config(
+                    "delta",
+                    1,
+                    group_key="2.1",
+                    group_title="Có người Hoàng Sa",
+                ),
+                target_config(
+                    "epsilon",
+                    2,
+                    group_key="2.1",
+                    group_title="Có người Hoàng Sa",
+                ),
+            ]
+        },
+    )
+    service = ConfigEditorService()
+    service.load(tmp_path / "config.json")
+
+    service.update_target(
+        "beta",
+        {
+            "group.key": "2.1",
+            "group.title": "Có người Hoàng Sa",
+            "sort_order": 2,
+        },
+    )
+
+    old_group = service.targets_for_group("1.1")
+    new_group = service.targets_for_group("2.1")
+    assert [(target["id"], target["sort_order"]) for target in old_group] == [
+        ("alpha", 1),
+        ("gamma", 2),
+    ]
+    assert [(target["id"], target["sort_order"]) for target in new_group] == [
+        ("delta", 1),
+        ("beta", 2),
+        ("epsilon", 3),
+    ]
+    assert "target.sort_order_duplicate" not in {
+        issue.issue_id for issue in service.state.issues
+    }
+
+
 def test_config_editor_imports_and_exports_geojson(tmp_path: Path) -> None:
     write_json(tmp_path / "config.json", {"targets": [target_config("target_a")]})
     geojson_path = tmp_path / "source.geojson"
@@ -143,6 +204,42 @@ def test_config_editor_import_template_copies_to_project_data_templates(
     target = service.target("target_a")
     assert target is not None
     assert target["export"]["template_pptx_file"] == relative_path
+
+
+def test_config_editor_import_default_label_font_copies_to_project_fonts(
+    tmp_path: Path,
+) -> None:
+    write_json(tmp_path / "config.json", {"targets": [target_config("target_a")]})
+    source_font = tmp_path / "incoming" / "custom-label.ttf"
+    source_font.parent.mkdir()
+    source_font.write_bytes(b"font")
+    service = ConfigEditorService()
+    service.load(tmp_path / "config.json")
+
+    relative_path = service.import_default_label_font(source_font)
+
+    assert relative_path == "fonts/custom-label.ttf"
+    assert (tmp_path / relative_path).read_bytes() == b"font"
+    assert (
+        service.state.draft["defaults"]["grid"]["style"]["default_label_font"]
+        == relative_path
+    )
+
+
+def test_config_editor_import_default_label_font_keeps_existing_fonts_path(
+    tmp_path: Path,
+) -> None:
+    write_json(tmp_path / "config.json", {"targets": [target_config("target_a")]})
+    source_font = tmp_path / "fonts" / "arial-bold" / "Arial Bold.ttf"
+    source_font.parent.mkdir(parents=True)
+    source_font.write_bytes(b"font")
+    service = ConfigEditorService()
+    service.load(tmp_path / "config.json")
+
+    relative_path = service.import_default_label_font(source_font)
+
+    assert relative_path == "fonts/arial-bold/Arial Bold.ttf"
+    assert not (tmp_path / "fonts" / "Arial Bold.ttf").exists()
 
 
 def test_config_editor_ensure_target_template_local_copies_existing_config_path(

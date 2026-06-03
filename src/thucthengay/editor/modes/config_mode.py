@@ -40,6 +40,7 @@ from thucthengay.config import ConfigEditorError, ConfigEditorService
 from thucthengay.models import Issue, IssueSeverity
 
 _INVALID_INDEX = QModelIndex()
+_PLACEHOLDER_VISIBLE_ROWS = 5
 
 
 class TargetTableColumn(IntEnum):
@@ -330,6 +331,8 @@ class ConfigMode(QWidget):
         self.add_target_button = QPushButton("Thêm target")
 
         self.defaults_fields: dict[str, QLineEdit] = {}
+        self.default_label_font_browse_button = QPushButton("Browse")
+        self.default_label_font_browse_button.setToolTip("Chọn font label và copy vào fonts")
         self.pattern_table = QTableWidget(0, 3)
         self.pattern_table.setHorizontalHeaderLabels(["Tên", "Pattern", "Separator"])
         self.add_pattern_button = QPushButton("Thêm pattern")
@@ -353,6 +356,10 @@ class ConfigMode(QWidget):
         self.template_browse_button.setToolTip("Chọn template PPTX và copy vào data/templates")
         self.placeholder_table = QTableWidget(0, 2)
         self.placeholder_table.setHorizontalHeaderLabels(["field", "value"])
+        self.placeholder_table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
+        self.placeholder_table.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
+        self.add_placeholder_button = QPushButton("Thêm field")
+        self.delete_placeholder_button = QPushButton("Xóa field")
         self.import_geojson_button = QPushButton("Import GeoJSON")
         self.export_geojson_button = QPushButton("Export GeoJSON")
 
@@ -487,14 +494,10 @@ class ConfigMode(QWidget):
         layout = QVBoxLayout(content)
         layout.setContentsMargins(4, 8, 4, 8)
         field_specs = [
-            ("Grid", "grid.label_format", "label_format"),
             ("Grid Style", "grid.style.default_label_font", "default_label_font"),
             ("Grid Style", "grid.style.frame_color", "frame_color"),
             ("Grid Style", "grid.style.label_color", "label_color"),
             ("Grid Style", "grid.style.label_font_size", "label_font_size"),
-            ("Frame Reference", "grid.style.reference_width", "reference_width"),
-            ("Frame Reference", "grid.style.reference_height", "reference_height"),
-            ("Frame Reference", "grid.style.max_frame_ticks", "max_frame_ticks"),
             ("Export Defaults", "export.date_format", "date_format"),
             ("Export Defaults", "export.time_format", "time_format"),
             ("Export Defaults", "export.map_background_color", "map_background_color"),
@@ -509,7 +512,16 @@ class ConfigMode(QWidget):
                 field = QLineEdit()
                 field.setObjectName(f"configDefault_{key.replace('.', '_')}")
                 self.defaults_fields[key] = field
-                form.addRow(label, field)
+                if key == "grid.style.default_label_font":
+                    field.setReadOnly(True)
+                    picker = QWidget()
+                    picker_layout = QHBoxLayout(picker)
+                    picker_layout.setContentsMargins(0, 0, 0, 0)
+                    picker_layout.addWidget(field, 1)
+                    picker_layout.addWidget(self.default_label_font_browse_button)
+                    form.addRow(label, picker)
+                else:
+                    form.addRow(label, field)
             layout.addWidget(box)
         apply_button = QPushButton("Apply defaults")
         apply_button.clicked.connect(self._apply_defaults)
@@ -626,7 +638,15 @@ class ConfigMode(QWidget):
     def _build_placeholder_section(self) -> QGroupBox:
         box = QGroupBox("Placeholders")
         layout = QVBoxLayout(box)
+        actions = QHBoxLayout()
+        actions.addWidget(self.add_placeholder_button)
+        actions.addWidget(self.delete_placeholder_button)
+        actions.addStretch(1)
+        layout.addLayout(actions)
         self.placeholder_table.verticalHeader().setVisible(False)
+        self.placeholder_table.setMinimumHeight(
+            _table_height_for_visible_rows(self.placeholder_table, _PLACEHOLDER_VISIBLE_ROWS)
+        )
         layout.addWidget(self.placeholder_table)
         return box
 
@@ -662,6 +682,9 @@ class ConfigMode(QWidget):
         self.reset_button.clicked.connect(self._populate_inspector)
         self.apply_button.clicked.connect(self._apply_target)
         self.template_browse_button.clicked.connect(self._browse_template_pptx)
+        self.default_label_font_browse_button.clicked.connect(self._browse_default_label_font)
+        self.add_placeholder_button.clicked.connect(self._add_placeholder_field)
+        self.delete_placeholder_button.clicked.connect(self._delete_placeholder_field)
         self.import_geojson_button.clicked.connect(self._import_geojson)
         self.export_geojson_button.clicked.connect(self._export_geojson)
         self.add_pattern_button.clicked.connect(self._add_pattern_row)
@@ -770,6 +793,8 @@ class ConfigMode(QWidget):
                 self.reset_button,
                 self.apply_button,
                 self.template_browse_button,
+                self.add_placeholder_button,
+                self.delete_placeholder_button,
                 self.import_geojson_button,
                 self.export_geojson_button,
             ):
@@ -807,7 +832,6 @@ class ConfigMode(QWidget):
             if not isinstance(placeholder, dict):
                 placeholder = {}
             field_item = QTableWidgetItem(str(placeholder.get("field", "")))
-            field_item.setFlags(field_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
             self.placeholder_table.setItem(row, 0, field_item)
             self.placeholder_table.setItem(
                 row,
@@ -815,6 +839,30 @@ class ConfigMode(QWidget):
                 QTableWidgetItem(str(placeholder.get("value", ""))),
             )
         self.placeholder_table.resizeColumnsToContents()
+
+    def _add_placeholder_field(self) -> None:
+        if self._selected_target_id is None:
+            return
+        row = self.placeholder_table.rowCount()
+        self.placeholder_table.insertRow(row)
+        self.placeholder_table.setItem(
+            row,
+            0,
+            QTableWidgetItem(_next_placeholder_field_name(self.placeholder_table)),
+        )
+        self.placeholder_table.setItem(row, 1, QTableWidgetItem(""))
+        self.placeholder_table.selectRow(row)
+        self.placeholder_table.setCurrentCell(row, 0)
+        self.placeholder_table.editItem(self.placeholder_table.item(row, 0))
+
+    def _delete_placeholder_field(self) -> None:
+        if self._selected_target_id is None or self.placeholder_table.rowCount() == 0:
+            return
+        selected_rows = self.placeholder_table.selectionModel().selectedRows()
+        row = selected_rows[0].row() if selected_rows else self.placeholder_table.currentRow()
+        if row < 0:
+            return
+        self.placeholder_table.removeRow(row)
 
     def _refresh_defaults(self) -> None:
         defaults = self._service.state.draft.get("defaults")
@@ -1026,6 +1074,31 @@ class ConfigMode(QWidget):
             self._refresh_targets()
             self._refresh_raw_json()
             self._refresh_issues()
+
+    def _browse_default_label_font(self) -> None:
+        current_text = self.defaults_fields["grid.style.default_label_font"].text().strip()
+        start_dir = str(Path(current_text).expanduser().parent) if current_text else str(Path.cwd())
+        path, _filter = QFileDialog.getOpenFileName(
+            self,
+            "Chọn font label",
+            start_dir,
+            "Font files (*.ttf *.otf *.ttc);;All files (*)",
+        )
+        if not path:
+            return
+        try:
+            relative_path = self._service.import_default_label_font(path)
+        except ConfigEditorError as error:
+            self._show_error("Không copy được font label", str(error))
+            return
+        self.defaults_fields["grid.style.default_label_font"].setText(relative_path)
+        self.downstream_label.setText(
+            f"Đã copy font label vào fonts và cập nhật defaults: {relative_path}"
+        )
+        self._refresh_status()
+        self._refresh_stats()
+        self._refresh_raw_json()
+        self._refresh_issues()
 
     def _ensure_template_local_for_inspector(self, target_id: str) -> None:
         try:
@@ -1269,19 +1342,33 @@ def _collect_placeholders(
     current_target: dict[str, Any],
 ) -> list[dict[str, Any]]:
     existing_by_field: dict[str, dict[str, Any]] = {}
+    existing_by_row: list[dict[str, Any]] = []
     export = current_target.get("export")
     if isinstance(export, dict) and isinstance(export.get("placeholders"), list):
         for placeholder in export["placeholders"]:
             if isinstance(placeholder, dict):
-                existing_by_field[str(placeholder.get("field", ""))] = copy.deepcopy(placeholder)
+                existing = copy.deepcopy(placeholder)
+                existing_by_row.append(existing)
+                existing_by_field[str(placeholder.get("field", ""))] = existing
 
     placeholders: list[dict[str, Any]] = []
     for row in range(table.rowCount()):
         field = _table_text(table, row, 0)
+        if not field:
+            continue
         value = _table_text(table, row, 1)
-        placeholder = existing_by_field.get(field, {"field": field})
+        placeholder = copy.deepcopy(
+            existing_by_field.get(
+                field,
+                existing_by_row[row] if row < len(existing_by_row) else {"field": field},
+            )
+        )
+        placeholder["field"] = field
         placeholder.setdefault("kind", "map_image" if field == "map_image" else "text")
-        placeholder["value"] = value
+        if value:
+            placeholder["value"] = value
+        else:
+            placeholder.pop("value", None)
         placeholders.append(placeholder)
     return placeholders
 
@@ -1299,6 +1386,22 @@ def _get_dotted(data: dict[str, Any], dotted_key: str) -> Any:
 def _table_text(table: QTableWidget, row: int, column: int) -> str:
     item = table.item(row, column)
     return "" if item is None else item.text().strip()
+
+
+def _next_placeholder_field_name(table: QTableWidget) -> str:
+    used = {_table_text(table, row, 0) for row in range(table.rowCount())}
+    index = 1
+    while True:
+        field_name = f"field_{index}"
+        if field_name not in used:
+            return field_name
+        index += 1
+
+
+def _table_height_for_visible_rows(table: QTableWidget, visible_rows: int) -> int:
+    header_height = table.horizontalHeader().sizeHint().height()
+    row_height = table.verticalHeader().defaultSectionSize()
+    return header_height + (row_height * visible_rows) + (table.frameWidth() * 2) + 8
 
 
 def _parse_scalar(value: str) -> Any:

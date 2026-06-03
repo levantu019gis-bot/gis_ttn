@@ -246,9 +246,28 @@ class ConfigEditorService:
         target = self.target(target_id)
         if target is None:
             raise ConfigEditorError(f"Không tìm thấy target `{target_id}`.")
+        targets = _ensure_targets(self._state.draft)
+        old_group_key, _old_group_title = _target_group(target)
+        affects_order = "sort_order" in updates
         for dotted_key, value in updates.items():
             _set_dotted(target, dotted_key, value)
         new_id = str(target.get("id") or target_id)
+        new_group_key, _new_group_title = _target_group(target)
+        if old_group_key != new_group_key:
+            _normalize_group_sort_orders(targets, old_group_key)
+            _normalize_group_sort_orders(
+                targets,
+                new_group_key,
+                moved_target=target,
+                requested_sort_order=_sort_order_value(target),
+            )
+        elif affects_order:
+            _normalize_group_sort_orders(
+                targets,
+                new_group_key,
+                moved_target=target,
+                requested_sort_order=_sort_order_value(target),
+            )
         self.validate()
         return new_id
 
@@ -318,6 +337,18 @@ class ConfigEditorService:
         self.validate()
         return relative_template_path
 
+    def import_default_label_font(self, path: str | Path) -> str:
+        """Copy a selected label font into fonts and update defaults."""
+        source_path = Path(path).expanduser().resolve()
+        if source_path.suffix.lower() not in {".otf", ".ttc", ".ttf"}:
+            raise ConfigEditorError("Font label phải là file .ttf, .otf, hoặc .ttc.")
+        if not source_path.is_file():
+            raise ConfigEditorError(f"Không tìm thấy font label: {source_path}")
+
+        relative_font_path = self._copy_font_to_project_fonts(source_path)
+        self.update_defaults({"grid.style.default_label_font": relative_font_path})
+        return relative_font_path
+
     def ensure_target_template_local(self, target_id: str) -> str | None:
         """Copy an existing configured target template into data/templates when needed."""
         target = self.target(target_id)
@@ -370,6 +401,16 @@ class ConfigEditorService:
             shutil.copy2(source_path, destination)
         return destination.relative_to(self._project_root()).as_posix()
 
+    def _copy_font_to_project_fonts(self, source_path: Path) -> str:
+        fonts_dir = self._project_fonts_dir()
+        if _is_inside_project_dir(source_path, fonts_dir):
+            return source_path.resolve().relative_to(self._project_root()).as_posix()
+        fonts_dir.mkdir(parents=True, exist_ok=True)
+        destination = fonts_dir / source_path.name
+        if source_path.resolve() != destination.resolve():
+            shutil.copy2(source_path, destination)
+        return destination.relative_to(self._project_root()).as_posix()
+
     def _resolve_project_path(self, value: str) -> Path:
         if self._state.source_path is None:
             path = Path(value).expanduser()
@@ -378,11 +419,14 @@ class ConfigEditorService:
 
     def _project_root(self) -> Path:
         if self._state.source_path is None:
-            raise ConfigEditorError("Cần mở hoặc lưu config trước khi quản lý template PPTX.")
+            raise ConfigEditorError("Cần mở hoặc lưu config trước khi quản lý asset dự án.")
         return self._state.source_path.parent
 
     def _project_templates_dir(self) -> Path:
         return self._project_root() / "data" / "templates"
+
+    def _project_fonts_dir(self) -> Path:
+        return self._project_root() / "fonts"
 
 
 def _new_config_draft() -> dict[str, Any]:
@@ -683,6 +727,37 @@ def _next_sort_order(targets: list[dict[str, Any]], group_key: str) -> int:
     return (max(orders) if orders else 0) + 1
 
 
+def _normalize_group_sort_orders(
+    targets: list[dict[str, Any]],
+    group_key: str,
+    *,
+    moved_target: dict[str, Any] | None = None,
+    requested_sort_order: int | None = None,
+) -> None:
+    group_targets = [
+        target
+        for target in targets
+        if _target_group(target)[0] == group_key and target is not moved_target
+    ]
+    group_targets = sorted(group_targets, key=_raw_target_order_key)
+    if moved_target is not None and _target_group(moved_target)[0] == group_key:
+        insert_at = _sort_order_insert_index(requested_sort_order, len(group_targets))
+        group_targets.insert(insert_at, moved_target)
+    for sort_order, target in enumerate(group_targets, start=1):
+        target["sort_order"] = sort_order
+
+
+def _sort_order_insert_index(requested_sort_order: int | None, existing_count: int) -> int:
+    if requested_sort_order is None or requested_sort_order < 1:
+        return existing_count
+    return min(requested_sort_order, existing_count + 1) - 1
+
+
+def _sort_order_value(target: dict[str, Any]) -> int | None:
+    sort_order = target.get("sort_order")
+    return sort_order if isinstance(sort_order, int) else None
+
+
 def _set_dotted(target: dict[str, Any], dotted_key: str, value: Any) -> None:
     parts = dotted_key.split(".")
     current: dict[str, Any] = target
@@ -718,8 +793,12 @@ def _read_geojson_geometry(path: Path) -> dict[str, Any]:
 
 
 def _is_inside_project_templates(path: Path, templates_dir: Path) -> bool:
+    return _is_inside_project_dir(path, templates_dir)
+
+
+def _is_inside_project_dir(path: Path, directory: Path) -> bool:
     try:
-        path.resolve().relative_to(templates_dir.resolve())
+        path.resolve().relative_to(directory.resolve())
     except ValueError:
         return False
     return True
