@@ -1,7 +1,14 @@
 """Rendering package."""
 
 from thucthengay.models.render import FinalRenderCurrentness
-from thucthengay.render.core import render_map
+from thucthengay.render.core import (
+    FrameOverlayCache,
+    FullMapCache,
+    MapRenderCache,
+    RasterBaseCache,
+    render_map,
+    render_map_with_cache,
+)
 from thucthengay.render.final import (
     is_final_render_current,
     render_final_png,
@@ -43,6 +50,10 @@ __all__ = [
     "RenderSpec",
     "RenderSpecError",
     "RasterRenderResult",
+    "FrameOverlayCache",
+    "FullMapCache",
+    "MapRenderCache",
+    "RasterBaseCache",
     "build_render_spec",
     "build_target_preview_spec",
     "build_map_surround_layout",
@@ -52,6 +63,7 @@ __all__ = [
     "is_final_render_current",
     "render_final_png",
     "render_map",
+    "render_map_with_cache",
     "render_raster_layers",
     "render_raster_layers_result",
     "render_raster_layers_to_size",

@@ -3,6 +3,12 @@
 from __future__ import annotations
 
 import math
+from collections import OrderedDict
+from collections.abc import Hashable, Mapping
+from dataclasses import dataclass
+from pathlib import Path
+from threading import Lock
+from typing import Any
 
 import numpy as np
 import rasterio
@@ -21,13 +27,225 @@ from thucthengay.render.raster import (
     RenderError,
     render_raster_layers_to_size,
 )
-from thucthengay.render.spec import MAX_RENDER_PIXELS, GeoWindow, RenderSpec
+from thucthengay.render.spec import MAX_RENDER_PIXELS, GeoWindow, RenderLayerRef, RenderSpec
 
 _MIN_LON = -180.0
 _MAX_LON = 180.0
 _MIN_LAT = -90.0
 _MAX_LAT = 90.0
 _ASPECT_EPSILON = 1e-10
+_DEFAULT_RASTER_BASE_CACHE_BYTES = 256 * 1024 * 1024
+_DEFAULT_FRAME_OVERLAY_CACHE_BYTES = 64 * 1024 * 1024
+_DEFAULT_FULL_MAP_CACHE_BYTES = 256 * 1024 * 1024
+
+
+@dataclass(frozen=True)
+class _CachedRasterBase:
+    canvas: np.ndarray
+    issues: tuple[Issue, ...]
+    painted_layer_ids: tuple[str, ...]
+    nbytes: int
+
+
+@dataclass(frozen=True)
+class _CachedFrameOverlay:
+    pixels: np.ndarray
+    mask: np.ndarray
+    nbytes: int
+
+
+@dataclass(frozen=True)
+class _CachedFullMap:
+    canvas: np.ndarray
+    issues: tuple[Issue, ...]
+    painted_layer_ids: tuple[str, ...]
+    nbytes: int
+
+
+class _ByteBudgetCache:
+    def __init__(self, *, max_bytes: int) -> None:
+        self.max_bytes = max(0, max_bytes)
+        self._used_bytes = 0
+        self._lock = Lock()
+
+    @property
+    def used_bytes(self) -> int:
+        with self._lock:
+            return self._used_bytes
+
+
+class RasterBaseCache(_ByteBudgetCache):
+    """Small LRU cache for inner raster canvases used by preview rendering."""
+
+    def __init__(self, *, max_bytes: int = _DEFAULT_RASTER_BASE_CACHE_BYTES) -> None:
+        super().__init__(max_bytes=max_bytes)
+        self._entries: OrderedDict[tuple[Hashable, ...], _CachedRasterBase] = OrderedDict()
+
+    @property
+    def entry_count(self) -> int:
+        with self._lock:
+            return len(self._entries)
+
+    def clear(self) -> None:
+        with self._lock:
+            self._entries.clear()
+            self._used_bytes = 0
+
+    def get(self, key: tuple[Hashable, ...]) -> RasterRenderResult | None:
+        with self._lock:
+            entry = self._entries.get(key)
+            if entry is None:
+                return None
+            self._entries.move_to_end(key)
+            return RasterRenderResult(
+                canvas=entry.canvas.copy(),
+                issues=entry.issues,
+                painted_layer_ids=entry.painted_layer_ids,
+            )
+
+    def put(self, key: tuple[Hashable, ...], result: RasterRenderResult) -> None:
+        nbytes = int(result.canvas.nbytes)
+        if self.max_bytes <= 0 or nbytes > self.max_bytes:
+            return
+        entry = _CachedRasterBase(
+            canvas=result.canvas.copy(),
+            issues=tuple(result.issues),
+            painted_layer_ids=tuple(result.painted_layer_ids),
+            nbytes=nbytes,
+        )
+        with self._lock:
+            old = self._entries.pop(key, None)
+            if old is not None:
+                self._used_bytes -= old.nbytes
+            self._entries[key] = entry
+            self._used_bytes += nbytes
+            self._evict_locked()
+
+    def _evict_locked(self) -> None:
+        while self._used_bytes > self.max_bytes and self._entries:
+            _old_key, old = self._entries.popitem(last=False)
+            self._used_bytes -= old.nbytes
+
+
+class FrameOverlayCache(_ByteBudgetCache):
+    """LRU cache for frame/tick/label overlays."""
+
+    def __init__(self, *, max_bytes: int = _DEFAULT_FRAME_OVERLAY_CACHE_BYTES) -> None:
+        super().__init__(max_bytes=max_bytes)
+        self._entries: OrderedDict[tuple[Hashable, ...], _CachedFrameOverlay] = OrderedDict()
+
+    @property
+    def entry_count(self) -> int:
+        with self._lock:
+            return len(self._entries)
+
+    def clear(self) -> None:
+        with self._lock:
+            self._entries.clear()
+            self._used_bytes = 0
+
+    def get(self, key: tuple[Hashable, ...]) -> tuple[np.ndarray, np.ndarray] | None:
+        with self._lock:
+            entry = self._entries.get(key)
+            if entry is None:
+                return None
+            self._entries.move_to_end(key)
+            return entry.pixels.copy(), entry.mask.copy()
+
+    def put(self, key: tuple[Hashable, ...], pixels: np.ndarray, mask: np.ndarray) -> None:
+        nbytes = int(pixels.nbytes + mask.nbytes)
+        if self.max_bytes <= 0 or nbytes > self.max_bytes:
+            return
+        entry = _CachedFrameOverlay(
+            pixels=pixels.copy(),
+            mask=mask.copy(),
+            nbytes=nbytes,
+        )
+        with self._lock:
+            old = self._entries.pop(key, None)
+            if old is not None:
+                self._used_bytes -= old.nbytes
+            self._entries[key] = entry
+            self._used_bytes += nbytes
+            self._evict_locked()
+
+    def _evict_locked(self) -> None:
+        while self._used_bytes > self.max_bytes and self._entries:
+            _old_key, old = self._entries.popitem(last=False)
+            self._used_bytes -= old.nbytes
+
+
+class FullMapCache(_ByteBudgetCache):
+    """LRU cache for complete preview canvases."""
+
+    def __init__(self, *, max_bytes: int = _DEFAULT_FULL_MAP_CACHE_BYTES) -> None:
+        super().__init__(max_bytes=max_bytes)
+        self._entries: OrderedDict[tuple[Hashable, ...], _CachedFullMap] = OrderedDict()
+
+    @property
+    def entry_count(self) -> int:
+        with self._lock:
+            return len(self._entries)
+
+    def clear(self) -> None:
+        with self._lock:
+            self._entries.clear()
+            self._used_bytes = 0
+
+    def get(self, key: tuple[Hashable, ...]) -> RasterRenderResult | None:
+        with self._lock:
+            entry = self._entries.get(key)
+            if entry is None:
+                return None
+            self._entries.move_to_end(key)
+            return RasterRenderResult(
+                canvas=entry.canvas.copy(),
+                issues=entry.issues,
+                painted_layer_ids=entry.painted_layer_ids,
+            )
+
+    def put(self, key: tuple[Hashable, ...], result: RasterRenderResult) -> None:
+        nbytes = int(result.canvas.nbytes)
+        if self.max_bytes <= 0 or nbytes > self.max_bytes:
+            return
+        entry = _CachedFullMap(
+            canvas=result.canvas.copy(),
+            issues=tuple(result.issues),
+            painted_layer_ids=tuple(result.painted_layer_ids),
+            nbytes=nbytes,
+        )
+        with self._lock:
+            old = self._entries.pop(key, None)
+            if old is not None:
+                self._used_bytes -= old.nbytes
+            self._entries[key] = entry
+            self._used_bytes += nbytes
+            self._evict_locked()
+
+    def _evict_locked(self) -> None:
+        while self._used_bytes > self.max_bytes and self._entries:
+            _old_key, old = self._entries.popitem(last=False)
+            self._used_bytes -= old.nbytes
+
+
+class MapRenderCache:
+    """Preview cache bundle for raster bases, frame overlays, and full maps."""
+
+    def __init__(
+        self,
+        *,
+        raster_base_bytes: int = _DEFAULT_RASTER_BASE_CACHE_BYTES,
+        frame_overlay_bytes: int = _DEFAULT_FRAME_OVERLAY_CACHE_BYTES,
+        full_map_bytes: int = _DEFAULT_FULL_MAP_CACHE_BYTES,
+    ) -> None:
+        self.raster_bases = RasterBaseCache(max_bytes=raster_base_bytes)
+        self.frame_overlays = FrameOverlayCache(max_bytes=frame_overlay_bytes)
+        self.full_maps = FullMapCache(max_bytes=full_map_bytes)
+
+    def clear(self) -> None:
+        self.raster_bases.clear()
+        self.frame_overlays.clear()
+        self.full_maps.clear()
 
 
 def _cancelled_issue(spec: RenderSpec) -> Issue:
@@ -185,17 +403,7 @@ def _spec_for_inner_map(spec: RenderSpec, inner_map: PixelRect) -> RenderSpec:
     )
 
 
-def render_map(
-    spec: RenderSpec,
-    *,
-    dataset_opener: DatasetOpener = rasterio.open,
-    is_cancelled: CancelCallback | None = None,
-) -> RasterRenderResult:
-    """Render a full map-surround image with raster inside the inset map panel."""
-    output_pixels = spec.output_width * spec.output_height
-    if output_pixels > MAX_RENDER_PIXELS:
-        raise RenderError([_too_large_issue(spec)])
-
+def _render_layout_for_spec(spec: RenderSpec) -> tuple[RenderSpec, MapSurroundLayout]:
     base_layout = build_map_surround_layout(
         spec.output_width,
         spec.output_height,
@@ -208,18 +416,196 @@ def render_map(
         inner_map=inner,
         geo_map=inner,
     )
+    return render_spec, layout
+
+
+def _render_raster_base_cache_key(
+    spec: RenderSpec,
+    *,
+    output_width: int,
+    output_height: int,
+) -> tuple[Hashable, ...]:
+    return (
+        spec.composition_id,
+        spec.target_id,
+        output_width,
+        output_height,
+        spec.background.color,
+        _geo_window_key(spec.geo_window),
+        tuple(_layer_key(layer) for layer in spec.visible_layers),
+    )
+
+
+def _geo_window_key(window: GeoWindow) -> tuple[float, float, float, float]:
+    return (
+        window.min_lon,
+        window.min_lat,
+        window.max_lon,
+        window.max_lat,
+    )
+
+
+def _layer_key(layer: RenderLayerRef) -> tuple[Hashable, ...]:
+    path = layer.cache_path or layer.source_path
+    return (
+        layer.layer_id,
+        layer.order,
+        layer.source_path,
+        layer.cache_path,
+        _path_signature(path),
+    )
+
+
+def _full_map_cache_key(spec: RenderSpec) -> tuple[Hashable, ...]:
+    return (
+        "full-map",
+        _freeze_jsonish(spec.model_dump(mode="json")),
+        tuple(_layer_key(layer) for layer in spec.visible_layers),
+    )
+
+
+def _frame_overlay_cache_key(
+    spec: RenderSpec,
+    layout: MapSurroundLayout,
+) -> tuple[Hashable, ...]:
+    return (
+        "frame-overlay",
+        spec.output_width,
+        spec.output_height,
+        _rect_key(layout.outer_frame),
+        _rect_key(layout.inner_map),
+        _rect_key(layout.map_view),
+        _geo_window_key(spec.geo_window),
+        _freeze_jsonish(spec.grid.model_dump(mode="json")),
+    )
+
+
+def _rect_key(rect: PixelRect) -> tuple[int, int, int, int]:
+    return rect.left, rect.top, rect.right, rect.bottom
+
+
+def _freeze_jsonish(value: Any) -> Hashable:
+    if isinstance(value, Mapping):
+        return tuple(sorted((str(key), _freeze_jsonish(item)) for key, item in value.items()))
+    if isinstance(value, list | tuple):
+        return tuple(_freeze_jsonish(item) for item in value)
+    if isinstance(value, set | frozenset):
+        return tuple(sorted(_freeze_jsonish(item) for item in value))
+    return value
+
+
+def _path_signature(path: str) -> tuple[int, int] | None:
+    try:
+        stat = Path(path).stat()
+    except OSError:
+        return None
+    return stat.st_size, stat.st_mtime_ns
+
+
+def _render_raster_base(
+    render_spec: RenderSpec,
+    *,
+    output_width: int,
+    output_height: int,
+    dataset_opener: DatasetOpener,
+    is_cancelled: CancelCallback | None,
+    raster_cache: RasterBaseCache | None,
+) -> RasterRenderResult:
+    if raster_cache is None:
+        return render_raster_layers_to_size(
+            render_spec,
+            output_width=output_width,
+            output_height=output_height,
+            dataset_opener=dataset_opener,
+            is_cancelled=is_cancelled,
+        )
+
+    key = _render_raster_base_cache_key(
+        render_spec,
+        output_width=output_width,
+        output_height=output_height,
+    )
+    cached = raster_cache.get(key)
+    if cached is not None:
+        return cached
+
+    result = render_raster_layers_to_size(
+        render_spec,
+        output_width=output_width,
+        output_height=output_height,
+        dataset_opener=dataset_opener,
+        is_cancelled=is_cancelled,
+    )
+    if is_cancelled is None or not is_cancelled():
+        raster_cache.put(key, result)
+    return result
+
+
+def render_map(
+    spec: RenderSpec,
+    *,
+    dataset_opener: DatasetOpener = rasterio.open,
+    is_cancelled: CancelCallback | None = None,
+) -> RasterRenderResult:
+    """Render a full map-surround image with raster inside the inset map panel."""
+    return _render_map(spec, dataset_opener=dataset_opener, is_cancelled=is_cancelled)
+
+
+def render_map_with_cache(
+    spec: RenderSpec,
+    *,
+    render_cache: MapRenderCache | None = None,
+    raster_cache: RasterBaseCache | None = None,
+    dataset_opener: DatasetOpener = rasterio.open,
+    is_cancelled: CancelCallback | None = None,
+) -> RasterRenderResult:
+    """Render a map-surround image while reusing unchanged inner raster bases."""
+    if render_cache is None and raster_cache is None:
+        render_cache = MapRenderCache()
+    return _render_map(
+        spec,
+        dataset_opener=dataset_opener,
+        is_cancelled=is_cancelled,
+        raster_cache=render_cache.raster_bases if render_cache is not None else raster_cache,
+        frame_cache=render_cache.frame_overlays if render_cache is not None else None,
+        full_cache=render_cache.full_maps if render_cache is not None else None,
+    )
+
+
+def _render_map(
+    spec: RenderSpec,
+    *,
+    dataset_opener: DatasetOpener,
+    is_cancelled: CancelCallback | None,
+    raster_cache: RasterBaseCache | None = None,
+    frame_cache: FrameOverlayCache | None = None,
+    full_cache: FullMapCache | None = None,
+) -> RasterRenderResult:
+    output_pixels = spec.output_width * spec.output_height
+    if output_pixels > MAX_RENDER_PIXELS:
+        raise RenderError([_too_large_issue(spec)])
+
+    full_key = _full_map_cache_key(spec) if full_cache is not None else None
+    if full_cache is not None and full_key is not None:
+        cached_full = full_cache.get(full_key)
+        if cached_full is not None:
+            return cached_full
+
+    render_spec, layout = _render_layout_for_spec(spec)
+    inner = layout.inner_map
     inner_pixels = inner.width * inner.height
     if _estimated_peak_pixels(output_pixels=output_pixels, inner_pixels=inner_pixels) > (
         MAX_RENDER_PIXELS * 2
     ):
         raise RenderError([_peak_too_large_issue(spec)])
 
-    result = render_raster_layers_to_size(
+    result = _render_raster_base(
         render_spec,
         output_width=inner.width,
         output_height=inner.height,
         dataset_opener=dataset_opener,
         is_cancelled=is_cancelled,
+        raster_cache=raster_cache,
     )
     if is_cancelled is not None and is_cancelled():
         raise RenderError([*result.issues, _cancelled_issue(spec)])
@@ -244,14 +630,73 @@ def render_map(
     try:
         if is_cancelled is not None and is_cancelled():
             raise RenderError([_cancelled_issue(spec)])
-        draw_map_surround_frame(canvas, render_spec, layout, is_cancelled=is_cancelled)
+        _apply_map_surround_frame(
+            canvas,
+            render_spec,
+            layout,
+            background=bg,
+            frame_cache=frame_cache,
+            is_cancelled=is_cancelled,
+        )
     except MemoryError as exc:
         raise RenderError([*result.issues, _memory_issue(spec)]) from exc
     except RenderError as exc:
         raise RenderError([*result.issues, *exc.issues]) from exc
 
-    return RasterRenderResult(
+    rendered = RasterRenderResult(
         canvas=canvas,
         issues=result.issues,
         painted_layer_ids=result.painted_layer_ids,
     )
+    if full_cache is not None and full_key is not None and (
+        is_cancelled is None or not is_cancelled()
+    ):
+        full_cache.put(full_key, rendered)
+    return rendered
+
+
+def _apply_map_surround_frame(
+    canvas: np.ndarray,
+    spec: RenderSpec,
+    layout: MapSurroundLayout,
+    *,
+    background: tuple[int, int, int],
+    frame_cache: FrameOverlayCache | None,
+    is_cancelled: CancelCallback | None,
+) -> None:
+    if frame_cache is None:
+        draw_map_surround_frame(canvas, spec, layout, is_cancelled=is_cancelled)
+        return
+
+    key = _frame_overlay_cache_key(spec, layout)
+    cached = frame_cache.get(key)
+    if cached is None:
+        pixels, mask = _build_frame_overlay(
+            spec,
+            layout,
+            background=background,
+            is_cancelled=is_cancelled,
+        )
+        if is_cancelled is None or not is_cancelled():
+            frame_cache.put(key, pixels, mask)
+    else:
+        pixels, mask = cached
+
+    canvas[mask] = pixels[mask]
+
+
+def _build_frame_overlay(
+    spec: RenderSpec,
+    layout: MapSurroundLayout,
+    *,
+    background: tuple[int, int, int],
+    is_cancelled: CancelCallback | None,
+) -> tuple[np.ndarray, np.ndarray]:
+    base = np.empty((spec.output_height, spec.output_width, 3), dtype=np.uint8)
+    base[:, :] = (255, 255, 255)
+    inner = layout.inner_map
+    base[inner.top : inner.bottom, inner.left : inner.right, :] = background
+    pixels = base.copy()
+    draw_map_surround_frame(pixels, spec, layout, is_cancelled=is_cancelled)
+    mask = np.any(pixels != base, axis=2)
+    return pixels, mask

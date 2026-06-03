@@ -8,7 +8,7 @@
   "capture_date": "2026-05-26",
   "composition_id": "DaQuangAnh__20260526",
   "grid_override": null,
-  "include": true,
+  "include": false,
   "layers": [
     {
       "cache_path": "cache/DaQuangAnh/20260526/PSScene_20260526_030852_97_2560_cloud_4.0__ef1ab6225f2c.tif",
@@ -59,11 +59,11 @@
       "visible": true
     }
   ],
-  "needs_revalidation": false,
+  "needs_revalidation": true,
   "notes": "",
-  "ready": true,
-  "review_order": 2,
-  "reviewed": true,
+  "ready": false,
+  "review_order": null,
+  "reviewed": false,
   "target_id": "DaQuangAnh",
   "validation_summary": {
     "error_count": 0,
@@ -73,8 +73,8 @@
   },
   "view": {
     "center": [
-      111.50775789293729,
-      16.446708473794477
+      111.51208796,
+      16.44513324
     ],
     "rotation": 0,
     "scale": 6000

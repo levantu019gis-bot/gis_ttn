@@ -57,6 +57,7 @@ from thucthengay.models import (
     TargetConfig,
     TemplateMetadata,
 )
+from thucthengay.render.core import MapRenderCache, render_map_with_cache
 from thucthengay.render.raster import render_raster_layers
 from thucthengay.render.spec import RenderSpecError, build_render_spec
 from thucthengay.render.target_preview import build_target_preview_spec
@@ -91,6 +92,7 @@ class ReviewEditMode(QWidget):
         self._render_threads: dict[str, QThread] = {}
         self._render_workers: dict[str, RenderWorker] = {}
         self._render_tokens: dict[str, object] = {}
+        self._canvas_render_cache = MapRenderCache()
         self._pending_canvas_view: tuple[list[float], int] | None = None
         self._target_render_thread: QThread | None = None
         self._target_render_worker: RenderWorker | None = None
@@ -287,6 +289,7 @@ class ReviewEditMode(QWidget):
         selected_id = self._current_or_selected_composition_id()
         self._workspace_service = workspace_service
         self._targets = list(targets) if targets is not None else None
+        self._canvas_render_cache.clear()
         compositions = workspace_service.list_compositions()
         self.tree_model.set_compositions(compositions, targets=targets)
         self.tree_view.expandAll()
@@ -707,7 +710,7 @@ class ReviewEditMode(QWidget):
 
     def _start_canvas_render(self, request: PreviewRenderRequest, token: object) -> None:
         thread = QThread(self)
-        worker = RenderWorker(request)
+        worker = RenderWorker(request, render=self._render_canvas_map)
         worker.moveToThread(thread)
         thread.started.connect(worker.run)
         worker.finished.connect(self._handle_canvas_render_result)
@@ -721,6 +724,13 @@ class ReviewEditMode(QWidget):
         self._render_workers[request.job_id] = worker
         self._render_tokens[request.job_id] = token
         thread.start()
+
+    def _render_canvas_map(self, spec, *, is_cancelled=None):  # noqa: ANN001
+        return render_map_with_cache(
+            spec,
+            render_cache=self._canvas_render_cache,
+            is_cancelled=is_cancelled,
+        )
 
     def _request_target_preview(self, composition: Composition) -> None:
         """Build a full-coverage target preview and render it in a background thread."""

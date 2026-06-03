@@ -171,6 +171,211 @@ class TestRenderMap:
         assert rendered_spec.geo_window.min_lat <= spec.geo_window.min_lat
         assert rendered_spec.geo_window.max_lat >= spec.geo_window.max_lat
 
+    def test_cached_render_reuses_raster_base_when_only_grid_changes(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        calls: list[tuple[int, int]] = []
+
+        def fake_render_raster_layers_to_size(
+            render_spec: RenderSpec,
+            *,
+            output_width: int,
+            output_height: int,
+            dataset_opener,
+            is_cancelled,
+        ) -> RasterRenderResult:
+            calls.append((output_width, output_height))
+            canvas = np.empty((output_height, output_width, 3), dtype=np.uint8)
+            canvas[:, :] = (80, 90, 100)
+            return RasterRenderResult(canvas=canvas, painted_layer_ids=("fake",))
+
+        monkeypatch.setattr(
+            render_core,
+            "render_raster_layers_to_size",
+            fake_render_raster_layers_to_size,
+        )
+        cache = render_core.RasterBaseCache()
+        spec = _spec(layers=[], interval=GridInterval(minutes=30))
+
+        first = render_core.render_map_with_cache(spec, raster_cache=cache)
+        second = render_core.render_map_with_cache(
+            spec.model_copy(
+                update={
+                    "grid": GridConfig(
+                        interval=GridInterval(minutes=15),
+                        label_format="dms_full",
+                    )
+                }
+            ),
+            raster_cache=cache,
+        )
+
+        assert len(calls) == 1
+        assert cache.entry_count == 1
+        assert first.canvas.shape == second.canvas.shape
+
+    def test_cached_render_invalidates_raster_base_when_geo_window_changes(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        calls: list[GeoWindow] = []
+
+        def fake_render_raster_layers_to_size(
+            render_spec: RenderSpec,
+            *,
+            output_width: int,
+            output_height: int,
+            dataset_opener,
+            is_cancelled,
+        ) -> RasterRenderResult:
+            calls.append(render_spec.geo_window)
+            canvas = np.empty((output_height, output_width, 3), dtype=np.uint8)
+            canvas[:, :] = (80, 90, 100)
+            return RasterRenderResult(canvas=canvas, painted_layer_ids=("fake",))
+
+        monkeypatch.setattr(
+            render_core,
+            "render_raster_layers_to_size",
+            fake_render_raster_layers_to_size,
+        )
+        cache = render_core.RasterBaseCache()
+        spec = _spec(layers=[], interval=GridInterval(minutes=30))
+
+        render_core.render_map_with_cache(spec, raster_cache=cache)
+        render_core.render_map_with_cache(
+            spec.model_copy(
+                update={
+                    "geo_window": GeoWindow(
+                        min_lon=106.1,
+                        min_lat=10.0,
+                        max_lon=107.1,
+                        max_lat=11.0,
+                    )
+                }
+            ),
+            raster_cache=cache,
+        )
+
+        assert len(calls) == 2
+        assert cache.entry_count == 2
+
+    def test_cached_render_reuses_frame_overlay_when_only_layers_change(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        raster_calls = 0
+        frame_calls = 0
+
+        def fake_render_raster_layers_to_size(
+            render_spec: RenderSpec,
+            *,
+            output_width: int,
+            output_height: int,
+            dataset_opener,
+            is_cancelled,
+        ) -> RasterRenderResult:
+            nonlocal raster_calls
+            raster_calls += 1
+            canvas = np.empty((output_height, output_width, 3), dtype=np.uint8)
+            canvas[:, :] = (40 + raster_calls, 50, 60)
+            return RasterRenderResult(canvas=canvas, painted_layer_ids=("fake",))
+
+        original_draw = render_core.draw_map_surround_frame
+
+        def counting_draw_map_surround_frame(*args, **kwargs):
+            nonlocal frame_calls
+            frame_calls += 1
+            return original_draw(*args, **kwargs)
+
+        monkeypatch.setattr(
+            render_core,
+            "render_raster_layers_to_size",
+            fake_render_raster_layers_to_size,
+        )
+        monkeypatch.setattr(
+            render_core,
+            "draw_map_surround_frame",
+            counting_draw_map_surround_frame,
+        )
+        cache = render_core.MapRenderCache()
+        spec = _spec(
+            layers=[RenderLayerRef(layer_id="A", source_path="a.tif", cache_path=None, order=0)]
+        )
+        changed_layers = spec.model_copy(
+            update={
+                "visible_layers": [
+                    RenderLayerRef(
+                        layer_id="B",
+                        source_path="b.tif",
+                        cache_path=None,
+                        order=0,
+                    )
+                ]
+            }
+        )
+
+        render_core.render_map_with_cache(spec, render_cache=cache)
+        render_core.render_map_with_cache(changed_layers, render_cache=cache)
+
+        assert raster_calls == 2
+        assert frame_calls == 1
+        assert cache.frame_overlays.entry_count == 1
+
+    def test_cached_render_reuses_full_map_when_spec_is_identical(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        raster_calls = 0
+        frame_calls = 0
+
+        def fake_render_raster_layers_to_size(
+            render_spec: RenderSpec,
+            *,
+            output_width: int,
+            output_height: int,
+            dataset_opener,
+            is_cancelled,
+        ) -> RasterRenderResult:
+            nonlocal raster_calls
+            raster_calls += 1
+            canvas = np.empty((output_height, output_width, 3), dtype=np.uint8)
+            canvas[:, :] = (80, 90, 100)
+            return RasterRenderResult(canvas=canvas, painted_layer_ids=("fake",))
+
+        original_draw = render_core.draw_map_surround_frame
+
+        def counting_draw_map_surround_frame(*args, **kwargs):
+            nonlocal frame_calls
+            frame_calls += 1
+            return original_draw(*args, **kwargs)
+
+        monkeypatch.setattr(
+            render_core,
+            "render_raster_layers_to_size",
+            fake_render_raster_layers_to_size,
+        )
+        monkeypatch.setattr(
+            render_core,
+            "draw_map_surround_frame",
+            counting_draw_map_surround_frame,
+        )
+        cache = render_core.MapRenderCache()
+        spec = _spec(layers=[], interval=GridInterval(minutes=30))
+
+        first = render_core.render_map_with_cache(spec, render_cache=cache)
+        second = render_core.render_map_with_cache(spec, render_cache=cache)
+
+        assert raster_calls == 1
+        assert frame_calls == 1
+        assert cache.full_maps.entry_count == 1
+        assert np.array_equal(first.canvas, second.canvas)
+
+    def test_cached_render_matches_uncached_pixels(self) -> None:
+        spec = _spec(layers=[], bg_color="#112233", interval=GridInterval(degrees=1))
+        uncached = render_map(spec)
+        cached = render_core.render_map_with_cache(spec, render_cache=render_core.MapRenderCache())
+
+        assert np.array_equal(cached.canvas, uncached.canvas)
+        assert cached.issues == uncached.issues
+        assert cached.painted_layer_ids == uncached.painted_layer_ids
+
     def test_preserves_non_fatal_raster_issues(self) -> None:
         good = _make_memfile(bounds=(106.0, 10.0, 107.0, 11.0), rgb=(40, 50, 60))
         layers = [

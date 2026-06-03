@@ -7,42 +7,8 @@
   },
   "capture_date": "2026-05-26",
   "composition_id": "DaLinhCon__20260526",
-  "grid_override": {
-    "interval": {
-      "degrees": 0,
-      "minutes": 1,
-      "seconds": 0.0
-    },
-    "label_format": "dms_full",
-    "style": {
-      "default_label_font": "fonts/arial-bold/Arial Bold/Arial Bold.ttf",
-      "epsilon": 1e-10,
-      "frame_color": "#000000",
-      "label_color": "#000000",
-      "label_font_size": 24,
-      "max_frame_ticks_per_axis": 2000,
-      "reference_frame_gap": 42,
-      "reference_height": 2340,
-      "reference_label_font_size": 72,
-      "reference_outer_frame": [
-        244,
-        144,
-        3272,
-        2286
-      ],
-      "reference_width": 3306,
-      "supported_label_formats": [
-        "dms_full",
-        "dms_short"
-      ],
-      "surround_inner_stroke_width": 4,
-      "surround_outer_stroke_width": 6,
-      "surround_tick_length": 14,
-      "surround_tick_stroke_width": 4,
-      "tick_length_px": 8
-    }
-  },
-  "include": true,
+  "grid_override": null,
+  "include": false,
   "layers": [
     {
       "cache_path": "cache/DaLinhCon/20260526/PSScene_20260526_033522_72_252e_cloud_0__d15aee90ae47.tif",
@@ -83,9 +49,9 @@
   ],
   "needs_revalidation": false,
   "notes": "",
-  "ready": true,
-  "review_order": 1,
-  "reviewed": true,
+  "ready": false,
+  "review_order": null,
+  "reviewed": false,
   "target_id": "DaLinhCon",
   "validation_summary": {
     "error_count": 0,
@@ -95,8 +61,8 @@
   },
   "view": {
     "center": [
-      112.72979617,
-      16.66795289
+      112.72936459007214,
+      16.667485341128206
     ],
     "rotation": 0,
     "scale": 10000
