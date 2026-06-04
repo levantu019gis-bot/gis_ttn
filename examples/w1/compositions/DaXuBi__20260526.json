@@ -23,11 +23,11 @@
       "visible": true
     }
   ],
-  "needs_revalidation": true,
+  "needs_revalidation": false,
   "notes": "",
   "ready": false,
   "review_order": null,
-  "reviewed": false,
+  "reviewed": true,
   "target_id": "DaXuBi",
   "validation_summary": {
     "error_count": 0,

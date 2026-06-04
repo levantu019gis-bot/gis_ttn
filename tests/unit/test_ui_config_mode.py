@@ -85,6 +85,15 @@ def test_config_mode_widget_smoke_runs_in_isolated_qt_process(tmp_path: Path) ->
     source_font = tmp_path / "incoming" / "custom-label.ttf"
     source_font.parent.mkdir()
     source_font.write_bytes(b"font")
+    geojson_path = tmp_path / "incoming" / "target.geojson"
+    write_json(
+        geojson_path,
+        {
+            "type": "Feature",
+            "properties": {"name": "Imported"},
+            "geometry": {"type": "Point", "coordinates": [112.0, 9.0]},
+        },
+    )
     copied_template_path = tmp_path / "data" / "templates" / "target_a.pptx"
     copied_font_path = tmp_path / "fonts" / "custom-label.ttf"
     write_json(config_path, {"defaults": config_defaults(), "targets": [target_config()]})
@@ -106,6 +115,9 @@ assert mode.template_browse_button.text() == "Browse"
 assert mode.target_fields["export.template_pptx_file"].isReadOnly()
 assert mode.target_fields["export.template_pptx_file"].text() == "data/templates/target_a.pptx"
 assert Path(r"{copied_template_path}").is_file()
+assert mode.geometry_text.isReadOnly()
+assert '"target_id": "target_a"' in mode.geometry_text.toPlainText()
+assert '"coordinates": [' in mode.geometry_text.toPlainText()
 assert mode.defaults_fields["grid.label_format"].text() == "dms_short"
 assert mode.defaults_fields["grid.style.supported_label_formats"].text() == "dms_full, dms_short"
 assert mode.defaults_fields["grid.style.reference_width"].text() == "3306"
@@ -171,6 +183,26 @@ assert all(
 mode.group_list.setCurrentRow(1)
 mode.add_target_button.click()
 assert len(mode._service.targets_for_group("1.1")) == 2
+mode.target_fields["id"].setText("new_geojson_target")
+mode.target_fields["name"].setText("New GeoJSON Target")
+mode.target_fields["alias"].setText("NGT")
+mode.target_fields["group.key"].setText("2.1")
+mode.target_fields["group.title"].setText("Có người Hoàng Sa")
+QFileDialog.getOpenFileName = staticmethod(lambda *args, **kwargs: (r"{geojson_path}", ""))
+mode.import_geojson_button.click()
+imported_target = mode._service.target("new_geojson_target")
+assert imported_target is not None
+assert imported_target["name"] == "New GeoJSON Target"
+assert imported_target["alias"] == "NGT"
+assert imported_target["group"] == {{"key": "2.1", "title": "Có người Hoàng Sa"}}
+assert imported_target["metadata"]["geojson_geometry"] == {{
+    "type": "Point",
+    "coordinates": [112.0, 9.0],
+}}
+assert mode._selected_target_id == "new_geojson_target"
+assert mode.target_fields["id"].text() == "new_geojson_target"
+assert '"target_id": "new_geojson_target"' in mode.geometry_text.toPlainText()
+assert "112.0" in mode.geometry_text.toPlainText()
 mode.close()
 print("config-mode-ok")
 """

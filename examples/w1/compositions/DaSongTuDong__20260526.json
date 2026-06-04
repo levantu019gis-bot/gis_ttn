@@ -1,14 +1,49 @@
 {
   "artifacts": {
     "export_log_path": null,
-    "final_render_path": null,
+    "final_render_path": "renders/DaSongTuDong__20260526.7982075f5781.jpg",
     "preview_render_path": null,
-    "render_log_path": null
+    "render_log_path": "renders/DaSongTuDong__20260526.render-log.json"
   },
   "capture_date": "2026-05-26",
   "composition_id": "DaSongTuDong__20260526",
-  "grid_override": null,
-  "include": false,
+  "grid_override": {
+    "interval": {
+      "degrees": 0,
+      "minutes": 0,
+      "seconds": 20.0
+    },
+    "label_format": "dms_full",
+    "style": {
+      "default_label_font": "fonts/arial-bold/Arial Bold/Arial Bold.ttf",
+      "epsilon": 1e-10,
+      "frame_color": "#000000",
+      "label_color": "#000000",
+      "label_font_size": 24,
+      "max_frame_ticks": "",
+      "max_frame_ticks_per_axis": 2000,
+      "reference_frame_gap": 42,
+      "reference_height": 2340,
+      "reference_label_font_size": 72,
+      "reference_outer_frame": [
+        244,
+        144,
+        3272,
+        2286
+      ],
+      "reference_width": 3306,
+      "supported_label_formats": [
+        "dms_full",
+        "dms_short"
+      ],
+      "surround_inner_stroke_width": 4,
+      "surround_outer_stroke_width": 6,
+      "surround_tick_length": 14,
+      "surround_tick_stroke_width": 4,
+      "tick_length_px": 8
+    }
+  },
+  "include": true,
   "layers": [
     {
       "cache_path": "cache/DaSongTuDong/20260526/PSScene_20260526_025638_39_2553_cloud_13.0__9e289a85e91f.tif",
@@ -35,11 +70,11 @@
       "visible": true
     }
   ],
-  "needs_revalidation": true,
+  "needs_revalidation": false,
   "notes": "",
-  "ready": false,
-  "review_order": null,
-  "reviewed": false,
+  "ready": true,
+  "review_order": 1,
+  "reviewed": true,
   "target_id": "DaSongTuDong",
   "validation_summary": {
     "error_count": 0,
@@ -49,10 +84,10 @@
   },
   "view": {
     "center": [
-      114.35580420456317,
-      11.454530998551093
+      114.35446998,
+      11.45293783
     ],
     "rotation": 0,
-    "scale": 50000
+    "scale": 3000
   }
 }

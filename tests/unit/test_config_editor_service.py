@@ -69,6 +69,29 @@ def test_config_editor_create_save_and_backup(tmp_path: Path) -> None:
 
     assert state.dirty is True
     assert state.summary.target_count == 0
+    assert state.draft["defaults"]["grid"]["style"]["reference_width"] == 3306
+    assert state.draft["defaults"]["grid"]["style"]["reference_outer_frame"] == [
+        244,
+        144,
+        3272,
+        2286,
+    ]
+    assert (
+        state.draft["defaults"]["grid"]["style"]["default_label_font"]
+        == "fonts/arial-bold/Arial Bold/Arial Bold.ttf"
+    )
+    assert state.draft["defaults"]["export"]["date_format"] == "dd.MM.yy"
+    assert state.draft["defaults"]["export"]["time_format"] == "HH.mm/dd.MM.yy"
+    assert state.draft["filename_patterns"] == [
+        {
+            "name": "PlanetScope PSScene",
+            "pattern": "*_yyyyMMdd_HHmmss_*_*_cloud_cloud-percent",
+        },
+        {
+            "name": "PlanetScope simple",
+            "pattern": "yyyyMMdd_HHmmss_*",
+        },
+    ]
 
     service.add_target(group_key="2.2.4", group_title="Có người Trường Sa ĐL")
     service.update_target(
@@ -89,6 +112,22 @@ def test_config_editor_create_save_and_backup(tmp_path: Path) -> None:
     assert saved.dirty is False
     raw = json.loads((tmp_path / "config.json").read_text(encoding="utf-8"))
     assert raw["targets"][0]["id"] == "da_lac"
+
+
+def test_config_editor_new_config_defaults_are_isolated_between_drafts() -> None:
+    first = ConfigEditorService()
+    first.state.draft["defaults"]["grid"]["style"]["reference_outer_frame"][0] = 999
+    first.state.draft["filename_patterns"].append({"name": "custom", "pattern": "yyyyMMdd_*"})
+
+    second = ConfigEditorService()
+
+    assert second.state.draft["defaults"]["grid"]["style"]["reference_outer_frame"] == [
+        244,
+        144,
+        3272,
+        2286,
+    ]
+    assert len(second.state.draft["filename_patterns"]) == 2
 
 
 def test_config_editor_detects_duplicate_id_and_sort_order(tmp_path: Path) -> None:
@@ -155,6 +194,42 @@ def test_config_editor_reorders_old_and_new_groups_when_target_moves(
         ("delta", 1),
         ("beta", 2),
         ("epsilon", 3),
+    ]
+    assert "target.sort_order_duplicate" not in {
+        issue.issue_id for issue in service.state.issues
+    }
+
+
+def test_config_editor_delete_target_reorders_remaining_group(tmp_path: Path) -> None:
+    write_json(
+        tmp_path / "config.json",
+        {
+            "targets": [
+                target_config("alpha", 1),
+                target_config("beta", 2),
+                target_config("gamma", 3),
+                target_config(
+                    "delta",
+                    1,
+                    group_key="2.1",
+                    group_title="Có người Hoàng Sa",
+                ),
+            ]
+        },
+    )
+    service = ConfigEditorService()
+    service.load(tmp_path / "config.json")
+
+    service.delete_target("beta")
+
+    default_group = service.targets_for_group("1.1")
+    other_group = service.targets_for_group("2.1")
+    assert [(target["id"], target["sort_order"]) for target in default_group] == [
+        ("alpha", 1),
+        ("gamma", 2),
+    ]
+    assert [(target["id"], target["sort_order"]) for target in other_group] == [
+        ("delta", 1),
     ]
     assert "target.sort_order_duplicate" not in {
         issue.issue_id for issue in service.state.issues

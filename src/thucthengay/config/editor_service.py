@@ -235,10 +235,17 @@ class ConfigEditorService:
     def delete_target(self, target_id: str) -> None:
         """Remove one target from the draft."""
         targets = _ensure_targets(self._state.draft)
+        deleted_group_keys = {
+            _target_group(target)[0]
+            for target in targets
+            if target.get("id") == target_id
+        }
         before = len(targets)
         targets[:] = [target for target in targets if target.get("id") != target_id]
         if len(targets) == before:
             raise ConfigEditorError(f"Không tìm thấy target `{target_id}` để xóa.")
+        for group_key in deleted_group_keys:
+            _normalize_group_sort_orders(targets, group_key)
         self.validate()
 
     def update_target(self, target_id: str, updates: dict[str, Any]) -> str:
@@ -432,23 +439,54 @@ class ConfigEditorService:
 def _new_config_draft() -> dict[str, Any]:
     return {
         "schema_version": "1.0",
-        "defaults": {
-            "grid": {"label_format": "dms_full", "style": {}},
-            "export": {
-                "date_format": "yyyy-MM-dd",
-                "time_format": "HH:mm:ss",
-                "map_background_color": "#FFFFFF",
-            },
-        },
-        "filename_patterns": [
-            {
-                "name": "PlanetScope prefix",
-                "pattern": "yyyyMMdd_HHmmss_*",
-                "separator": "_",
-            }
-        ],
+        "defaults": copy.deepcopy(_DEFAULT_CONFIG_SEED),
+        "filename_patterns": copy.deepcopy(_DEFAULT_FILENAME_PATTERNS_SEED),
         "targets": [],
     }
+
+
+_DEFAULT_CONFIG_SEED: dict[str, Any] = {
+    "grid": {
+        "label_format": "dms_full",
+        "style": {
+            "supported_label_formats": ["dms_full", "dms_short"],
+            "epsilon": 1e-10,
+            "max_frame_ticks_per_axis": 2000,
+            "reference_width": 3306,
+            "reference_height": 2340,
+            "reference_outer_frame": [244, 144, 3272, 2286],
+            "reference_frame_gap": 42,
+            "surround_outer_stroke_width": 6,
+            "surround_inner_stroke_width": 4,
+            "surround_tick_length": 14,
+            "surround_tick_stroke_width": 4,
+            "reference_label_font_size": 72,
+            "default_label_font": "fonts/arial-bold/Arial Bold/Arial Bold.ttf",
+            "frame_color": "#000000",
+            "label_color": "#000000",
+            "label_font_size": 24,
+            "tick_length_px": 8,
+            "max_frame_ticks": "",
+        },
+    },
+    "export": {
+        "date_format": "dd.MM.yy",
+        "time_format": "HH.mm/dd.MM.yy",
+        "map_background_color": "#000000",
+    },
+}
+
+
+_DEFAULT_FILENAME_PATTERNS_SEED: list[dict[str, Any]] = [
+    {
+        "name": "PlanetScope PSScene",
+        "pattern": "*_yyyyMMdd_HHmmss_*_*_cloud_cloud-percent",
+    },
+    {
+        "name": "PlanetScope simple",
+        "pattern": "yyyyMMdd_HHmmss_*",
+    },
+]
 
 
 def _atomic_write_json(path: Path, data: dict[str, Any]) -> None:

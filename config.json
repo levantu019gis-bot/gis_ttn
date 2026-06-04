@@ -3807,7 +3807,7 @@
         "key": "2.2.1",
         "title": "Có người Trường Sa TQ"
       },
-      "sort_order": 1,
+      "sort_order": 2,
       "name": "Đá Xu Bi",
       "alias": "Đá Xu Bi",
       "coordinate": [
@@ -3894,7 +3894,7 @@
         "key": "2.2.1",
         "title": "Có người Trường Sa TQ"
       },
-      "sort_order": 2,
+      "sort_order": 3,
       "name": "Đá Ga Ven",
       "alias": "Đá Ga Ven",
       "coordinate": [
@@ -3978,7 +3978,7 @@
         "key": "2.2.1",
         "title": "Có người Trường Sa TQ"
       },
-      "sort_order": 3,
+      "sort_order": 4,
       "name": "Đá Đền Cây Cỏ",
       "alias": "Đá Đền Cây Cỏ",
       "coordinate": [
@@ -4066,7 +4066,7 @@
         "key": "2.2.1",
         "title": "Có người Trường Sa TQ"
       },
-      "sort_order": 4,
+      "sort_order": 5,
       "name": "Đá Vành Khăn",
       "alias": "Đá Vành Khăn",
       "coordinate": [
@@ -4149,7 +4149,7 @@
         "key": "2.2.1",
         "title": "Có người Trường Sa TQ"
       },
-      "sort_order": 5,
+      "sort_order": 6,
       "name": "Đá Châu Viên",
       "alias": "Đá Châu Viên",
       "coordinate": [
@@ -4229,7 +4229,7 @@
         "key": "2.2.1",
         "title": "Có người Trường Sa TQ"
       },
-      "sort_order": 6,
+      "sort_order": 7,
       "name": "Đá Huy Gơ",
       "alias": "Đá Huy Gơ",
       "coordinate": [
@@ -4305,7 +4305,7 @@
         "key": "2.2.1",
         "title": "Có người Trường Sa TQ"
       },
-      "sort_order": 7,
+      "sort_order": 8,
       "name": "Đá Gạc Ma",
       "alias": "Đá Gạc Ma",
       "coordinate": [
@@ -4388,12 +4388,10 @@
         114.35580420456317,
         11.454530998551093
       ],
-      "scale": 50000,
+      "scale": 3000,
       "grid": {
         "interval": {
-          "degrees": 0,
-          "minutes": 1,
-          "seconds": 0.0
+          "seconds": 20
         }
       },
       "export": {
@@ -5713,8 +5711,8 @@
       "id": "DaBaBinh",
       "enabled": true,
       "group": {
-        "key": 0,
-        "title": "Chưa phân nhóm"
+        "key": "2.2.4",
+        "title": "Có người Trường Sa ĐL"
       },
       "sort_order": 1,
       "name": "Đá Ba Bình",
@@ -5732,26 +5730,30 @@
         }
       },
       "export": {
-        "template_pptx_file": "examples/templates/target_001.template.pptx",
+        "template_pptx_file": "data/templates/target_001.template.pptx",
         "template_txt_value": "Tại đá Ba Bình (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "placeholders": [
           {
             "field": "map_image",
-            "element_id": "65"
+            "element_id": "65",
+            "kind": "map_image"
           },
           {
             "field": "title",
             "element_id": "66",
-            "value": "Hiện trạng đá Ba Bình, quần đảo Trường Sa ngày {capture_date}"
+            "value": "Hiện trạng đá Ba Bình, quần đảo Trường Sa ngày {capture_date}",
+            "kind": "text"
           },
           {
             "field": "time",
-            "element_id": "67"
+            "element_id": "67",
+            "kind": "text"
           },
           {
             "field": "comment",
             "element_id": "68",
-            "value": "Không ghi nhận hoạt động tôn tạo, xây dựng công trình."
+            "value": "Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
+            "kind": "text"
           }
         ]
       },
@@ -5801,10 +5803,10 @@
       "id": "DaChuThap",
       "enabled": true,
       "group": {
-        "key": 0,
-        "title": "Chưa phân nhóm"
+        "key": "2.2.1",
+        "title": "Có người Trường Sa TQ"
       },
-      "sort_order": 2,
+      "sort_order": 1,
       "name": "Đá Chữ Thập",
       "alias": "Đá Chữ Thập",
       "coordinate": [
@@ -5820,26 +5822,30 @@
         }
       },
       "export": {
-        "template_pptx_file": "examples/templates/target_001.template.pptx",
+        "template_pptx_file": "data/templates/target_001.template.pptx",
         "template_txt_value": "Tại đá Chữ Thập (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "placeholders": [
           {
             "field": "map_image",
-            "element_id": "65"
+            "element_id": "65",
+            "kind": "map_image"
           },
           {
             "field": "title",
             "element_id": "66",
-            "value": "Hiện trạng đá Chữ Thập, quần đảo Trường Sa ngày {capture_date}"
+            "value": "Hiện trạng đá Chữ Thập, quần đảo Trường Sa ngày {capture_date}",
+            "kind": "text"
           },
           {
             "field": "time",
-            "element_id": "67"
+            "element_id": "67",
+            "kind": "text"
           },
           {
             "field": "comment",
             "element_id": "68",
-            "value": "Không ghi nhận hoạt động tôn tạo, xây dựng công trình."
+            "value": "Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
+            "kind": "text"
           }
         ]
       },

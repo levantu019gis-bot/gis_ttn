@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import copy
+import json
 from enum import IntEnum
 from pathlib import Path
 from typing import Any
@@ -362,6 +363,11 @@ class ConfigMode(QWidget):
         self.delete_placeholder_button = QPushButton("Xóa field")
         self.import_geojson_button = QPushButton("Import GeoJSON")
         self.export_geojson_button = QPushButton("Export GeoJSON")
+        self.geometry_text = QTextEdit()
+        self.geometry_text.setObjectName("configGeometryText")
+        self.geometry_text.setReadOnly(True)
+        self.geometry_text.setMinimumHeight(150)
+        self.geometry_text.setPlaceholderText("Target chưa có metadata.geojson_geometry.")
 
         self.issue_model = IssueTableModel(self)
         self.issue_table = QTableView()
@@ -685,9 +691,14 @@ class ConfigMode(QWidget):
 
     def _build_geometry_section(self) -> QGroupBox:
         box = QGroupBox("Geometry")
-        layout = QHBoxLayout(box)
-        layout.addWidget(self.import_geojson_button)
-        layout.addWidget(self.export_geojson_button)
+        layout = QVBoxLayout(box)
+        actions = QHBoxLayout()
+        actions.addWidget(self.import_geojson_button)
+        actions.addWidget(self.export_geojson_button)
+        actions.addStretch(1)
+        layout.addLayout(actions)
+        layout.addWidget(QLabel("GeoJSON hiện tại"))
+        layout.addWidget(self.geometry_text)
         return box
 
     def _build_issues_panel(self) -> QGroupBox:
@@ -830,6 +841,7 @@ class ConfigMode(QWidget):
                 self.delete_placeholder_button,
                 self.import_geojson_button,
                 self.export_geojson_button,
+                self.geometry_text,
             ):
                 widget.setEnabled(has_target)
             self.enabled_check.setEnabled(has_target)
@@ -842,6 +854,7 @@ class ConfigMode(QWidget):
                 for field in self.target_fields.values():
                     field.setText("")
                 self.placeholder_table.setRowCount(0)
+                self.geometry_text.setPlainText("")
                 return
             target_id = str(target.get("id", ""))
             self.inspector_title.setText(f"{target.get('name', target_id)} · {target_id}")
@@ -852,6 +865,7 @@ class ConfigMode(QWidget):
             for key, field in self.target_fields.items():
                 field.setText(values.get(key, ""))
             self._populate_placeholders(target)
+            self._populate_geometry(target)
         finally:
             self._loading_form = False
 
@@ -872,6 +886,9 @@ class ConfigMode(QWidget):
                 QTableWidgetItem(str(placeholder.get("value", ""))),
             )
         self.placeholder_table.resizeColumnsToContents()
+
+    def _populate_geometry(self, target: dict[str, Any]) -> None:
+        self.geometry_text.setPlainText(_geojson_text_for_target(target))
 
     def _add_placeholder_field(self) -> None:
         if self._selected_target_id is None:
@@ -1057,11 +1074,14 @@ class ConfigMode(QWidget):
         self._refresh_all()
 
     def _apply_target(self) -> None:
+        self._persist_target_form(refresh=True)
+
+    def _persist_target_form(self, *, refresh: bool) -> bool:
         if self._loading_form or self._selected_target_id is None:
-            return
+            return False
         target = self._current_target()
         if target is None:
-            return
+            return False
         updates = _collect_target_updates(
             self.enabled_check,
             self.target_fields,
@@ -1073,10 +1093,22 @@ class ConfigMode(QWidget):
                 self._selected_target_id,
                 updates,
             )
-        except ConfigEditorError as error:
+        except (ConfigEditorError, ValueError) as error:
             self._show_error("Không cập nhật được target", str(error))
+            return False
+        if refresh:
+            self._sync_group_to_selected_target()
+            self._refresh_all()
+        return True
+
+    def _sync_group_to_selected_target(self) -> None:
+        if self._selected_target_id is None:
             return
-        self._refresh_all()
+        target = self._service.target(self._selected_target_id)
+        if target is None:
+            return
+        group_key, _group_title = _target_group(target)
+        self._selected_group_key = None if group_key in {"", "0"} else group_key
 
     def _browse_template_pptx(self) -> None:
         if self._selected_target_id is None:
@@ -1216,11 +1248,14 @@ class ConfigMode(QWidget):
         )
         if not path:
             return
+        if not self._persist_target_form(refresh=False):
+            return
         try:
             self._service.import_geojson(self._selected_target_id, path)
         except ConfigEditorError as error:
             self._show_error("Không import được GeoJSON", str(error))
             return
+        self._sync_group_to_selected_target()
         self._refresh_all()
 
     def _export_geojson(self) -> None:
@@ -1475,6 +1510,22 @@ def _target_group(target: dict[str, Any]) -> tuple[str, str]:
 def _target_has_geometry(target: dict[str, Any]) -> bool:
     metadata = target.get("metadata")
     return isinstance(metadata, dict) and isinstance(metadata.get("geojson_geometry"), dict)
+
+
+def _geojson_text_for_target(target: dict[str, Any]) -> str:
+    metadata = target.get("metadata")
+    geometry = metadata.get("geojson_geometry") if isinstance(metadata, dict) else None
+    if not isinstance(geometry, dict):
+        return ""
+    feature = {
+        "type": "Feature",
+        "properties": {
+            "target_id": target.get("id", ""),
+            "name": target.get("name", ""),
+        },
+        "geometry": geometry,
+    }
+    return json.dumps(feature, ensure_ascii=False, indent=2)
 
 
 def _group_title_for_key(service: ConfigEditorService, group_key: str) -> str:
