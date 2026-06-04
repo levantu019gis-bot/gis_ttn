@@ -226,6 +226,25 @@
         "PSScene_20260526_030628_02_2575_cloud_0__23f3a44867f1"
       ],
       "width": 3306
+    },
+    {
+      "composition_id": "DaBac__20260526",
+      "failure_reason": null,
+      "height": 2340,
+      "issues": [],
+      "output_path": "renders/DaBac__20260526.05d033c282a8.jpg",
+      "render_spec_hash": "05d033c282a8ef28b875f36dc4340e8fafc62040263c61f344fba106217ac322",
+      "status": "success",
+      "target_id": "DaBac",
+      "timestamp": "2026-06-04T03:35:22.664695Z",
+      "visible_layer_refs": [
+        "PSScene_20260526_030843_51_2560_cloud_0__4ae803da1a09",
+        "PSScene_20260526_030841_15_2560_cloud_0__80978c717ccc",
+        "PSScene_20260526_030632_75_2575_cloud_0__62b0d44f766e",
+        "PSScene_20260526_030630_39_2575_cloud_0__2a5e6b085c0e",
+        "PSScene_20260526_030628_02_2575_cloud_0__23f3a44867f1"
+      ],
+      "width": 3306
     }
   ]
 }

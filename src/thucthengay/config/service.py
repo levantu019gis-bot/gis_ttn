@@ -13,7 +13,7 @@ from typing import Any
 from pydantic import ValidationError
 
 from thucthengay.config.loader import load_json_file
-from thucthengay.config.path_resolver import resolve_relative_to_file
+from thucthengay.config.path_resolver import resolve_config_asset_path
 from thucthengay.export import (
     LoadedTemplate,
     TemplateLoadError,
@@ -126,6 +126,7 @@ def load_project_config(config_path: str | Path) -> ConfigLoadResult:
     )
 
     for target in result.enabled_targets:
+        _resolve_runtime_target_assets(config_file, target)
         _validate_target_references(config_file, target, result)
 
     result.issues.extend(template_compatibility_issues(result.loaded_templates.values()))
@@ -249,11 +250,11 @@ def _validate_target_references(
     result: ConfigLoadResult,
 ) -> None:
     geojson_file = (
-        resolve_relative_to_file(config_file, target.geojson_file)
+        resolve_config_asset_path(config_file, target.geojson_file)
         if target.geojson_file is not None
         else None
     )
-    template_pptx_file = resolve_relative_to_file(
+    template_pptx_file = resolve_config_asset_path(
         config_file,
         target.export.template_pptx_file,
     )
@@ -294,6 +295,15 @@ def _validate_target_references(
     result.loaded_templates[target.id] = loaded_template
     target.metadata["template_metadata"] = loaded_template.metadata.model_dump(mode="json")
     result.target_paths[target.id] = target_paths
+
+
+def _resolve_runtime_target_assets(config_file: Path, target: TargetConfig) -> None:
+    font_value = target.grid.style.get("default_label_font")
+    if not isinstance(font_value, str) or not font_value.strip():
+        return
+    resolved_font = resolve_config_asset_path(config_file, font_value)
+    if resolved_font.is_file():
+        target.grid.style["default_label_font"] = str(resolved_font)
 
 
 def _config_issue(issue_id: str, message: str, remediation: str) -> Issue:

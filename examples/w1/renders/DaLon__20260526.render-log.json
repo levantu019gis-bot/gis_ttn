@@ -37,6 +37,25 @@
         "PSScene_20260526_030635_21_2562_cloud_0__22e120b5fa56"
       ],
       "width": 3306
+    },
+    {
+      "composition_id": "DaLon__20260526",
+      "failure_reason": null,
+      "height": 2340,
+      "issues": [],
+      "output_path": "renders/DaLon__20260526.239e16af0bec.jpg",
+      "render_spec_hash": "239e16af0bec29095f79a2e46cf8e480821f5f58c60f5df8d8ab2f3a4500b96f",
+      "status": "success",
+      "target_id": "DaLon",
+      "timestamp": "2026-06-04T03:35:26.486872Z",
+      "visible_layer_refs": [
+        "PSScene_20260526_030644_56_2575_cloud_26.0__9ca09a000efc",
+        "PSScene_20260526_030642_20_2575_cloud_8.0__e61078c7967c",
+        "PSScene_20260526_030639_92_2562_cloud_10.0__d2abeebfc0cd",
+        "PSScene_20260526_030637_57_2562_cloud_3.0__2538d212140f",
+        "PSScene_20260526_030635_21_2562_cloud_0__22e120b5fa56"
+      ],
+      "width": 3306
     }
   ]
 }

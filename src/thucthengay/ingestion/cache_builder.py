@@ -10,6 +10,7 @@ from pathlib import Path
 
 from thucthengay.ingestion.intersection import TargetMatchingResult
 from thucthengay.models import ImageLayer, Issue, IssueScope, IssueSeverity
+from thucthengay.utils.path_safety import safe_filename_component
 from thucthengay.workspace import WorkspaceService
 
 UNKNOWN_DATE_KEY = "unknown_date"
@@ -99,8 +100,10 @@ def _cache_path_for_source(
     source_path: Path,
 ) -> Path:
     source_hash = sha1(str(source_path).encode("utf-8"), usedforsecurity=False).hexdigest()[:12]
-    filename = f"{source_path.stem}__{source_hash}{source_path.suffix.lower()}"
-    return workspace_service.paths.cache / target_id / date_key / filename
+    target_dir = safe_filename_component(target_id, fallback="target")
+    source_stem = safe_filename_component(source_path.stem, fallback="image")
+    filename = f"{source_stem}__{source_hash}{source_path.suffix.lower()}"
+    return workspace_service.paths.cache / target_dir / date_key / filename
 
 
 def _copy_source_to_cache(source_path: Path, cache_path: Path) -> None:

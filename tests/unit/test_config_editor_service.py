@@ -299,6 +299,24 @@ def test_config_editor_import_template_copies_to_project_data_templates(
     assert target["export"]["template_pptx_file"] == relative_path
 
 
+def test_config_editor_import_template_from_data_config_stays_under_data_templates(
+    tmp_path: Path,
+) -> None:
+    data_dir = tmp_path / "data"
+    write_json(data_dir / "config.json", {"targets": [target_config("target_a")]})
+    source_template = tmp_path / "incoming" / "custom.pptx"
+    source_template.parent.mkdir()
+    source_template.write_bytes(b"pptx")
+    service = ConfigEditorService()
+    service.load(data_dir / "config.json")
+
+    relative_path = service.import_template_pptx("target_a", source_template)
+
+    assert relative_path == "templates/custom.pptx"
+    assert (data_dir / relative_path).read_bytes() == b"pptx"
+    assert not (data_dir / "data" / "templates" / "custom.pptx").exists()
+
+
 def test_config_editor_import_default_label_font_copies_to_project_fonts(
     tmp_path: Path,
 ) -> None:
@@ -333,6 +351,27 @@ def test_config_editor_import_default_label_font_keeps_existing_fonts_path(
 
     assert relative_path == "fonts/arial-bold/Arial Bold.ttf"
     assert not (tmp_path / "fonts" / "Arial Bold.ttf").exists()
+
+
+def test_config_editor_import_default_label_font_from_data_config_uses_project_fonts(
+    tmp_path: Path,
+) -> None:
+    data_dir = tmp_path / "data"
+    write_json(data_dir / "config.json", {"targets": [target_config("target_a")]})
+    source_font = tmp_path / "incoming" / "custom-label.ttf"
+    source_font.parent.mkdir()
+    source_font.write_bytes(b"font")
+    service = ConfigEditorService()
+    service.load(data_dir / "config.json")
+
+    relative_path = service.import_default_label_font(source_font)
+
+    assert relative_path == "../fonts/custom-label.ttf"
+    assert (tmp_path / "fonts" / "custom-label.ttf").read_bytes() == b"font"
+    assert (
+        service.state.draft["defaults"]["grid"]["style"]["default_label_font"]
+        == relative_path
+    )
 
 
 def test_config_editor_update_defaults_keeps_target_grid_overrides(tmp_path: Path) -> None:

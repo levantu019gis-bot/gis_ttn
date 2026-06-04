@@ -7,6 +7,7 @@ from typing import Any
 from pydantic import AliasChoices, BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from thucthengay.models.template import TemplatePlaceholder
+from thucthengay.utils.path_safety import validate_windows_safe_filename_component
 
 
 class GridInterval(BaseModel):
@@ -62,18 +63,17 @@ class FilenamePatternConfig(BaseModel):
     pattern: str
     separator: str = "_"
 
-    @field_validator("pattern")
-    @classmethod
-    def pattern_must_have_extractable_token(cls, value: str) -> str:
+    @model_validator(mode="after")
+    def pattern_must_have_extractable_token(self) -> FilenamePatternConfig:
         extractable = {"yyyyMMdd", "HHmmss", "cloud-percent"}
-        tokens = value.split("_")
+        tokens = self.pattern.split(self.separator)
         if not any(token in extractable for token in tokens):
             msg = (
                 "pattern must contain at least one extractable token"
                 " (yyyyMMdd, HHmmss, cloud-percent)"
             )
             raise ValueError(msg)
-        return value
+        return self
 
 
 class TargetExportConfig(BaseModel):
@@ -204,6 +204,11 @@ class TargetConfig(BaseModel):
             msg = "latitude must be between -90 and 90"
             raise ValueError(msg)
         return value
+
+    @field_validator("id")
+    @classmethod
+    def id_must_be_portable_filename_component(cls, value: str) -> str:
+        return validate_windows_safe_filename_component(value, field_name="target id")
 
 
 def target_group_order_key(target: TargetConfig) -> tuple[int, tuple[int, ...], str]:

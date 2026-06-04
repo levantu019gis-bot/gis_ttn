@@ -10,7 +10,7 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 from PySide6.QtWidgets import QApplication
 
 from thucthengay.config import ConfigLoadResult
-from thucthengay.editor.app_shell import AppShell
+from thucthengay.editor.app_shell import AppShell, _manifest_config_path
 from thucthengay.editor.modes.setup_mode import SetupMode
 from thucthengay.editor.preferences import PreferencesService, RecentProjectEntry
 from thucthengay.editor.widgets.path_picker import (
@@ -519,3 +519,14 @@ def test_app_shell_opens_existing_workspace_from_manifest(
     assert shell.preferences_service.preferences.recent_projects[0].config_path == str(
         config_file.resolve()
     )
+
+
+def test_manifest_config_path_falls_back_when_absolute_path_was_moved(tmp_path: Path) -> None:
+    project_config = tmp_path / "config.json"
+    project_config.write_text("{}", encoding="utf-8")
+    workspace = tmp_path / "examples" / "w1"
+    workspace.mkdir(parents=True)
+
+    resolved = _manifest_config_path(r"C:\old\project\config.json", workspace)
+
+    assert resolved == project_config.resolve()

@@ -8,6 +8,7 @@ from pydantic import ValidationError
 from thucthengay.models import (
     Composition,
     ExportLog,
+    FilenamePatternConfig,
     FinalRenderLog,
     FinalRenderLogEntry,
     FinalRenderResult,
@@ -166,6 +167,26 @@ def test_non_positive_scale_fails_on_target_field() -> None:
         TargetConfig.model_validate(data)
 
     assert ("scale",) in {tuple(error["loc"]) for error in exc_info.value.errors()}
+
+
+def test_target_id_rejects_windows_unsafe_filename_characters() -> None:
+    data = valid_target_dict()
+    data["id"] = "alpha:beta"
+
+    with pytest.raises(ValidationError) as exc_info:
+        TargetConfig.model_validate(data)
+
+    assert ("id",) in {tuple(error["loc"]) for error in exc_info.value.errors()}
+
+
+def test_filename_pattern_validator_uses_configured_separator() -> None:
+    pattern = FilenamePatternConfig(
+        name="dash separated",
+        pattern="yyyyMMdd-HHmmss-*",
+        separator="-",
+    )
+
+    assert pattern.separator == "-"
 
 
 def test_zero_grid_interval_fails_on_interval_field() -> None:

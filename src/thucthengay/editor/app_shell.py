@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import sys
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 from uuid import uuid4
 
 from PySide6.QtCore import QThread
@@ -16,6 +16,7 @@ from thucthengay.editor.modes.review_edit_mode import ReviewEditMode
 from thucthengay.editor.modes.setup_mode import SetupMode, SetupPaths
 from thucthengay.editor.preferences import PreferencesService, RecentProjectEntry
 from thucthengay.jobs import IngestionJobResult, IngestionSummary, JobControl, JobState
+from thucthengay.utils.path_safety import is_absolute_path_text
 from thucthengay.workspace import WorkspaceError, WorkspaceService
 
 
@@ -256,12 +257,39 @@ def run_gui(argv: list[str] | None = None) -> int:
 
 def _manifest_config_path(config_path: str, workspace_root: Path) -> Path:
     path = Path(config_path).expanduser()
-    if path.is_absolute():
+    if is_absolute_path_text(config_path):
+        if path.exists():
+            return path
+        fallback = _fallback_manifest_config_path(config_path, workspace_root)
+        if fallback is not None:
+            return fallback
         return path
     workspace_relative = workspace_root / path
     if workspace_relative.exists():
         return workspace_relative
     return path.resolve()
+
+
+def _fallback_manifest_config_path(config_path: str, workspace_root: Path) -> Path | None:
+    config_name = (
+        PureWindowsPath(config_path).name
+        if "\\" in config_path
+        else Path(config_path).name
+    )
+    if not config_name:
+        return None
+    candidates = (
+        workspace_root / config_name,
+        workspace_root / "data" / config_name,
+        workspace_root.parent / config_name,
+        workspace_root.parent / "data" / config_name,
+        workspace_root.parent.parent / config_name,
+        workspace_root.parent.parent / "data" / config_name,
+    )
+    for candidate in candidates:
+        if candidate.exists():
+            return candidate.resolve()
+    return None
 
 
 def _config_issue_summary(config_result: ConfigLoadResult) -> str:

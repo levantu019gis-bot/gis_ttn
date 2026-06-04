@@ -107,6 +107,26 @@ def test_populate_workspace_cache_deduplicates_same_source_for_same_target_date(
     assert first.layers_by_target_date == second.layers_by_target_date
 
 
+def test_populate_workspace_cache_sanitizes_source_filename_for_windows(
+    tmp_path: Path,
+) -> None:
+    source = tmp_path / "imagery" / "scene:bad?.tif"
+    source.parent.mkdir()
+    source.write_bytes(b"raster")
+    workspace = WorkspaceService(tmp_path / "workspace")
+    workspace.initialize(config_path="config.json")
+
+    result = populate_workspace_cache(
+        matching_result("target_001", scanned_image(source)),
+        workspace,
+    )
+
+    cached_layer = result.layers_by_target_date[("target_001", "20260525")][0]
+    assert Path(cached_layer.cache_path).name.startswith("scene_bad_")
+    assert ":" not in cached_layer.cache_path
+    assert "?" not in cached_layer.cache_path
+
+
 def test_populate_workspace_cache_warns_and_excludes_missing_source(tmp_path: Path) -> None:
     missing_source = tmp_path / "imagery" / "missing.tif"
     workspace = WorkspaceService(tmp_path / "workspace")

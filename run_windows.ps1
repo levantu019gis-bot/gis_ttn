@@ -15,7 +15,7 @@ if (-not (Get-Command conda -ErrorAction SilentlyContinue)) {
 $env:PYTHONPATH = Join-Path $ProjectRoot "src"
 Set-Location $ProjectRoot
 
-$CondaPrefix = conda run -n $EnvName python -c "import os; print(os.environ['CONDA_PREFIX'])"
+$CondaPrefix = (conda run -n $EnvName python -c "import os; print(os.environ['CONDA_PREFIX'])").Trim()
 $env:PROJ_LIB = Join-Path $CondaPrefix "Library\share\proj"
 $env:PROJ_DATA = $env:PROJ_LIB
 

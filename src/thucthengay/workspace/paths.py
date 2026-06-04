@@ -5,6 +5,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
+from thucthengay.utils.path_safety import validate_windows_safe_filename_component
+
 APP_OWNED_DIRS = ("cache", "compositions", "renders", "exports")
 MANIFEST_FILENAME = "manifest.json"
 
@@ -40,7 +42,9 @@ class WorkspacePaths:
         return (self.cache, self.compositions, self.renders, self.exports)
 
     def composition_file(self, composition_id: str) -> Path:
-        if "/" in composition_id or "\\" in composition_id or composition_id in {"", ".", ".."}:
+        try:
+            validate_windows_safe_filename_component(composition_id, field_name="composition id")
+        except ValueError as error:
             msg = f"Invalid composition id for workspace path: {composition_id!r}"
-            raise ValueError(msg)
+            raise ValueError(msg) from error
         return self.compositions / f"{composition_id}.json"

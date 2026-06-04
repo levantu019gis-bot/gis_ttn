@@ -172,6 +172,41 @@ def test_load_project_config_filters_enabled_targets_and_resolves_paths(tmp_path
     )
 
 
+def test_load_project_config_resolves_data_config_assets_with_project_fallback(
+    tmp_path: Path,
+) -> None:
+    data_dir = tmp_path / "data"
+    data_dir.mkdir()
+    (tmp_path / "fonts" / "arial-bold").mkdir(parents=True)
+    font_path = tmp_path / "fonts" / "arial-bold" / "Arial Bold.ttf"
+    font_path.write_bytes(b"font")
+    element_id = write_template_pptx(data_dir / "templates" / "target_a.pptx")
+    target = target_config("target_a", 1, map_element_id=element_id)
+    target.pop("geojson_file")
+    target["metadata"] = {"geojson_geometry": {"type": "Point", "coordinates": [106.7, 10.8]}}
+    write_json(
+        data_dir / "config.json",
+        {
+            "defaults": {
+                "grid": {
+                    "style": {
+                        "default_label_font": "fonts/arial-bold/Arial Bold.ttf",
+                    }
+                }
+            },
+            "targets": [target],
+        },
+    )
+
+    result = load_project_config(data_dir / "config.json")
+
+    assert result.ok is True
+    assert result.target_paths["target_a"].template_pptx_file == (
+        data_dir / "templates" / "target_a.pptx"
+    ).resolve()
+    assert result.enabled_targets[0].grid.style["default_label_font"] == str(font_path.resolve())
+
+
 def test_load_project_config_sorts_enabled_targets_by_group_then_local_order(
     tmp_path: Path,
 ) -> None:

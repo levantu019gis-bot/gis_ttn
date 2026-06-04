@@ -23,6 +23,7 @@ from thucthengay.models import (
 )
 from thucthengay.render.final import FinalRenderFunction
 from thucthengay.render.raster import CancelCallback
+from thucthengay.utils.path_safety import safe_filename_component
 from thucthengay.workspace import WorkspaceService
 
 AUTO_RENDER_PREP_ISSUE_IDS = {
@@ -133,8 +134,10 @@ def _output_paths(
     workspace_service: WorkspaceService,
     output_stem: str,
 ) -> tuple[Path, Path, Path]:
-    safe_stem = output_stem.strip() or DEFAULT_EXPORT_STEM
-    safe_stem = Path(safe_stem).stem or DEFAULT_EXPORT_STEM
+    safe_stem = safe_filename_component(
+        Path(output_stem.strip()).stem,
+        fallback=DEFAULT_EXPORT_STEM,
+    )
     output_dir = workspace_service.paths.exports
     return (
         output_dir / f"{safe_stem}.pptx",

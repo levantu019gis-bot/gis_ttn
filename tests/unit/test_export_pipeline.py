@@ -53,6 +53,25 @@ def test_run_full_export_renders_final_images_and_writes_outputs(tmp_path: Path)
     assert result.preflight_plan.summary.error_count == 0
 
 
+def test_run_full_export_sanitizes_output_stem_for_windows(tmp_path: Path) -> None:
+    map_id = _write_template(tmp_path / "templates" / "alpha.pptx")
+    target = _target(tmp_path / "templates" / "alpha.pptx", map_id)
+    service = WorkspaceService(tmp_path / "workspace")
+    service.initialize(config_path="config.json")
+    service.write_composition(_composition())
+
+    result = run_full_export(
+        service,
+        [target],
+        output_stem='daily:report*bad',
+        render=_success_render,
+    )
+
+    assert result.ok is True
+    assert (service.paths.exports / "daily_report_bad.pptx").is_file()
+    assert (service.paths.exports / "daily_report_bad.txt").is_file()
+
+
 def _write_template(path: Path) -> int:
     path.parent.mkdir(parents=True, exist_ok=True)
     presentation = Presentation()

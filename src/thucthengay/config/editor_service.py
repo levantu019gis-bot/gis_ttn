@@ -17,7 +17,11 @@ from typing import Any
 from pydantic import ValidationError
 
 from thucthengay.config.loader import load_json_file
-from thucthengay.config.path_resolver import resolve_relative_to_file
+from thucthengay.config.path_resolver import (
+    project_root_for_config_file,
+    relative_to_file,
+    resolve_config_asset_path,
+)
 from thucthengay.export.txt_values import SUPPORTED_TEXT_FIELDS, SUPPORTED_TXT_FIELDS
 from thucthengay.ingestion.metadata_parser import parse_business_metadata
 from thucthengay.models import Issue, IssueScope, IssueSeverity, ProjectConfig, target_order_key
@@ -411,34 +415,39 @@ class ConfigEditorService:
         destination = templates_dir / source_path.name
         if source_path.resolve() != destination.resolve():
             shutil.copy2(source_path, destination)
-        return destination.relative_to(self._project_root()).as_posix()
+        return relative_to_file(self._source_path_or_raise(), destination)
 
     def _copy_font_to_project_fonts(self, source_path: Path) -> str:
         fonts_dir = self._project_fonts_dir()
         if _is_inside_project_dir(source_path, fonts_dir):
-            return source_path.resolve().relative_to(self._project_root()).as_posix()
+            return relative_to_file(self._source_path_or_raise(), source_path)
         fonts_dir.mkdir(parents=True, exist_ok=True)
         destination = fonts_dir / source_path.name
         if source_path.resolve() != destination.resolve():
             shutil.copy2(source_path, destination)
-        return destination.relative_to(self._project_root()).as_posix()
+        return relative_to_file(self._source_path_or_raise(), destination)
 
     def _resolve_project_path(self, value: str) -> Path:
         if self._state.source_path is None:
             path = Path(value).expanduser()
             return path.resolve()
-        return resolve_relative_to_file(self._state.source_path, value)
+        return resolve_config_asset_path(self._state.source_path, value)
 
     def _project_root(self) -> Path:
         if self._state.source_path is None:
             raise ConfigEditorError("Cần mở hoặc lưu config trước khi quản lý asset dự án.")
-        return self._state.source_path.parent
+        return project_root_for_config_file(self._state.source_path)
 
     def _project_templates_dir(self) -> Path:
         return self._project_root() / "data" / "templates"
 
     def _project_fonts_dir(self) -> Path:
         return self._project_root() / "fonts"
+
+    def _source_path_or_raise(self) -> Path:
+        if self._state.source_path is None:
+            raise ConfigEditorError("Cần mở hoặc lưu config trước khi quản lý asset dự án.")
+        return self._state.source_path
 
 
 def _new_config_draft() -> dict[str, Any]:
@@ -585,7 +594,7 @@ def _semantic_issues(raw_config: dict[str, Any], *, source_path: Path | None) ->
                 )
             )
         elif source_path is not None:
-            resolved = resolve_relative_to_file(source_path, str(template_path))
+            resolved = resolve_config_asset_path(source_path, str(template_path))
             if not resolved.is_file():
                 issues.append(
                     _target_issue(
@@ -632,6 +641,22 @@ def _semantic_issues(raw_config: dict[str, Any], *, source_path: Path | None) ->
                             )
                         )
 
+    font_value = _default_label_font_value(raw_config)
+    if source_path is not None and font_value:
+        resolved_font = resolve_config_asset_path(source_path, font_value)
+        if not resolved_font.is_file():
+            issues.append(
+                Issue(
+                    issue_id="config.default_label_font_missing",
+                    severity=IssueSeverity.WARNING,
+                    scope=IssueScope.CONFIG,
+                    message=f"Không tìm thấy font label mặc định: {resolved_font}",
+                    remediation=(
+                        "Chọn lại font trong Defaults hoặc đặt font theo đường dẫn tương đối "
+                        "từ file config."
+                    ),
+                )
+            )
     for target_id, count in seen_ids.items():
         if count > 1:
             issues.append(
@@ -701,6 +726,20 @@ def _raw_targets(raw_config: dict[str, Any]) -> list[dict[str, Any]]:
     if not isinstance(targets, list):
         return []
     return [target for target in targets if isinstance(target, dict)]
+
+
+def _default_label_font_value(raw_config: dict[str, Any]) -> str | None:
+    defaults = raw_config.get("defaults")
+    if not isinstance(defaults, dict):
+        return None
+    grid = defaults.get("grid")
+    if not isinstance(grid, dict):
+        return None
+    style = grid.get("style")
+    if not isinstance(style, dict):
+        return None
+    value = style.get("default_label_font")
+    return value if isinstance(value, str) and value.strip() else None
 
 
 def _ensure_targets(raw_config: dict[str, Any]) -> list[dict[str, Any]]:

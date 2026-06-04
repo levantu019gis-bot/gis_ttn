@@ -161,6 +161,14 @@ def test_composition_id_cannot_escape_workspace(tmp_path: Path) -> None:
         service.write_composition(valid_composition("../escape"))
 
 
+def test_composition_id_rejects_windows_invalid_filename_characters(tmp_path: Path) -> None:
+    service = WorkspaceService(tmp_path / "workspace")
+    service.initialize(config_path="config.json")
+
+    with pytest.raises(ValueError):
+        service.write_composition(valid_composition("target:001__20260525"))
+
+
 def test_update_review_state_persists_status_and_notes_after_reload(tmp_path: Path) -> None:
     service = WorkspaceService(tmp_path / "workspace")
     service.initialize(config_path="config.json")
