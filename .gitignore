@@ -10,6 +10,7 @@ dist/
 .pyright/
 workspace-output/
 exports/
+examples/
 *.log
 
 *.tif
