@@ -66,6 +66,8 @@ class TargetTableRole(IntEnum):
 class TargetTableModel(QAbstractTableModel):
     """Read-only target projection used by the Config tab."""
 
+    enabledToggled = Signal(str, bool)
+
     HEADERS = {
         TargetTableColumn.ENABLED: "Bật",
         TargetTableColumn.ORDER: "Order",
@@ -172,6 +174,32 @@ class TargetTableModel(QAbstractTableModel):
                 return f"{error_count} lỗi"
             return f"{len(issues)} cảnh báo"
         return None
+
+    def flags(self, index: QModelIndex) -> Qt.ItemFlag:  # noqa: N802
+        flags = super().flags(index)
+        if index.isValid() and index.column() == TargetTableColumn.ENABLED:
+            flags |= Qt.ItemFlag.ItemIsUserCheckable
+        return flags
+
+    def setData(  # noqa: N802
+        self,
+        index: QModelIndex,
+        value: object,
+        role: int = int(Qt.ItemDataRole.EditRole),
+    ) -> bool:
+        if (
+            not index.isValid()
+            or index.column() != TargetTableColumn.ENABLED
+            or role != int(Qt.ItemDataRole.CheckStateRole)
+        ):
+            return False
+        target = self.row_at(index.row())
+        if target is None:
+            return False
+        target_id = str(target.get("id", ""))
+        enabled = value == Qt.CheckState.Checked or value == Qt.CheckState.Checked.value
+        self.enabledToggled.emit(target_id, enabled)
+        return True
 
 
 class IssueTableColumn(IntEnum):
@@ -286,6 +314,8 @@ class ConfigMode(QWidget):
         self._selected_group_key: str | None = None
         self._selected_target_id: str | None = None
         self._loading_form = False
+        self._syncing_selection = False
+        self._inspector_snapshot: tuple[object, ...] | None = None
 
         self.new_button = QPushButton("Tạo mới")
         self.open_button = QPushButton("Mở config")
@@ -721,6 +751,7 @@ class ConfigMode(QWidget):
         self.group_list.currentItemChanged.connect(self._group_changed)
         self.add_group_button.clicked.connect(self._add_group)
         self.add_target_button.clicked.connect(self._add_target)
+        self.target_model.enabledToggled.connect(self._toggle_target_enabled)
         self.target_table.selectionModel().selectionChanged.connect(self._target_selection_changed)
         self.delete_target_button.clicked.connect(self._delete_target)
         self.reset_button.clicked.connect(self._populate_inspector)
@@ -793,19 +824,22 @@ class ConfigMode(QWidget):
         self.group_list.blockSignals(False)
 
     def _refresh_targets(self) -> None:
+        previous_target_id = self._selected_target_id
         rows = self._filtered_targets()
         self.target_model.set_rows(rows, self._service.state.issues)
         self.target_table.resizeColumnsToContents()
         if self._selected_target_id:
             row = self.target_model.row_for_target_id(self._selected_target_id)
             if row >= 0:
-                self.target_table.selectRow(row)
+                self._select_table_row(row)
                 return
         if rows:
             self._selected_target_id = str(rows[0].get("id", ""))
-            self.target_table.selectRow(0)
+            self._select_table_row(0)
         else:
             self._selected_target_id = None
+        if self._selected_target_id != previous_target_id:
+            self._populate_inspector()
 
     def _filtered_targets(self) -> list[dict[str, Any]]:
         rows = self._service.targets_for_group(self._selected_group_key)
@@ -855,17 +889,18 @@ class ConfigMode(QWidget):
                     field.setText("")
                 self.placeholder_table.setRowCount(0)
                 self.geometry_text.setPlainText("")
+                self._inspector_snapshot = None
                 return
             target_id = str(target.get("id", ""))
             self.inspector_title.setText(f"{target.get('name', target_id)} · {target_id}")
             self.enabled_check.setChecked(bool(target.get("enabled", True)))
-            self._ensure_template_local_for_inspector(target_id)
-            target = self._current_target() or target
             values = _target_form_values(target)
             for key, field in self.target_fields.items():
                 field.setText(values.get(key, ""))
             self._populate_placeholders(target)
             self._populate_geometry(target)
+            self._update_geometry_actions(target)
+            self._inspector_snapshot = self._current_inspector_snapshot()
         finally:
             self._loading_form = False
 
@@ -889,6 +924,11 @@ class ConfigMode(QWidget):
 
     def _populate_geometry(self, target: dict[str, Any]) -> None:
         self.geometry_text.setPlainText(_geojson_text_for_target(target))
+
+    def _update_geometry_actions(self, target: dict[str, Any] | None) -> None:
+        has_target = target is not None
+        self.import_geojson_button.setEnabled(has_target)
+        self.export_geojson_button.setEnabled(has_target and _target_has_geometry(target or {}))
 
     def _add_placeholder_field(self) -> None:
         if self._selected_target_id is None:
@@ -982,16 +1022,20 @@ class ConfigMode(QWidget):
         self.downstream_label.setText(f"Đã tạo backup: {path}")
 
     def _save_config(self) -> None:
+        if not self._flush_inspector_edits():
+            return
         try:
             state = self._service.save()
         except (ConfigEditorError, OSError) as error:
             self._show_error("Không lưu được config", str(error))
             return
-        self.configSaved.emit(state.source_path)
         self.downstream_label.setText(_downstream_refresh_message())
+        self.configSaved.emit(state.source_path)
         self._refresh_all()
 
     def _save_config_as(self) -> None:
+        if not self._flush_inspector_edits():
+            return
         path, _filter = QFileDialog.getSaveFileName(
             self,
             "Lưu config thành",
@@ -1005,15 +1049,21 @@ class ConfigMode(QWidget):
         except (ConfigEditorError, OSError) as error:
             self._show_error("Không lưu được config", str(error))
             return
-        self.configSaved.emit(state.source_path)
         self.downstream_label.setText(_downstream_refresh_message())
+        self.configSaved.emit(state.source_path)
         self._refresh_all()
 
     def _validate_config(self) -> None:
+        if not self._flush_inspector_edits():
+            return
         self._service.validate()
         self._refresh_all()
 
     def _group_changed(self, current: QListWidgetItem | None) -> None:
+        previous_group_key = self._selected_group_key
+        if not self._flush_inspector_edits():
+            self._restore_group_selection(previous_group_key)
+            return
         if current is None:
             self._selected_group_key = None
         else:
@@ -1038,12 +1088,20 @@ class ConfigMode(QWidget):
         self._refresh_all()
 
     def _target_selection_changed(self) -> None:
+        if self._syncing_selection:
+            return
         selected = self.target_table.selectionModel().selectedRows()
-        if not selected:
-            self._selected_target_id = None
-        else:
+        next_target_id = ""
+        if selected:
             target_id = selected[0].data(TargetTableRole.TARGET_ID)
-            self._selected_target_id = str(target_id) if target_id else None
+            next_target_id = str(target_id) if target_id else ""
+        if next_target_id == (self._selected_target_id or ""):
+            return
+        previous_target_id = self._selected_target_id
+        if not self._flush_inspector_edits():
+            self._restore_target_selection(previous_target_id)
+            return
+        self._selected_target_id = next_target_id or None
         self._populate_inspector()
 
     def _delete_target(self) -> None:
@@ -1073,6 +1131,38 @@ class ConfigMode(QWidget):
         self._selected_target_id = None
         self._refresh_all()
 
+    def _toggle_target_enabled(self, target_id: str, enabled: bool) -> None:
+        if target_id == self._selected_target_id:
+            had_inspector_edits = self._inspector_has_unsaved_edits()
+            self.enabled_check.setChecked(enabled)
+            if had_inspector_edits:
+                if not self._persist_target_form(refresh=True):
+                    self._refresh_targets()
+                return
+            try:
+                self._service.update_target(target_id, {"enabled": enabled})
+            except ConfigEditorError as error:
+                self._show_error("Không cập nhật được target", str(error))
+                return
+            self._inspector_snapshot = self._current_inspector_snapshot()
+            self.downstream_label.setText("Đã cập nhật enabled trong draft.")
+            self._refresh_status()
+            self._refresh_stats()
+            self._refresh_targets()
+            self._refresh_raw_json()
+            self._refresh_issues()
+            return
+        if not self._flush_inspector_edits():
+            self._refresh_targets()
+            return
+        try:
+            self._service.update_target(target_id, {"enabled": enabled})
+        except ConfigEditorError as error:
+            self._show_error("Không cập nhật được target", str(error))
+            return
+        self.downstream_label.setText("Đã cập nhật enabled trong draft.")
+        self._refresh_all()
+
     def _apply_target(self) -> None:
         self._persist_target_form(refresh=True)
 
@@ -1096,10 +1186,66 @@ class ConfigMode(QWidget):
         except (ConfigEditorError, ValueError) as error:
             self._show_error("Không cập nhật được target", str(error))
             return False
+        self._inspector_snapshot = self._current_inspector_snapshot()
         if refresh:
             self._sync_group_to_selected_target()
             self._refresh_all()
         return True
+
+    def _flush_inspector_edits(self) -> bool:
+        if not self._inspector_has_unsaved_edits():
+            return True
+        return self._persist_target_form(refresh=False)
+
+    def _inspector_has_unsaved_edits(self) -> bool:
+        if self._loading_form or self._selected_target_id is None:
+            return False
+        return self._current_inspector_snapshot() != self._inspector_snapshot
+
+    def _current_inspector_snapshot(self) -> tuple[object, ...] | None:
+        if self._selected_target_id is None:
+            return None
+        field_values = tuple(
+            (key, field.text())
+            for key, field in self.target_fields.items()
+        )
+        placeholder_values = tuple(
+            (
+                _table_text(self.placeholder_table, row, 0),
+                _table_text(self.placeholder_table, row, 1),
+            )
+            for row in range(self.placeholder_table.rowCount())
+        )
+        return (self.enabled_check.isChecked(), field_values, placeholder_values)
+
+    def _select_table_row(self, row: int) -> None:
+        self._syncing_selection = True
+        try:
+            self.target_table.selectRow(row)
+        finally:
+            self._syncing_selection = False
+
+    def _restore_target_selection(self, target_id: str | None) -> None:
+        if not target_id:
+            self._selected_target_id = None
+            return
+        row = self.target_model.row_for_target_id(target_id)
+        if row >= 0:
+            self._select_table_row(row)
+        self._selected_target_id = target_id
+        self._populate_inspector()
+
+    def _restore_group_selection(self, group_key: str | None) -> None:
+        self._selected_group_key = group_key
+        for row in range(self.group_list.count()):
+            item = self.group_list.item(row)
+            value = item.data(Qt.ItemDataRole.UserRole)
+            item_group_key = str(value) if value else None
+            if item_group_key == group_key:
+                self.group_list.blockSignals(True)
+                self.group_list.setCurrentRow(row)
+                self.group_list.blockSignals(False)
+                return
 
     def _sync_group_to_selected_target(self) -> None:
         if self._selected_target_id is None:
@@ -1112,6 +1258,8 @@ class ConfigMode(QWidget):
 
     def _browse_template_pptx(self) -> None:
         if self._selected_target_id is None:
+            return
+        if not self._flush_inspector_edits():
             return
         current_text = self.target_fields["export.template_pptx_file"].text().strip()
         start_dir = str(Path(current_text).expanduser().parent) if current_text else str(Path.cwd())
@@ -1131,6 +1279,7 @@ class ConfigMode(QWidget):
                 self._show_error("Không copy được template", str(error))
                 return
             self.target_fields["export.template_pptx_file"].setText(relative_path)
+            self._inspector_snapshot = self._current_inspector_snapshot()
             self.downstream_label.setText(
                 f"Đã copy template vào data/templates và cập nhật target: {relative_path}"
             )
@@ -1164,24 +1313,6 @@ class ConfigMode(QWidget):
         self._refresh_stats()
         self._refresh_raw_json()
         self._refresh_issues()
-
-    def _ensure_template_local_for_inspector(self, target_id: str) -> None:
-        try:
-            updated_path = self._service.ensure_target_template_local(target_id)
-        except ConfigEditorError as error:
-            message = f"{error} Hãy chọn lại file bằng Browse."
-            self.downstream_label.setText(message)
-            self.template_browse_button.setToolTip(message)
-            return
-        if updated_path:
-            self.template_browse_button.setToolTip(
-                "Chọn template PPTX và copy vào data/templates"
-            )
-            self._service.validate()
-            self._refresh_status()
-            self._refresh_stats()
-            self._refresh_raw_json()
-            self._refresh_issues()
 
     def _apply_defaults(self) -> None:
         updates: dict[str, Any] = {}
@@ -1230,6 +1361,11 @@ class ConfigMode(QWidget):
         target = self._current_target()
         if target is None:
             return
+        if not self._flush_inspector_edits():
+            return
+        target = self._current_target()
+        if target is None:
+            return
         if _target_has_geometry(target):
             answer = QMessageBox.question(
                 self,
@@ -1247,8 +1383,6 @@ class ConfigMode(QWidget):
             "GeoJSON files (*.geojson *.json);;All files (*)",
         )
         if not path:
-            return
-        if not self._persist_target_form(refresh=False):
             return
         try:
             self._service.import_geojson(self._selected_target_id, path)
@@ -1292,7 +1426,7 @@ class ConfigMode(QWidget):
         self._refresh_targets()
         row = self.target_model.row_for_target_id(target_id)
         if row >= 0:
-            self.target_table.selectRow(row)
+            self._select_table_row(row)
 
     def _current_target(self) -> dict[str, Any] | None:
         if self._selected_target_id is None:

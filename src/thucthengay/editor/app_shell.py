@@ -212,6 +212,20 @@ class AppShell(QMainWindow):
 
     def _config_saved(self, config_path: Path) -> None:
         self.setup_mode.config_row.set_path(config_path)
+        config_result = load_project_config(config_path)
+        if not config_result.ok or config_result.config is None:
+            self.config_mode.downstream_label.setText(
+                "Đã lưu config nhưng chưa reload downstream vì config còn lỗi. "
+                f"{_config_issue_summary(config_result)}"
+            )
+            return
+        self.review_edit_mode.refresh_config_targets(config_result.enabled_targets)
+        self.export_mode.refresh_config_targets(config_result.enabled_targets)
+        self.config_mode.downstream_label.setText(
+            "Đã lưu config và reload target list cho Review/Edit, Export. "
+            "Nếu geometry/enabled/defaults/patterns đổi, hãy chạy lại ingestion/"
+            "validation/preflight khi cần."
+        )
 
     def _remove_recent_project(self, project: RecentProjectEntry) -> None:
         self.preferences_service.remove_recent_project(project.workspace_folder)

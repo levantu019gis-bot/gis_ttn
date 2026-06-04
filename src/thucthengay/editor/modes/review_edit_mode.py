@@ -296,6 +296,26 @@ class ReviewEditMode(QWidget):
         self._refresh_filter_controls()
         self._restore_selection(selected_id)
 
+    def refresh_config_targets(self, targets: list[TargetConfig]) -> None:
+        """Refresh target ordering/details after Config tab saves a new config."""
+        if self._workspace_service is None:
+            return
+        selected_id = self._current_or_selected_composition_id()
+        self._targets = list(targets)
+        self._canvas_render_cache.clear()
+        try:
+            compositions = self._workspace_service.list_compositions()
+        except WorkspaceError as error:
+            self.action_summary.setText(f"Không reload được config targets: {error}")
+            return
+        self.tree_model.set_compositions(compositions, targets=targets)
+        self.tree_view.expandAll()
+        self._refresh_filter_controls()
+        self._restore_selection(selected_id)
+        self.action_summary.setText(
+            "Đã reload target config mới. Hãy revalidate composition nếu config ảnh hưởng."
+        )
+
     def closeEvent(self, event) -> None:  # noqa: ANN001, N802
         self._flush_pending_canvas_view()
         self._cancel_target_render()

@@ -15,6 +15,7 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QApplication
 
+from thucthengay.config import ConfigLoadResult
 from thucthengay.editor.app_shell import AppShell
 from thucthengay.editor.models.export_plan_model import ExportPlanRole
 from thucthengay.editor.modes.export_mode import ExportMode
@@ -29,6 +30,7 @@ from thucthengay.models import (
     MapFrame,
     MetadataStatus,
     PlaceholderType,
+    ProjectConfig,
     TargetConfig,
     TemplateMetadata,
     TemplatePlaceholder,
@@ -299,3 +301,38 @@ def test_app_shell_exposes_export_mode_and_jump_switches_to_review(tmp_path: Pat
     shell._jump_to_review_context("alpha", "", "")
 
     assert shell.mode_tabs.currentWidget() is shell.review_edit_mode
+
+
+def test_app_shell_config_saved_refreshes_loaded_review_and_export_targets(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    qapp()
+    shell = AppShell(preferences_service=PreferencesService(tmp_path / "preferences.json"))
+    workspace = WorkspaceService(tmp_path / "workspace")
+    workspace.initialize(config_path="config.json")
+    old_target = target_config()
+    new_target = target_config().model_copy(update={"name": "Alpha Reloaded"})
+    shell.review_edit_mode.load_workspace(workspace, targets=[old_target])
+    shell.export_mode.load_workspace(workspace, targets=[old_target])
+    config_path = tmp_path / "config.json"
+
+    def fake_load_project_config(path: Path) -> ConfigLoadResult:
+        return ConfigLoadResult(
+            config_path=path,
+            config=ProjectConfig(targets=[new_target]),
+            enabled_targets=[new_target],
+        )
+
+    monkeypatch.setattr(
+        "thucthengay.editor.app_shell.load_project_config",
+        fake_load_project_config,
+    )
+
+    shell._config_saved(config_path)
+
+    assert shell.setup_mode.config_row.path_field.full_text == str(config_path.resolve())
+    assert shell.review_edit_mode._targets == [new_target]
+    assert shell.export_mode._targets == [new_target]
+    assert shell.export_mode._last_plan is None
+    assert "reload target list" in shell.config_mode.downstream_label.text()

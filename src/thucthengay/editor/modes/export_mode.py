@@ -115,6 +115,17 @@ class ExportMode(QWidget):
         self.export_button.setEnabled(False)
         self._last_plan = None
 
+    def refresh_config_targets(self, targets: list[TargetConfig]) -> None:
+        """Refresh target config after the Config tab saves and require preflight again."""
+        if self._workspace_service is None:
+            return
+        self._targets = list(targets)
+        self._last_plan = None
+        self.plan_model.set_rows([])
+        self.export_button.setEnabled(False)
+        self.export_button.setToolTip("Config da doi; hay chay lai Preflight truoc khi export.")
+        self.status_label.setText("Da reload config moi. Hay chay lai Preflight.")
+
     def run_preflight(self) -> None:
         if self._workspace_service is None:
             self.status_label.setText("Chua co workspace de chay preflight.")

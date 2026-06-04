@@ -130,7 +130,12 @@ class ConfigEditorService:
         )
         if destination is None:
             raise ConfigEditorError("Chưa có đường dẫn để lưu config.")
-        self.validate()
+        state = self.validate()
+        if not state.ok:
+            raise ConfigEditorError(
+                "Draft config còn lỗi blocking. Hãy xử lý lỗi trong Validation Issues "
+                "trước khi lưu."
+            )
         _atomic_write_json(destination, self._state.draft)
         self._state.source_path = destination
         self._state.persisted = copy.deepcopy(self._state.draft)
@@ -222,7 +227,7 @@ class ConfigEditorService:
                     "placeholders": [
                         {"field": "map_image", "kind": "map_image", "value": ""},
                         {"field": "title", "kind": "text", "value": ""},
-                        {"field": "time", "kind": "text", "value": "auto"},
+                        {"field": "time", "kind": "text", "value": "{time_label}"},
                         {"field": "comment", "kind": "text", "value": ""},
                     ],
                 },

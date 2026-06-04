@@ -101,6 +101,7 @@ def test_config_mode_widget_smoke_runs_in_isolated_qt_process(tmp_path: Path) ->
 import os
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 from pathlib import Path
+from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QApplication, QFileDialog, QTableWidgetItem
 from thucthengay.editor.modes.config_mode import ConfigMode
 app = QApplication.instance() or QApplication([])
@@ -113,8 +114,25 @@ assert "export.date_format" not in mode.target_fields
 assert "export.time_format" not in mode.target_fields
 assert mode.template_browse_button.text() == "Browse"
 assert mode.target_fields["export.template_pptx_file"].isReadOnly()
+assert mode.target_fields["export.template_pptx_file"].text() == "templates/target_a.pptx"
+assert not Path(r"{copied_template_path}").exists()
+QFileDialog.getOpenFileName = staticmethod(lambda *args, **kwargs: (r"{template_path}", ""))
+mode.template_browse_button.click()
 assert mode.target_fields["export.template_pptx_file"].text() == "data/templates/target_a.pptx"
 assert Path(r"{copied_template_path}").is_file()
+enabled_index = mode.target_model.index(0, 0)
+mode.target_model.setData(
+    enabled_index,
+    Qt.CheckState.Unchecked,
+    int(Qt.ItemDataRole.CheckStateRole),
+)
+assert mode._service.target("target_a")["enabled"] is False
+mode.target_model.setData(
+    enabled_index,
+    Qt.CheckState.Checked,
+    int(Qt.ItemDataRole.CheckStateRole),
+)
+assert mode._service.target("target_a")["enabled"] is True
 assert mode.geometry_text.isReadOnly()
 assert '"target_id": "target_a"' in mode.geometry_text.toPlainText()
 assert '"coordinates": [' in mode.geometry_text.toPlainText()
@@ -183,6 +201,8 @@ assert all(
 mode.group_list.setCurrentRow(1)
 mode.add_target_button.click()
 assert len(mode._service.targets_for_group("1.1")) == 2
+assert mode.import_geojson_button.isEnabled()
+assert not mode.export_geojson_button.isEnabled()
 mode.target_fields["id"].setText("new_geojson_target")
 mode.target_fields["name"].setText("New GeoJSON Target")
 mode.target_fields["alias"].setText("NGT")
@@ -203,6 +223,9 @@ assert mode._selected_target_id == "new_geojson_target"
 assert mode.target_fields["id"].text() == "new_geojson_target"
 assert '"target_id": "new_geojson_target"' in mode.geometry_text.toPlainText()
 assert "112.0" in mode.geometry_text.toPlainText()
+mode.target_fields["name"].setText("Renamed Before Group Change")
+mode.group_list.setCurrentRow(0)
+assert mode._service.target("new_geojson_target")["name"] == "Renamed Before Group Change"
 mode.close()
 print("config-mode-ok")
 """

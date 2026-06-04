@@ -64,6 +64,8 @@ def test_config_editor_loads_draft_and_reports_summary(tmp_path: Path) -> None:
 
 
 def test_config_editor_create_save_and_backup(tmp_path: Path) -> None:
+    (tmp_path / "templates").mkdir()
+    (tmp_path / "templates" / "da_lac.pptx").write_bytes(b"pptx")
     service = ConfigEditorService()
     state = service.create_new(tmp_path / "config.json")
 
@@ -112,6 +114,22 @@ def test_config_editor_create_save_and_backup(tmp_path: Path) -> None:
     assert saved.dirty is False
     raw = json.loads((tmp_path / "config.json").read_text(encoding="utf-8"))
     assert raw["targets"][0]["id"] == "da_lac"
+    placeholders = {
+        placeholder["field"]: placeholder
+        for placeholder in raw["targets"][0]["export"]["placeholders"]
+    }
+    assert placeholders["time"]["value"] == "{time_label}"
+
+
+def test_config_editor_save_blocks_invalid_draft(tmp_path: Path) -> None:
+    service = ConfigEditorService()
+    service.create_new(tmp_path / "config.json")
+    service.add_target()
+
+    with pytest.raises(ConfigEditorError, match="blocking"):
+        service.save()
+
+    assert not (tmp_path / "config.json").exists()
 
 
 def test_config_editor_new_config_defaults_are_isolated_between_drafts() -> None:
