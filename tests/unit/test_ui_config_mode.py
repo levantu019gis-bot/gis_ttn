@@ -45,6 +45,38 @@ def target_config() -> dict[str, object]:
     }
 
 
+def config_defaults() -> dict[str, object]:
+    return {
+        "grid": {
+            "label_format": "dms_short",
+            "style": {
+                "supported_label_formats": ["dms_full", "dms_short"],
+                "reference_width": 3306,
+                "reference_height": 2340,
+                "reference_outer_frame": [244, 144, 3272, 2286],
+                "reference_frame_gap": 42,
+                "max_frame_ticks_per_axis": 2000,
+                "epsilon": 1e-10,
+                "default_label_font": "fonts/arial-bold/Arial Bold.ttf",
+                "frame_color": "#000000",
+                "label_color": "#000000",
+                "label_font_size": 24,
+                "tick_length_px": 8,
+                "reference_label_font_size": 72,
+                "surround_tick_length": 14,
+                "surround_outer_stroke_width": 6,
+                "surround_inner_stroke_width": 4,
+                "surround_tick_stroke_width": 4,
+            },
+        },
+        "export": {
+            "date_format": "dd.MM.yy",
+            "time_format": "HH.mm/dd.MM.yy",
+            "map_background_color": "#000000",
+        },
+    }
+
+
 def test_config_mode_widget_smoke_runs_in_isolated_qt_process(tmp_path: Path) -> None:
     config_path = tmp_path / "config.json"
     template_path = tmp_path / "templates" / "target_a.pptx"
@@ -55,7 +87,7 @@ def test_config_mode_widget_smoke_runs_in_isolated_qt_process(tmp_path: Path) ->
     source_font.write_bytes(b"font")
     copied_template_path = tmp_path / "data" / "templates" / "target_a.pptx"
     copied_font_path = tmp_path / "fonts" / "custom-label.ttf"
-    write_json(config_path, {"targets": [target_config()]})
+    write_json(config_path, {"defaults": config_defaults(), "targets": [target_config()]})
     code = f"""
 import os
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
@@ -74,11 +106,26 @@ assert mode.template_browse_button.text() == "Browse"
 assert mode.target_fields["export.template_pptx_file"].isReadOnly()
 assert mode.target_fields["export.template_pptx_file"].text() == "data/templates/target_a.pptx"
 assert Path(r"{copied_template_path}").is_file()
-assert "grid.label_format" not in mode.defaults_fields
-assert "grid.style.reference_width" not in mode.defaults_fields
-assert "grid.style.reference_height" not in mode.defaults_fields
-assert "grid.style.max_frame_ticks" not in mode.defaults_fields
+assert mode.defaults_fields["grid.label_format"].text() == "dms_short"
+assert mode.defaults_fields["grid.style.supported_label_formats"].text() == "dms_full, dms_short"
+assert mode.defaults_fields["grid.style.reference_width"].text() == "3306"
+assert mode.defaults_fields["grid.style.reference_height"].text() == "2340"
+assert mode.defaults_fields["grid.style.reference_outer_frame"].text() == "244, 144, 3272, 2286"
+assert mode.defaults_fields["grid.style.max_frame_ticks_per_axis"].text() == "2000"
+assert mode.defaults_fields["grid.style.surround_outer_stroke_width"].text() == "6"
 assert mode.defaults_fields["grid.style.default_label_font"].isReadOnly()
+mode.defaults_fields["grid.label_format"].setText("dms_full")
+mode.defaults_fields["grid.style.reference_outer_frame"].setText("10, 20, 90, 80")
+mode.defaults_fields["grid.style.epsilon"].setText("0.0001")
+mode._apply_defaults()
+assert mode._service.state.draft["defaults"]["grid"]["label_format"] == "dms_full"
+assert (
+    mode._service.state.draft["defaults"]["grid"]["style"]["reference_outer_frame"]
+    == [10, 20, 90, 80]
+)
+assert mode._service.state.draft["defaults"]["grid"]["style"]["epsilon"] == 0.0001
+target_after_defaults = mode._service.target("target_a")
+assert target_after_defaults["grid"] == {{"interval": {{"minutes": 1}}}}
 QFileDialog.getOpenFileName = staticmethod(lambda *args, **kwargs: (r"{source_font}", ""))
 mode.default_label_font_browse_button.click()
 assert Path(r"{copied_font_path}").read_bytes() == b"font"

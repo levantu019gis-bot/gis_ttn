@@ -242,6 +242,38 @@ def test_config_editor_import_default_label_font_keeps_existing_fonts_path(
     assert not (tmp_path / "fonts" / "Arial Bold.ttf").exists()
 
 
+def test_config_editor_update_defaults_keeps_target_grid_overrides(tmp_path: Path) -> None:
+    target = target_config("target_a")
+    target["grid"] = {
+        "interval": {"minutes": 1},
+        "style": {"label_color": "#445566"},
+    }
+    write_json(tmp_path / "config.json", {"targets": [target]})
+    service = ConfigEditorService()
+    service.load(tmp_path / "config.json")
+
+    service.update_defaults(
+        {
+            "grid.label_format": "dms_short",
+            "grid.style.supported_label_formats": ["dms_full", "dms_short"],
+            "grid.style.reference_width": 3306,
+            "grid.style.reference_height": 2340,
+            "grid.style.reference_outer_frame": [244, 144, 3272, 2286],
+            "grid.style.max_frame_ticks_per_axis": 2000,
+            "grid.style.epsilon": 1e-10,
+        }
+    )
+
+    defaults = service.state.draft["defaults"]
+    assert defaults["grid"]["label_format"] == "dms_short"
+    assert defaults["grid"]["style"]["reference_outer_frame"] == [244, 144, 3272, 2286]
+    assert defaults["grid"]["style"]["supported_label_formats"] == ["dms_full", "dms_short"]
+    assert service.target("target_a")["grid"] == {
+        "interval": {"minutes": 1},
+        "style": {"label_color": "#445566"},
+    }
+
+
 def test_config_editor_ensure_target_template_local_copies_existing_config_path(
     tmp_path: Path,
 ) -> None:

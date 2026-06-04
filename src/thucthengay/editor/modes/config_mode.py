@@ -493,11 +493,44 @@ class ConfigMode(QWidget):
         content = QWidget()
         layout = QVBoxLayout(content)
         layout.setContentsMargins(4, 8, 4, 8)
+        policy_label = QLabel(
+            "Defaults là cấu hình dùng chung. Mỗi target vẫn giữ grid.interval riêng; "
+            "target grid.style chỉ override các field style khác default."
+        )
+        policy_label.setObjectName("configDefaultsPolicy")
+        policy_label.setWordWrap(True)
+        layout.addWidget(policy_label)
         field_specs = [
-            ("Grid Style", "grid.style.default_label_font", "default_label_font"),
-            ("Grid Style", "grid.style.frame_color", "frame_color"),
-            ("Grid Style", "grid.style.label_color", "label_color"),
-            ("Grid Style", "grid.style.label_font_size", "label_font_size"),
+            ("Default Grid", "grid.label_format", "label_format"),
+            ("Default Grid", "grid.style.supported_label_formats", "supported_formats"),
+            ("Default Grid", "grid.style.default_label_font", "default_label_font"),
+            ("Default Grid", "grid.style.frame_color", "frame_color"),
+            ("Default Grid", "grid.style.label_color", "label_color"),
+            ("Default Grid", "grid.style.label_font_size", "label_font_size"),
+            ("Default Grid", "grid.style.tick_length_px", "tick_length_px"),
+            ("Default Grid", "grid.style.reference_label_font_size", "reference_label_font_size"),
+            ("Frame Reference", "grid.style.reference_width", "reference_width"),
+            ("Frame Reference", "grid.style.reference_height", "reference_height"),
+            ("Frame Reference", "grid.style.reference_outer_frame", "reference_outer_frame"),
+            ("Frame Reference", "grid.style.reference_frame_gap", "reference_frame_gap"),
+            ("Advanced Grid Style", "grid.style.max_frame_ticks_per_axis", "max_ticks_per_axis"),
+            ("Advanced Grid Style", "grid.style.epsilon", "epsilon"),
+            ("Advanced Grid Style", "grid.style.surround_tick_length", "surround_tick_length"),
+            (
+                "Advanced Grid Style",
+                "grid.style.surround_outer_stroke_width",
+                "surround_outer_stroke_width",
+            ),
+            (
+                "Advanced Grid Style",
+                "grid.style.surround_inner_stroke_width",
+                "surround_inner_stroke_width",
+            ),
+            (
+                "Advanced Grid Style",
+                "grid.style.surround_tick_stroke_width",
+                "surround_tick_stroke_width",
+            ),
             ("Export Defaults", "export.date_format", "date_format"),
             ("Export Defaults", "export.time_format", "time_format"),
             ("Export Defaults", "export.map_background_color", "map_background_color"),
@@ -870,7 +903,7 @@ class ConfigMode(QWidget):
             defaults = {}
         for key, field in self.defaults_fields.items():
             value = _get_dotted(defaults, key)
-            field.setText("" if value is None else str(value))
+            field.setText(_format_default_value(value))
 
     def _refresh_patterns(self) -> None:
         patterns = self._service.state.draft.get("filename_patterns", [])
@@ -1124,6 +1157,10 @@ class ConfigMode(QWidget):
             value = field.text().strip()
             updates[key] = _parse_scalar(value)
         self._service.update_defaults(updates)
+        self.downstream_label.setText(
+            "Đã cập nhật defaults trong draft. Target grid.interval và target overrides "
+            "không bị ghi đè."
+        )
         self._refresh_all()
 
     def _apply_patterns(self) -> None:
@@ -1404,9 +1441,22 @@ def _table_height_for_visible_rows(table: QTableWidget, visible_rows: int) -> in
     return header_height + (row_height * visible_rows) + (table.frameWidth() * 2) + 8
 
 
+def _format_default_value(value: Any) -> str:
+    if value is None:
+        return ""
+    if isinstance(value, list):
+        return ", ".join(str(item) for item in value)
+    return str(value)
+
+
 def _parse_scalar(value: str) -> Any:
     if value == "":
         return ""
+    if "," in value or (value.startswith("[") and value.endswith("]")):
+        list_text = value.strip()
+        if list_text.startswith("[") and list_text.endswith("]"):
+            list_text = list_text[1:-1]
+        return [_parse_scalar(item.strip()) for item in list_text.split(",")]
     try:
         if "." in value:
             return float(value)
