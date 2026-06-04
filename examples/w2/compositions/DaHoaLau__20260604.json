@@ -1,0 +1,82 @@
+{
+  "artifacts": {
+    "export_log_path": null,
+    "final_render_path": null,
+    "preview_render_path": null,
+    "render_log_path": null
+  },
+  "capture_date": "2026-06-04",
+  "composition_id": "DaHoaLau__20260604",
+  "grid_override": null,
+  "include": false,
+  "layers": [
+    {
+      "cache_path": "cache/DaHoaLau/20260604/PSScene_20260604_033507_35_2506_cloud_28.000000000000004__1c990eb48e38.tif",
+      "capture_date": "2026-06-04",
+      "capture_time": "10:35:07",
+      "cloud_percent": 28.000000000000004,
+      "layer_id": "PSScene_20260604_033507_35_2506_cloud_28.000000000000004__1c990eb48e38",
+      "metadata_source": "filename",
+      "metadata_status": "valid",
+      "order": 0,
+      "source_path": "D:\\TU_KXOA\\webgis_v13_05.03\\webgis_v13\\backend\\input_geotiffs\\2026\\20260604\\PSScene_20260604_033507_35_2506_cloud_28.000000000000004.tif",
+      "visible": true
+    },
+    {
+      "cache_path": "cache/DaHoaLau/20260604/PSScene_20260604_033505_27_2506_cloud_12.0__139be7845e10.tif",
+      "capture_date": "2026-06-04",
+      "capture_time": "10:35:05",
+      "cloud_percent": 12.0,
+      "layer_id": "PSScene_20260604_033505_27_2506_cloud_12.0__139be7845e10",
+      "metadata_source": "filename",
+      "metadata_status": "valid",
+      "order": 1,
+      "source_path": "D:\\TU_KXOA\\webgis_v13_05.03\\webgis_v13\\backend\\input_geotiffs\\2026\\20260604\\PSScene_20260604_033505_27_2506_cloud_12.0.tif",
+      "visible": true
+    },
+    {
+      "cache_path": "cache/DaHoaLau/20260604/PSScene_20260604_032247_90_251e_cloud_77.0__97d7188bfcad.tif",
+      "capture_date": "2026-06-04",
+      "capture_time": "10:22:47",
+      "cloud_percent": 77.0,
+      "layer_id": "PSScene_20260604_032247_90_251e_cloud_77.0__97d7188bfcad",
+      "metadata_source": "filename",
+      "metadata_status": "valid",
+      "order": 2,
+      "source_path": "D:\\TU_KXOA\\webgis_v13_05.03\\webgis_v13\\backend\\input_geotiffs\\2026\\20260604\\PSScene_20260604_032247_90_251e_cloud_77.0.tif",
+      "visible": true
+    },
+    {
+      "cache_path": "cache/DaHoaLau/20260604/PSScene_20260604_032245_88_251e_cloud_46.0__d92604cb4747.tif",
+      "capture_date": "2026-06-04",
+      "capture_time": "10:22:45",
+      "cloud_percent": 46.0,
+      "layer_id": "PSScene_20260604_032245_88_251e_cloud_46.0__d92604cb4747",
+      "metadata_source": "filename",
+      "metadata_status": "valid",
+      "order": 3,
+      "source_path": "D:\\TU_KXOA\\webgis_v13_05.03\\webgis_v13\\backend\\input_geotiffs\\2026\\20260604\\PSScene_20260604_032245_88_251e_cloud_46.0.tif",
+      "visible": true
+    }
+  ],
+  "needs_revalidation": true,
+  "notes": "",
+  "ready": false,
+  "review_order": null,
+  "reviewed": false,
+  "target_id": "DaHoaLau",
+  "validation_summary": {
+    "error_count": 0,
+    "info_count": 0,
+    "last_validated_at": null,
+    "warning_count": 0
+  },
+  "view": {
+    "center": [
+      113.82498512280914,
+      7.380859386033756
+    ],
+    "rotation": 0,
+    "scale": 50000
+  }
+}

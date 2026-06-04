@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from pptx import Presentation
+from pptx.enum.text import MSO_AUTO_SIZE
 from pptx.slide import Slide
 
 
@@ -61,11 +62,20 @@ def replace_shape_with_picture(slide: Slide, element_id: int, image_path: Path) 
     return True
 
 
-def replace_text(slide: Slide, element_id: int, value: str) -> bool:
+def replace_text(
+    slide: Slide,
+    element_id: int,
+    value: str,
+    *,
+    fit_shape_to_text: bool = False,
+) -> bool:
     """Replace text while preserving the first existing run's formatting."""
     shape = find_shape_by_element_id(slide, element_id)
     if shape is None or not getattr(shape, "has_text_frame", False):
         return False
+    if fit_shape_to_text:
+        shape.text_frame.auto_size = MSO_AUTO_SIZE.SHAPE_TO_FIT_TEXT
+        shape.text_frame.word_wrap = False
     paragraphs = tuple(shape.text_frame.paragraphs)
     first_run = None
     template_text_parts: list[str] = []

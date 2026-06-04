@@ -1,0 +1,94 @@
+{
+  "artifacts": {
+    "export_log_path": null,
+    "final_render_path": null,
+    "preview_render_path": null,
+    "render_log_path": null
+  },
+  "capture_date": "2026-06-04",
+  "composition_id": "BaiSaBin__20260604",
+  "grid_override": null,
+  "include": false,
+  "layers": [
+    {
+      "cache_path": "cache/BaiSaBin/20260604/PSScene_20260604_031615_88_2538_cloud_19.0__555e58bc620b.tif",
+      "capture_date": "2026-06-04",
+      "capture_time": "10:16:15",
+      "cloud_percent": 19.0,
+      "layer_id": "PSScene_20260604_031615_88_2538_cloud_19.0__555e58bc620b",
+      "metadata_source": "filename",
+      "metadata_status": "valid",
+      "order": 0,
+      "source_path": "D:\\TU_KXOA\\webgis_v13_05.03\\webgis_v13\\backend\\input_geotiffs\\2026\\20260604\\PSScene_20260604_031615_88_2538_cloud_19.0.tif",
+      "visible": true
+    },
+    {
+      "cache_path": "cache/BaiSaBin/20260604/PSScene_20260604_031613_65_2538_cloud_33.0__7d19fddb3531.tif",
+      "capture_date": "2026-06-04",
+      "capture_time": "10:16:13",
+      "cloud_percent": 33.0,
+      "layer_id": "PSScene_20260604_031613_65_2538_cloud_33.0__7d19fddb3531",
+      "metadata_source": "filename",
+      "metadata_status": "valid",
+      "order": 1,
+      "source_path": "D:\\TU_KXOA\\webgis_v13_05.03\\webgis_v13\\backend\\input_geotiffs\\2026\\20260604\\PSScene_20260604_031613_65_2538_cloud_33.0.tif",
+      "visible": true
+    },
+    {
+      "cache_path": "cache/BaiSaBin/20260604/PSScene_20260604_024558_46_2545_cloud_18.0__914231377cea.tif",
+      "capture_date": "2026-06-04",
+      "capture_time": "09:45:58",
+      "cloud_percent": 18.0,
+      "layer_id": "PSScene_20260604_024558_46_2545_cloud_18.0__914231377cea",
+      "metadata_source": "filename",
+      "metadata_status": "valid",
+      "order": 2,
+      "source_path": "D:\\TU_KXOA\\webgis_v13_05.03\\webgis_v13\\backend\\input_geotiffs\\2026\\20260604\\PSScene_20260604_024558_46_2545_cloud_18.0.tif",
+      "visible": true
+    },
+    {
+      "cache_path": "cache/BaiSaBin/20260604/PSScene_20260604_024556_11_2545_cloud_22.0__8db1ec731d41.tif",
+      "capture_date": "2026-06-04",
+      "capture_time": "09:45:56",
+      "cloud_percent": 22.0,
+      "layer_id": "PSScene_20260604_024556_11_2545_cloud_22.0__8db1ec731d41",
+      "metadata_source": "filename",
+      "metadata_status": "valid",
+      "order": 3,
+      "source_path": "D:\\TU_KXOA\\webgis_v13_05.03\\webgis_v13\\backend\\input_geotiffs\\2026\\20260604\\PSScene_20260604_024556_11_2545_cloud_22.0.tif",
+      "visible": true
+    },
+    {
+      "cache_path": "cache/BaiSaBin/20260604/PSScene_20260604_024553_75_2545_cloud_25.0__10d7b7c6a41f.tif",
+      "capture_date": "2026-06-04",
+      "capture_time": "09:45:53",
+      "cloud_percent": 25.0,
+      "layer_id": "PSScene_20260604_024553_75_2545_cloud_25.0__10d7b7c6a41f",
+      "metadata_source": "filename",
+      "metadata_status": "valid",
+      "order": 4,
+      "source_path": "D:\\TU_KXOA\\webgis_v13_05.03\\webgis_v13\\backend\\input_geotiffs\\2026\\20260604\\PSScene_20260604_024553_75_2545_cloud_25.0.tif",
+      "visible": true
+    }
+  ],
+  "needs_revalidation": true,
+  "notes": "",
+  "ready": false,
+  "review_order": null,
+  "reviewed": false,
+  "target_id": "BaiSaBin",
+  "validation_summary": {
+    "error_count": 0,
+    "info_count": 0,
+    "last_validated_at": null,
+    "warning_count": 0
+  },
+  "view": {
+    "center": [
+      116.49619730436403,
+      9.766108654618757
+    ],
+    "rotation": 0,
+    "scale": 50000
+  }
+}

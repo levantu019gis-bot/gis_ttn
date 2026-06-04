@@ -1,0 +1,70 @@
+{
+  "artifacts": {
+    "export_log_path": null,
+    "final_render_path": null,
+    "preview_render_path": null,
+    "render_log_path": null
+  },
+  "capture_date": "2026-06-04",
+  "composition_id": "DaLac__20260604",
+  "grid_override": null,
+  "include": false,
+  "layers": [
+    {
+      "cache_path": "cache/DaLac/20260604/PSScene_20260604_033425_77_2506_cloud_9.0__e47004fe1ba7.tif",
+      "capture_date": "2026-06-04",
+      "capture_time": "10:34:25",
+      "cloud_percent": 9.0,
+      "layer_id": "PSScene_20260604_033425_77_2506_cloud_9.0__e47004fe1ba7",
+      "metadata_source": "filename",
+      "metadata_status": "valid",
+      "order": 0,
+      "source_path": "D:\\TU_KXOA\\webgis_v13_05.03\\webgis_v13\\backend\\input_geotiffs\\2026\\20260604\\PSScene_20260604_033425_77_2506_cloud_9.0.tif",
+      "visible": true
+    },
+    {
+      "cache_path": "cache/DaLac/20260604/PSScene_20260604_033423_69_2506_cloud_36.0__ead82c2eabd9.tif",
+      "capture_date": "2026-06-04",
+      "capture_time": "10:34:23",
+      "cloud_percent": 36.0,
+      "layer_id": "PSScene_20260604_033423_69_2506_cloud_36.0__ead82c2eabd9",
+      "metadata_source": "filename",
+      "metadata_status": "valid",
+      "order": 1,
+      "source_path": "D:\\TU_KXOA\\webgis_v13_05.03\\webgis_v13\\backend\\input_geotiffs\\2026\\20260604\\PSScene_20260604_033423_69_2506_cloud_36.0.tif",
+      "visible": true
+    },
+    {
+      "cache_path": "cache/DaLac/20260604/PSScene_20260604_033421_61_2506_cloud_74.0__7550ac087138.tif",
+      "capture_date": "2026-06-04",
+      "capture_time": "10:34:21",
+      "cloud_percent": 74.0,
+      "layer_id": "PSScene_20260604_033421_61_2506_cloud_74.0__7550ac087138",
+      "metadata_source": "filename",
+      "metadata_status": "valid",
+      "order": 2,
+      "source_path": "D:\\TU_KXOA\\webgis_v13_05.03\\webgis_v13\\backend\\input_geotiffs\\2026\\20260604\\PSScene_20260604_033421_61_2506_cloud_74.0.tif",
+      "visible": true
+    }
+  ],
+  "needs_revalidation": true,
+  "notes": "",
+  "ready": false,
+  "review_order": null,
+  "reviewed": false,
+  "target_id": "DaLac",
+  "validation_summary": {
+    "error_count": 0,
+    "info_count": 0,
+    "last_validated_at": null,
+    "warning_count": 0
+  },
+  "view": {
+    "center": [
+      114.2517756844011,
+      10.162738514802186
+    ],
+    "rotation": 0,
+    "scale": 50000
+  }
+}

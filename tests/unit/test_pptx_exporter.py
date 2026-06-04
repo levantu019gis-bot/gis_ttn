@@ -8,6 +8,7 @@ from PIL import Image
 from pptx import Presentation
 from pptx.dml.color import RGBColor
 from pptx.enum.shapes import MSO_SHAPE
+from pptx.enum.text import MSO_AUTO_SIZE
 from pptx.util import Inches, Pt
 
 from thucthengay.export import ensure_final_renders_for_export, export_combined_pptx
@@ -76,6 +77,35 @@ def _write_contract_template(path: Path) -> tuple[int, int, int]:
     title_shape.text = "title"
     time_shape = slide.shapes.add_textbox(Inches(5), Inches(1.25), Inches(4), Inches(0.5))
     time_shape.text = "time"
+    presentation.save(path)
+    return int(map_shape.shape_id), int(title_shape.shape_id), int(time_shape.shape_id)
+
+
+def _write_contract_template_with_time_rectangle(path: Path) -> tuple[int, int, int]:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    presentation = Presentation()
+    presentation.slide_width = Inches(10)
+    presentation.slide_height = Inches(5.625)
+    slide = presentation.slides.add_slide(presentation.slide_layouts[6])
+    map_shape = slide.shapes.add_shape(
+        MSO_SHAPE.RECTANGLE,
+        Inches(0.5),
+        Inches(0.75),
+        Inches(4),
+        Inches(3),
+    )
+    title_shape = slide.shapes.add_textbox(Inches(5), Inches(0.75), Inches(4), Inches(0.5))
+    title_shape.text = "title"
+    time_shape = slide.shapes.add_shape(
+        MSO_SHAPE.RECTANGLE,
+        Inches(5),
+        Inches(1.25),
+        Inches(0.7),
+        Inches(0.3),
+    )
+    time_shape.text = "time"
+    time_shape.text_frame.auto_size = MSO_AUTO_SIZE.NONE
+    time_shape.text_frame.word_wrap = True
     presentation.save(path)
     return int(map_shape.shape_id), int(title_shape.shape_id), int(time_shape.shape_id)
 
@@ -268,6 +298,55 @@ def test_export_combined_pptx_uses_config_placeholder_values_and_formats(
     assert "Hien trang Alpha Title ngay 25.05.26" in slide_text
     assert "08.30/25.05.26" in slide_text
     assert any(shape.shape_type == 13 for shape in presentation.slides[0].shapes)
+
+
+def test_export_combined_pptx_time_placeholder_rectangle_fits_replaced_text(
+    tmp_path: Path,
+) -> None:
+    map_id, title_id, time_id = _write_contract_template_with_time_rectangle(
+        tmp_path / "templates" / "alpha.pptx"
+    )
+    target = TargetConfig(
+        id="alpha",
+        name="Alpha Name",
+        title="Alpha Title",
+        geojson_file="targets/alpha.geojson",
+        coordinate=[106.7, 10.8],
+        scale=50000,
+        grid=GridConfig(interval=GridInterval(minutes=1)),
+        export={
+            "template_pptx_file": str(tmp_path / "templates" / "alpha.pptx"),
+            "template_txt_value": "Tai {target_title} luc {time_label}",
+            "date_format": "dd.MM.yy",
+            "time_format": "HH.mm/dd.MM.yy",
+            "placeholders": [
+                {"field": "map_image", "element_id": str(map_id)},
+                {"field": "title", "element_id": str(title_id)},
+                {"field": "time", "element_id": str(time_id)},
+            ],
+        },
+    )
+    target.metadata["template_metadata"] = TemplateMetadata(
+        template_pptx=str(tmp_path / "templates" / "alpha.pptx"),
+        slide_index=0,
+        map_frame=MapFrame(x=36, y=54, width=288, height=216),
+        placeholders=target.export.placeholders,
+    ).model_dump(mode="json")
+    service = _workspace(tmp_path, _composition("alpha__20260525"))
+    ensure_final_renders_for_export(service, [target], render=_success_render)
+
+    output_path = service.paths.exports / "time-fit.pptx"
+    result = export_combined_pptx(service, [target], output_path=output_path)
+
+    assert result.ok is True
+    presentation = Presentation(str(output_path))
+    time_shape = next(
+        shape
+        for shape in presentation.slides[0].shapes
+        if getattr(shape, "has_text_frame", False) and shape.text == "08.30/25.05.26"
+    )
+    assert time_shape.text_frame.auto_size == MSO_AUTO_SIZE.SHAPE_TO_FIT_TEXT
+    assert time_shape.text_frame.word_wrap is False
 
 
 def test_export_combined_pptx_orders_slides_by_review_order(tmp_path: Path) -> None:

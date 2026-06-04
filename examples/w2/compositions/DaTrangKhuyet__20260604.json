@@ -1,0 +1,82 @@
+{
+  "artifacts": {
+    "export_log_path": null,
+    "final_render_path": null,
+    "preview_render_path": null,
+    "render_log_path": null
+  },
+  "capture_date": "2026-06-04",
+  "composition_id": "DaTrangKhuyet__20260604",
+  "grid_override": null,
+  "include": false,
+  "layers": [
+    {
+      "cache_path": "cache/DaTrangKhuyet/20260604/PSScene_20260604_031631_48_2538_cloud_0__bebd752ebd42.tif",
+      "capture_date": "2026-06-04",
+      "capture_time": "10:16:31",
+      "cloud_percent": 0.0,
+      "layer_id": "PSScene_20260604_031631_48_2538_cloud_0__bebd752ebd42",
+      "metadata_source": "filename",
+      "metadata_status": "valid",
+      "order": 0,
+      "source_path": "D:\\TU_KXOA\\webgis_v13_05.03\\webgis_v13\\backend\\input_geotiffs\\2026\\20260604\\PSScene_20260604_031631_48_2538_cloud_0.tif",
+      "visible": true
+    },
+    {
+      "cache_path": "cache/DaTrangKhuyet/20260604/PSScene_20260604_024612_60_2545_cloud_10.0__00d75c4722b4.tif",
+      "capture_date": "2026-06-04",
+      "capture_time": "09:46:12",
+      "cloud_percent": 10.0,
+      "layer_id": "PSScene_20260604_024612_60_2545_cloud_10.0__00d75c4722b4",
+      "metadata_source": "filename",
+      "metadata_status": "valid",
+      "order": 1,
+      "source_path": "D:\\TU_KXOA\\webgis_v13_05.03\\webgis_v13\\backend\\input_geotiffs\\2026\\20260604\\PSScene_20260604_024612_60_2545_cloud_10.0.tif",
+      "visible": true
+    },
+    {
+      "cache_path": "cache/DaTrangKhuyet/20260604/PSScene_20260604_024610_24_2545_cloud_18.0__f526bf2af36f.tif",
+      "capture_date": "2026-06-04",
+      "capture_time": "09:46:10",
+      "cloud_percent": 18.0,
+      "layer_id": "PSScene_20260604_024610_24_2545_cloud_18.0__f526bf2af36f",
+      "metadata_source": "filename",
+      "metadata_status": "valid",
+      "order": 2,
+      "source_path": "D:\\TU_KXOA\\webgis_v13_05.03\\webgis_v13\\backend\\input_geotiffs\\2026\\20260604\\PSScene_20260604_024610_24_2545_cloud_18.0.tif",
+      "visible": true
+    },
+    {
+      "cache_path": "cache/DaTrangKhuyet/20260604/PSScene_20260604_024607_89_2545_cloud_17.0__702aee141b0c.tif",
+      "capture_date": "2026-06-04",
+      "capture_time": "09:46:07",
+      "cloud_percent": 17.0,
+      "layer_id": "PSScene_20260604_024607_89_2545_cloud_17.0__702aee141b0c",
+      "metadata_source": "filename",
+      "metadata_status": "valid",
+      "order": 3,
+      "source_path": "D:\\TU_KXOA\\webgis_v13_05.03\\webgis_v13\\backend\\input_geotiffs\\2026\\20260604\\PSScene_20260604_024607_89_2545_cloud_17.0.tif",
+      "visible": true
+    }
+  ],
+  "needs_revalidation": true,
+  "notes": "",
+  "ready": false,
+  "review_order": null,
+  "reviewed": false,
+  "target_id": "DaTrangKhuyet",
+  "validation_summary": {
+    "error_count": 0,
+    "info_count": 0,
+    "last_validated_at": null,
+    "warning_count": 0
+  },
+  "view": {
+    "center": [
+      116.27680144026247,
+      8.904423888735842
+    ],
+    "rotation": 0,
+    "scale": 50000
+  }
+}

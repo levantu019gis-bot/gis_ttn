@@ -1166,6 +1166,7 @@ class ReviewEditMode(QWidget):
         updated_target = update_target_alignment_defaults(
             manifest.config_path,
             target_id=composition.target_id,
+            coordinate=composition.view.center,
             interval=grid.interval,
             scale=composition.view.scale,
         )
@@ -1176,7 +1177,11 @@ class ReviewEditMode(QWidget):
             return
         self._targets = [
             target.model_copy(
-                update={"scale": updated_target.scale, "grid": updated_target.grid}
+                update={
+                    "coordinate": updated_target.coordinate,
+                    "scale": updated_target.scale,
+                    "grid": updated_target.grid,
+                }
             )
             if target.id == updated_target.id
             else target

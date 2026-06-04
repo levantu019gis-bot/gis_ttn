@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import os
 import tempfile
+from collections.abc import Sequence
 from dataclasses import dataclass, field
 from json import JSONDecodeError
 from pathlib import Path
@@ -137,10 +138,11 @@ def update_target_alignment_defaults(
     config_path: str | Path,
     *,
     target_id: str,
+    coordinate: Sequence[float],
     interval: GridInterval,
     scale: int,
 ) -> TargetConfig:
-    """Persist the reviewed interval/scale back to one target in config.json."""
+    """Persist the reviewed coordinate/interval/scale back to one target in config.json."""
     config_file = Path(config_path).expanduser()
     if not config_file.is_absolute():
         config_file = config_file.resolve()
@@ -166,6 +168,7 @@ def update_target_alignment_defaults(
         msg = f"Không tìm thấy target `{target_id}` trong config."
         raise ConfigUpdateError(msg)
 
+    raw_target["coordinate"] = list(coordinate)
     raw_target["scale"] = scale
     raw_grid = raw_target.get("grid")
     if not isinstance(raw_grid, dict):

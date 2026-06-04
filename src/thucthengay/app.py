@@ -22,3 +22,7 @@ def _is_headless_linux() -> bool:
     if not sys.platform.startswith("linux"):
         return False
     return not os.environ.get("DISPLAY") and not os.environ.get("WAYLAND_DISPLAY")
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

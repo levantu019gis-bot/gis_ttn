@@ -143,10 +143,10 @@
         111.6783030992196,
         16.229411609731184
       ],
-      "scale": 50000,
+      "scale": 80000,
       "grid": {
         "interval": {
-          "minutes": 1
+          "minutes": 5
         }
       },
       "export": {
@@ -315,10 +315,10 @@
         111.7907975277723,
         16.057237645474203
       ],
-      "scale": 50000,
+      "scale": 40000,
       "grid": {
         "interval": {
-          "minutes": 1
+          "minutes": 3
         }
       },
       "export": {
@@ -568,9 +568,7 @@
       "scale": 50000,
       "grid": {
         "interval": {
-          "degrees": 0,
-          "minutes": 1,
-          "seconds": 0.0
+          "minutes": 1
         }
       },
       "export": {
@@ -1249,12 +1247,10 @@
         114.2517756844011,
         10.162738514802186
       ],
-      "scale": 50000,
+      "scale": 10000,
       "grid": {
         "interval": {
-          "degrees": 0,
-          "minutes": 1,
-          "seconds": 0.0
+          "seconds": 30
         }
       },
       "export": {
@@ -1336,9 +1332,7 @@
       "scale": 50000,
       "grid": {
         "interval": {
-          "degrees": 0,
-          "minutes": 1,
-          "seconds": 0.0
+          "minutes": 1
         }
       },
       "export": {
@@ -1413,12 +1407,10 @@
         114.43816280254377,
         9.862388550715288
       ],
-      "scale": 50000,
+      "scale": 100000,
       "grid": {
         "interval": {
-          "degrees": 0,
-          "minutes": 1,
-          "seconds": 0.0
+          "minutes": 1
         }
       },
       "export": {

@@ -1,0 +1,58 @@
+{
+  "artifacts": {
+    "export_log_path": null,
+    "final_render_path": null,
+    "preview_render_path": null,
+    "render_log_path": null
+  },
+  "capture_date": "2026-06-04",
+  "composition_id": "DaVanhKhan__20260604",
+  "grid_override": null,
+  "include": false,
+  "layers": [
+    {
+      "cache_path": "cache/DaVanhKhan/20260604/PSScene_20260604_032251_29_2547_cloud_70.0__fd653c704478.tif",
+      "capture_date": "2026-06-04",
+      "capture_time": "10:22:51",
+      "cloud_percent": 70.0,
+      "layer_id": "PSScene_20260604_032251_29_2547_cloud_70.0__fd653c704478",
+      "metadata_source": "filename",
+      "metadata_status": "valid",
+      "order": 0,
+      "source_path": "D:\\TU_KXOA\\webgis_v13_05.03\\webgis_v13\\backend\\input_geotiffs\\2026\\20260604\\PSScene_20260604_032251_29_2547_cloud_70.0.tif",
+      "visible": true
+    },
+    {
+      "cache_path": "cache/DaVanhKhan/20260604/PSScene_20260604_032249_06_2547_cloud_87.0__b0b828893fdf.tif",
+      "capture_date": "2026-06-04",
+      "capture_time": "10:22:49",
+      "cloud_percent": 87.0,
+      "layer_id": "PSScene_20260604_032249_06_2547_cloud_87.0__b0b828893fdf",
+      "metadata_source": "filename",
+      "metadata_status": "valid",
+      "order": 1,
+      "source_path": "D:\\TU_KXOA\\webgis_v13_05.03\\webgis_v13\\backend\\input_geotiffs\\2026\\20260604\\PSScene_20260604_032249_06_2547_cloud_87.0.tif",
+      "visible": true
+    }
+  ],
+  "needs_revalidation": true,
+  "notes": "",
+  "ready": false,
+  "review_order": null,
+  "reviewed": false,
+  "target_id": "DaVanhKhan",
+  "validation_summary": {
+    "error_count": 0,
+    "info_count": 0,
+    "last_validated_at": null,
+    "warning_count": 0
+  },
+  "view": {
+    "center": [
+      115.53887821625442,
+      9.912977609013312
+    ],
+    "rotation": 0,
+    "scale": 50000
+  }
+}

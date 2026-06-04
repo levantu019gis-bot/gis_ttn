@@ -73,7 +73,7 @@ for package in ("rasterio", "pyproj", "shapely"):
 _add_conda_dlls(binaries)
 
 a = Analysis(
-    [str(SRC / "thucthengay" / "app.py")],
+    [str(SRC / "thucthengay" / "__main__.py")],
     pathex=[str(SRC)],
     binaries=binaries,
     datas=datas,

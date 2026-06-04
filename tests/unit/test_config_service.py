@@ -515,6 +515,7 @@ def test_update_target_alignment_defaults_persists_scale_and_grid_interval(
     updated = update_target_alignment_defaults(
         config_path,
         target_id="target_a",
+        coordinate=[106.8, 10.9],
         interval=GridInterval(minutes=2, seconds=30),
         scale=25000,
     )
@@ -523,14 +524,17 @@ def test_update_target_alignment_defaults_persists_scale_and_grid_interval(
     raw_a = raw["targets"][0]
     raw_b = raw["targets"][1]
     assert updated.id == "target_a"
+    assert updated.coordinate == [106.8, 10.9]
     assert updated.scale == 25000
     assert updated.grid.interval.minutes == 2
     assert updated.grid.interval.seconds == 30
+    assert raw_a["coordinate"] == [106.8, 10.9]
     assert raw_a["scale"] == 25000
     assert raw_a["grid"]["interval"] == {"minutes": 2, "seconds": 30}
     assert raw_a["grid"]["label_format"] == "dms_short"
     assert raw_a["grid"]["style"] == {"frame_color": "#112233"}
     assert raw_b["scale"] == 50000
+    assert raw_b["coordinate"] == target_b["coordinate"]
     assert raw_b["grid"]["interval"] == {"minutes": 1}
 
 

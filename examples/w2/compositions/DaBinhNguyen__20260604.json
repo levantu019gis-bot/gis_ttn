@@ -1,0 +1,46 @@
+{
+  "artifacts": {
+    "export_log_path": null,
+    "final_render_path": null,
+    "preview_render_path": null,
+    "render_log_path": null
+  },
+  "capture_date": "2026-06-04",
+  "composition_id": "DaBinhNguyen__20260604",
+  "grid_override": null,
+  "include": false,
+  "layers": [
+    {
+      "cache_path": "cache/DaBinhNguyen/20260604/PSScene_20260604_032233_47_2547_cloud_84.0__087ddc782aeb.tif",
+      "capture_date": "2026-06-04",
+      "capture_time": "10:22:33",
+      "cloud_percent": 84.0,
+      "layer_id": "PSScene_20260604_032233_47_2547_cloud_84.0__087ddc782aeb",
+      "metadata_source": "filename",
+      "metadata_status": "valid",
+      "order": 0,
+      "source_path": "D:\\TU_KXOA\\webgis_v13_05.03\\webgis_v13\\backend\\input_geotiffs\\2026\\20260604\\PSScene_20260604_032233_47_2547_cloud_84.0.tif",
+      "visible": true
+    }
+  ],
+  "needs_revalidation": true,
+  "notes": "",
+  "ready": false,
+  "review_order": null,
+  "reviewed": false,
+  "target_id": "DaBinhNguyen",
+  "validation_summary": {
+    "error_count": 0,
+    "info_count": 0,
+    "last_validated_at": null,
+    "warning_count": 0
+  },
+  "view": {
+    "center": [
+      115.8250820481308,
+      10.81989979970509
+    ],
+    "rotation": 0,
+    "scale": 50000
+  }
+}

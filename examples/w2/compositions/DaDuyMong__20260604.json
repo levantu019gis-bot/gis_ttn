@@ -1,0 +1,58 @@
+{
+  "artifacts": {
+    "export_log_path": null,
+    "final_render_path": null,
+    "preview_render_path": null,
+    "render_log_path": null
+  },
+  "capture_date": "2026-06-04",
+  "composition_id": "DaDuyMong__20260604",
+  "grid_override": null,
+  "include": false,
+  "layers": [
+    {
+      "cache_path": "cache/DaDuyMong/20260604/PSScene_20260604_034223_33_253d_cloud_89.0__474782d5d46e.tif",
+      "capture_date": "2026-06-04",
+      "capture_time": "10:42:23",
+      "cloud_percent": 89.0,
+      "layer_id": "PSScene_20260604_034223_33_253d_cloud_89.0__474782d5d46e",
+      "metadata_source": "filename",
+      "metadata_status": "valid",
+      "order": 0,
+      "source_path": "D:\\TU_KXOA\\webgis_v13_05.03\\webgis_v13\\backend\\input_geotiffs\\2026\\20260604\\PSScene_20260604_034223_33_253d_cloud_89.0.tif",
+      "visible": true
+    },
+    {
+      "cache_path": "cache/DaDuyMong/20260604/PSScene_20260604_033858_35_254a_cloud_89.0__a9b8ed1132ad.tif",
+      "capture_date": "2026-06-04",
+      "capture_time": "10:38:58",
+      "cloud_percent": 89.0,
+      "layer_id": "PSScene_20260604_033858_35_254a_cloud_89.0__a9b8ed1132ad",
+      "metadata_source": "filename",
+      "metadata_status": "valid",
+      "order": 1,
+      "source_path": "D:\\TU_KXOA\\webgis_v13_05.03\\webgis_v13\\backend\\input_geotiffs\\2026\\20260604\\PSScene_20260604_033858_35_254a_cloud_89.0.tif",
+      "visible": true
+    }
+  ],
+  "needs_revalidation": true,
+  "notes": "",
+  "ready": false,
+  "review_order": null,
+  "reviewed": false,
+  "target_id": "DaDuyMong",
+  "validation_summary": {
+    "error_count": 0,
+    "info_count": 0,
+    "last_validated_at": null,
+    "warning_count": 0
+  },
+  "view": {
+    "center": [
+      111.74275307326698,
+      16.463528890307543
+    ],
+    "rotation": 0,
+    "scale": 50000
+  }
+}

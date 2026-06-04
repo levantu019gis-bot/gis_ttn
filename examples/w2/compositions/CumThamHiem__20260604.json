@@ -1,0 +1,106 @@
+{
+  "artifacts": {
+    "export_log_path": null,
+    "final_render_path": null,
+    "preview_render_path": null,
+    "render_log_path": null
+  },
+  "capture_date": "2026-06-04",
+  "composition_id": "CumThamHiem__20260604",
+  "grid_override": null,
+  "include": false,
+  "layers": [
+    {
+      "cache_path": "cache/CumThamHiem/20260604/PSScene_20260604_033743_96_251b_cloud_39.0__81df93e9075b.tif",
+      "capture_date": "2026-06-04",
+      "capture_time": "10:37:43",
+      "cloud_percent": 39.0,
+      "layer_id": "PSScene_20260604_033743_96_251b_cloud_39.0__81df93e9075b",
+      "metadata_source": "filename",
+      "metadata_status": "valid",
+      "order": 0,
+      "source_path": "D:\\TU_KXOA\\webgis_v13_05.03\\webgis_v13\\backend\\input_geotiffs\\2026\\20260604\\PSScene_20260604_033743_96_251b_cloud_39.0.tif",
+      "visible": true
+    },
+    {
+      "cache_path": "cache/CumThamHiem/20260604/PSScene_20260604_033741_95_251b_cloud_54.0__f1ef8b4d28ab.tif",
+      "capture_date": "2026-06-04",
+      "capture_time": "10:37:41",
+      "cloud_percent": 54.0,
+      "layer_id": "PSScene_20260604_033741_95_251b_cloud_54.0__f1ef8b4d28ab",
+      "metadata_source": "filename",
+      "metadata_status": "valid",
+      "order": 1,
+      "source_path": "D:\\TU_KXOA\\webgis_v13_05.03\\webgis_v13\\backend\\input_geotiffs\\2026\\20260604\\PSScene_20260604_033741_95_251b_cloud_54.0.tif",
+      "visible": true
+    },
+    {
+      "cache_path": "cache/CumThamHiem/20260604/PSScene_20260604_033739_94_251b_cloud_69.0__048dc3a51015.tif",
+      "capture_date": "2026-06-04",
+      "capture_time": "10:37:39",
+      "cloud_percent": 69.0,
+      "layer_id": "PSScene_20260604_033739_94_251b_cloud_69.0__048dc3a51015",
+      "metadata_source": "filename",
+      "metadata_status": "valid",
+      "order": 2,
+      "source_path": "D:\\TU_KXOA\\webgis_v13_05.03\\webgis_v13\\backend\\input_geotiffs\\2026\\20260604\\PSScene_20260604_033739_94_251b_cloud_69.0.tif",
+      "visible": true
+    },
+    {
+      "cache_path": "cache/CumThamHiem/20260604/PSScene_20260604_032533_56_2526_cloud_6.0__c47de4106b44.tif",
+      "capture_date": "2026-06-04",
+      "capture_time": "10:25:33",
+      "cloud_percent": 6.0,
+      "layer_id": "PSScene_20260604_032533_56_2526_cloud_6.0__c47de4106b44",
+      "metadata_source": "filename",
+      "metadata_status": "valid",
+      "order": 3,
+      "source_path": "D:\\TU_KXOA\\webgis_v13_05.03\\webgis_v13\\backend\\input_geotiffs\\2026\\20260604\\PSScene_20260604_032533_56_2526_cloud_6.0.tif",
+      "visible": true
+    },
+    {
+      "cache_path": "cache/CumThamHiem/20260604/PSScene_20260604_032531_32_2526_cloud_42.0__ade5f8bfce1a.tif",
+      "capture_date": "2026-06-04",
+      "capture_time": "10:25:31",
+      "cloud_percent": 42.0,
+      "layer_id": "PSScene_20260604_032531_32_2526_cloud_42.0__ade5f8bfce1a",
+      "metadata_source": "filename",
+      "metadata_status": "valid",
+      "order": 4,
+      "source_path": "D:\\TU_KXOA\\webgis_v13_05.03\\webgis_v13\\backend\\input_geotiffs\\2026\\20260604\\PSScene_20260604_032531_32_2526_cloud_42.0.tif",
+      "visible": true
+    },
+    {
+      "cache_path": "cache/CumThamHiem/20260604/PSScene_20260604_032529_08_2526_cloud_61.0__0957e5c317a0.tif",
+      "capture_date": "2026-06-04",
+      "capture_time": "10:25:29",
+      "cloud_percent": 61.0,
+      "layer_id": "PSScene_20260604_032529_08_2526_cloud_61.0__0957e5c317a0",
+      "metadata_source": "filename",
+      "metadata_status": "valid",
+      "order": 5,
+      "source_path": "D:\\TU_KXOA\\webgis_v13_05.03\\webgis_v13\\backend\\input_geotiffs\\2026\\20260604\\PSScene_20260604_032529_08_2526_cloud_61.0.tif",
+      "visible": true
+    }
+  ],
+  "needs_revalidation": true,
+  "notes": "",
+  "ready": false,
+  "review_order": null,
+  "reviewed": false,
+  "target_id": "CumThamHiem",
+  "validation_summary": {
+    "error_count": 0,
+    "info_count": 0,
+    "last_validated_at": null,
+    "warning_count": 0
+  },
+  "view": {
+    "center": [
+      114.65303439812439,
+      8.147995957560727
+    ],
+    "rotation": 0,
+    "scale": 50000
+  }
+}

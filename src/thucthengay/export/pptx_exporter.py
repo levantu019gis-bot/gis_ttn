@@ -94,6 +94,7 @@ def export_combined_pptx(
                     slide,
                     placeholder.element_id,
                     resolution.text if resolution.ok else "",
+                    fit_shape_to_text=_should_fit_shape_to_text(placeholder),
                 )
         exported.append(
             ExportedComposition(
@@ -272,6 +273,10 @@ def _placeholder_text_resolution(
         unknown_issue_id="export.pptx_placeholder_unknown",
         unresolved_issue_id="export.pptx_placeholder_unresolved",
     )
+
+
+def _should_fit_shape_to_text(placeholder: TemplatePlaceholder) -> bool:
+    return placeholder.field in {"time", "time_label"}
 
 
 def _template_metadata(target: TargetConfig) -> TemplateMetadata:

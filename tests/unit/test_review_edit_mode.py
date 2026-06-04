@@ -1884,7 +1884,12 @@ def test_review_edit_include_persists_target_interval_and_scale_to_config(
     service = WorkspaceService(tmp_path / "workspace")
     service.initialize(config_path=config_path)
     service.write_composition(
-        composition("alpha__20260525", "alpha", date(2026, 5, 25), needs_revalidation=False)
+        composition(
+            "alpha__20260525",
+            "alpha",
+            date(2026, 5, 25),
+            needs_revalidation=False,
+        ).model_copy(update={"view": ViewState(center=[106.8, 10.9], scale=50000)})
     )
     target = target_config("alpha", sort_order=1, name="Alpha Target").model_copy(
         update={
@@ -1907,10 +1912,12 @@ def test_review_edit_include_persists_target_interval_and_scale_to_config(
     raw_target = raw["targets"][0]
     included = service.read_composition("alpha__20260525")
     assert included.include is True
+    assert raw_target["coordinate"] == [106.8, 10.9]
     assert raw_target["scale"] == 25000
     assert raw_target["grid"]["interval"] == {"minutes": 2, "seconds": 30}
     assert raw_target["grid"]["label_format"] == "dms_short"
     assert mode._targets is not None  # noqa: SLF001
+    assert mode._targets[0].coordinate == [106.8, 10.9]  # noqa: SLF001
     assert mode._targets[0].scale == 25000  # noqa: SLF001
     assert mode._targets[0].grid.interval.minutes == 2  # noqa: SLF001
 
