@@ -182,6 +182,34 @@ CM-UX2: Keep the target toolbar intentionally narrow with `Thêm target`; remove
 
 CM-UX3: In the inspector, `Placeholders` shows only `field` and editable `value`; geometry shows only `Import GeoJSON` and `Export GeoJSON`, with no geometry preview or copy button.
 
+### Historical Image Registry Requirements Addendum
+
+HIR-FR1: Provide an optional SQLite-backed historical image registry that stores images included for each target across workspaces, including target identity, capture date/time, cloud percent where available, source paths, workspace/composition provenance, and timestamps.
+
+HIR-FR2: Keep the workspace JSON as the source of truth for the current session; the SQLite registry is a long-lived reference source used to seed new workspaces with relevant historical imagery.
+
+HIR-FR3: When a new workspace ingestion runs, load historical imagery according to configurable target scope: only targets with current-session matches by default, or all enabled targets when explicitly configured.
+
+HIR-FR4: When loading historical imagery, support configurable image selection modes: latest capture date, latest N images, explicit date range, and lookback-days window anchored either to today or the current session latest capture date.
+
+HIR-FR5: Merge current-session imagery and historical imagery into target-date compositions with deterministic deduplication so the same source image is not duplicated for the same target/date.
+
+HIR-FR6: Validate historical image paths before adding them to a workspace; missing or unreadable paths must create structured issues with Vietnamese remediation and must not silently disappear.
+
+HIR-FR7: Allow Operators to repair missing historical image paths, including single-file replacement and bulk path-prefix replacement, then revalidate and persist repaired paths to the registry.
+
+HIR-FR8: Record historical registry entries only after a composition successfully passes validation and is included; skipped or validation-failed compositions must not be written as included history.
+
+HIR-AR1: Implement registry access behind a `HistoryService` in a new core module such as `src/thucthengay/history/`; PySide UI must not query or mutate SQLite directly.
+
+HIR-AR2: Use Python's built-in `sqlite3` with schema migrations, transactions, parameter binding, foreign keys, and short write operations; WAL mode is allowed only for local database files and must be avoided or configurable for network-share database locations.
+
+HIR-AR3: Historical images loaded into a workspace should be copied into workspace cache before review/render/export when available, preserving the existing workspace isolation and render/export reliability.
+
+HIR-UX1: Ingest summary and Review/Edit must distinguish current-session imagery from historical imagery through text/icon status, not color alone.
+
+HIR-UX2: Missing historical paths must be visible in the Warnings panel and navigable to the affected target/composition/layer, with a clear repair action.
+
 ### FR Coverage Map
 
 FR1: Epic 1 - Load target config.
@@ -213,6 +241,9 @@ AR17: Epic 7 - Windows packaging readiness.
 CM-FR1-CM-FR8: Epic 8 - Config Manager tab.
 CM-AR1-CM-AR2: Epic 8 - Config editing service and UI boundary.
 CM-UX1-CM-UX3: Epic 8 - Approved Config Manager layout and interactions.
+HIR-FR1-HIR-FR8: Epic 9 - Historical image registry and workspace seeding.
+HIR-AR1-HIR-AR3: Epic 9 - SQLite service boundary, migrations, and cache integration.
+HIR-UX1-HIR-UX2: Epic 9 - Historical imagery visibility and missing-path repair UX.
 
 
 ## Epic List
@@ -1770,3 +1801,158 @@ So that changes to targets, groups, geometry, templates, or defaults do not surp
 **When** downstream code refreshes config
 **Then** it receives the saved config through existing config service boundaries
 **And** no downstream UI reads the config JSON file directly.
+
+## Epic 9: Historical Image Registry
+
+**Goal:** Operator có thể dùng lại ảnh lịch sử đã từng include cho target trong các workspace trước, giúp workspace mới tự bổ sung ảnh cũ phù hợp để so sánh/đưa vào composition, đồng thời vẫn giữ workspace hiện tại là source of truth và báo rõ khi đường dẫn ảnh lịch sử bị mất.
+
+### Story 9.1: Add SQLite History Service and Registry Schema
+
+As an Operator,
+I want the app to remember included target imagery across workspaces,
+So that future workspaces can reuse relevant historical images without manually searching old folders.
+
+**Requirement References:** HIR-FR1, HIR-FR2, HIR-AR1, HIR-AR2, NFR2, NFR3, NFR5
+
+**Acceptance Criteria:**
+
+**Given** historical registry is enabled in config
+**When** `HistoryService` opens the configured SQLite database
+**Then** it creates or migrates the schema for target history, image assets, target-image links, include events, and schema version
+**And** all writes run inside transactions with SQLite parameter binding.
+
+**Given** historical registry is disabled or no database path is configured
+**When** ingestion/review runs
+**Then** the app continues to behave exactly like the current workspace-only workflow
+**And** no SQLite file is created implicitly outside the configured/default project data location.
+
+**Given** the database is located on a network share
+**When** the service initializes SQLite pragmas
+**Then** WAL mode is not forced
+**And** the service uses short transactions, `foreign_keys=ON`, and a busy timeout.
+
+**Given** core modules need registry access
+**When** they load or record history
+**Then** they call `HistoryService`
+**And** PySide UI widgets do not query or mutate SQLite directly.
+
+### Story 9.2: Record Included Compositions into History
+
+As an Operator,
+I want included compositions to be saved into historical registry,
+So that images I approved can appear in future workspaces.
+
+**Requirement References:** HIR-FR1, HIR-FR8, HIR-AR1, NFR4
+
+**Acceptance Criteria:**
+
+**Given** a composition passes validation and Include/Validate succeeds
+**When** the include transition is persisted
+**Then** the app records target id/name/alias, composition id, capture date/time, cloud percent, source path, cache path, and workspace path for each included layer.
+
+**Given** a composition is skipped or validation fails
+**When** review actions complete
+**Then** no included-history event is recorded for that composition.
+
+**Given** the same target/image is included again later
+**When** the registry write runs
+**Then** the existing target-image link is updated with latest inclusion metadata
+**And** a separate include event is appended for traceability.
+
+**Given** history recording fails after workspace include succeeds
+**When** the app reports the action result
+**Then** the composition remains included in the workspace
+**And** the Operator sees a non-blocking warning explaining that history was not updated.
+
+### Story 9.3: Load Historical Imagery into New Workspace Ingestion
+
+As an Operator,
+I want new workspaces to include relevant historical imagery for targets in scope,
+So that I can compare current and previous satellite scenes in the same review queue.
+
+**Requirement References:** HIR-FR2, HIR-FR3, HIR-FR4, HIR-FR5, HIR-AR3, HIR-UX1
+
+**Acceptance Criteria:**
+
+**Given** current-session imagery has been matched to targets
+**When** historical loading runs with `target_scope=targets_with_current_matches`
+**Then** history is queried only for targets that have at least one current-session match.
+
+**Given** historical loading runs with `target_scope=all_enabled_targets`
+**When** ingestion creates composition inputs
+**Then** history is queried for every enabled target in the loaded config.
+
+**Given** `image_selection.mode=latest_date`
+**When** history is queried for a target
+**Then** all available historical images from that target's latest capture date are loaded.
+
+**Given** `image_selection.mode=latest_images`
+**When** `limit_per_target` is set
+**Then** only the newest N historical images for each target are loaded.
+
+**Given** `image_selection.mode=date_range`
+**When** `start_date` and `end_date` are set
+**Then** only historical images with capture dates inside the inclusive range are loaded.
+
+**Given** `image_selection.mode=lookback_days`
+**When** an anchor is configured as `today` or `current_session_latest_date`
+**Then** only historical images inside the computed lookback window are loaded.
+
+**Given** a historical image is also present in current-session matches
+**When** composition inputs are merged
+**Then** the image appears only once for the same target/date.
+
+### Story 9.4: Validate and Repair Historical Image Paths
+
+As an Operator,
+I want missing historical paths to be detected and repairable,
+So that moved LAN/local imagery can be reused without corrupting the current workspace.
+
+**Requirement References:** HIR-FR6, HIR-FR7, HIR-UX2, NFR6, NFR7, NFR9
+
+**Acceptance Criteria:**
+
+**Given** a historical image path no longer exists
+**When** historical loading validates registry entries
+**Then** the app creates a structured warning issue with target, image, path, Vietnamese message, and remediation
+**And** the missing image is not copied into workspace cache until repaired.
+
+**Given** a historical image path exists but cannot be opened as a usable GeoTIFF
+**When** validation runs
+**Then** the app creates a structured warning or error issue based on whether review/export can safely continue.
+
+**Given** the Operator repairs one missing image path
+**When** the selected replacement file is accepted
+**Then** the app revalidates the file, updates the registry path in a transaction, and refreshes the affected workspace issue.
+
+**Given** many historical paths share an old prefix
+**When** the Operator applies a bulk path-prefix replacement
+**Then** the app previews affected rows and requires explicit confirmation before updating the registry.
+
+### Story 9.5: Surface Historical Imagery Status in Review/Edit and Ingest Summary
+
+As an Operator,
+I want historical imagery to be visibly distinguishable from current-session imagery,
+So that I understand which layers are new, historical, missing, or repaired while reviewing.
+
+**Requirement References:** HIR-UX1, HIR-UX2, UX-DR3, UX-DR6, UX-DR9, UX-DR14, UX-DR15
+
+**Acceptance Criteria:**
+
+**Given** ingestion completes with historical loading enabled
+**When** the summary is shown
+**Then** it displays current images scanned, current images matched, historical images loaded, historical images skipped, and historical path issues.
+
+**Given** a composition contains historical layers
+**When** the layer stack is rendered
+**Then** each layer shows a text/icon source indicator such as current or historical
+**And** status does not rely on color alone.
+
+**Given** historical path issues exist
+**When** the Warnings panel is rendered
+**Then** issue rows identify the affected target/composition/layer and offer navigation or repair where available.
+
+**Given** historical settings produce no matching historical imagery
+**When** ingestion completes
+**Then** the app reports that no historical images matched the configured target scope and image selection
+**And** this is informational rather than blocking.
