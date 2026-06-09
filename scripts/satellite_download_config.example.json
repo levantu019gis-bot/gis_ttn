@@ -1,0 +1,25 @@
+{
+  "geojson_dir": "../webapp_geojson/output_geojson",
+  "geojson_files": [],
+  "image_folders": [
+    "/mnt/satellite_image"
+  ],
+  "output_dir": "../output/satellite_images",
+  "geojson_crs": null,
+  "extensions": [".tif", ".tiff"],
+  "filename_formats": [
+    {
+      "format": "PSScene_yyyyMMdd_hhMMss_*_*_cloud_cloud-percent.tif",
+      "max_cloud_percent": 20
+    },
+    {
+      "format": "*_yyyyMMdd_hhMMss_*_*_cloud_cloud-percent.tif",
+      "max_cloud_percent": 20
+    }
+  ],
+  "preserve_source_tree": true,
+  "overwrite": false,
+  "dry_run": false,
+  "include_boundary_touch": true,
+  "write_manifest": true
+}
