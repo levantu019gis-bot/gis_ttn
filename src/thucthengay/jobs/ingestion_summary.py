@@ -15,6 +15,10 @@ NO_MATCH_EMPTY_STATE_MESSAGE = (
     "target có đang bị tắt không, footprint GeoTIFF có hợp lệ không, và ảnh có giao "
     "với boundary target hay không."
 )
+NO_HISTORICAL_EMPTY_STATE_MESSAGE = (
+    "Đã bật tải ảnh lịch sử nhưng không có ảnh lịch sử nào khớp với target scope "
+    "và image selection hiện tại."
+)
 
 
 class IngestionWarningItem(BaseModel):
@@ -62,10 +66,15 @@ class IngestionSummary(BaseModel):
     targets_with_images_count: int = 0
     created_composition_count: int = 0
     warning_count: int = 0
+    historical_loading_enabled: bool = False
+    historical_loaded_image_count: int = 0
+    historical_skipped_image_count: int = 0
+    historical_path_issue_count: int = 0
     workspace_path: str
     composition_ids: list[str] = Field(default_factory=list)
     warnings: list[IngestionWarningItem] = Field(default_factory=list)
     empty_state_message: str | None = None
+    historical_empty_message: str | None = None
 
     @classmethod
     def from_job_result(
@@ -82,6 +91,17 @@ class IngestionSummary(BaseModel):
             and result.matched_image_count == 0
             else None
         )
+        historical_path_issue_count = sum(
+            1 for issue in result.issues if issue.issue_id.startswith("historical.")
+        )
+        historical_empty_message = (
+            NO_HISTORICAL_EMPTY_STATE_MESSAGE
+            if result.state in {JobState.SUCCESS, JobState.WARNING}
+            and result.historical_loading_enabled
+            and result.historical_loaded_image_count == 0
+            and result.historical_skipped_image_count == 0
+            else None
+        )
         return cls(
             job_id=result.job_id,
             state=result.state,
@@ -90,10 +110,15 @@ class IngestionSummary(BaseModel):
             targets_with_images_count=result.targets_with_images_count,
             created_composition_count=len(result.composition_ids),
             warning_count=len(warnings),
+            historical_loading_enabled=result.historical_loading_enabled,
+            historical_loaded_image_count=result.historical_loaded_image_count,
+            historical_skipped_image_count=result.historical_skipped_image_count,
+            historical_path_issue_count=historical_path_issue_count,
             workspace_path=str(Path(workspace_path).expanduser().resolve()),
             composition_ids=list(result.composition_ids),
             warnings=warnings,
             empty_state_message=empty_state_message,
+            historical_empty_message=historical_empty_message,
         )
 
     @property

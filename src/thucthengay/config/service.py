@@ -66,6 +66,7 @@ class ConfigLoadResult:
     target_paths: dict[str, ResolvedTargetPaths] = field(default_factory=dict)
     template_metadata: dict[str, TemplateMetadata] = field(default_factory=dict)
     loaded_templates: dict[str, LoadedTemplate] = field(default_factory=dict)
+    historical_database_path: Path | None = None
     issues: list[Issue] = field(default_factory=list)
 
     @property
@@ -125,6 +126,7 @@ def load_project_config(config_path: str | Path) -> ConfigLoadResult:
         (target for target in result.config.targets if target.enabled),
         key=target_order_key,
     )
+    _resolve_historical_registry_path(config_file, result)
 
     for target in result.enabled_targets:
         _resolve_runtime_target_assets(config_file, target)
@@ -298,6 +300,41 @@ def _validate_target_references(
     result.loaded_templates[target.id] = loaded_template
     target.metadata["template_metadata"] = loaded_template.metadata.model_dump(mode="json")
     result.target_paths[target.id] = target_paths
+
+
+def _resolve_historical_registry_path(
+    config_file: Path,
+    result: ConfigLoadResult,
+) -> None:
+    if result.config is None:
+        return
+
+    registry = result.config.historical_registry
+    if registry.database_path:
+        result.historical_database_path = resolve_config_asset_path(
+            config_file,
+            registry.database_path,
+        )
+
+    if not result.config.historical_loading.enabled:
+        return
+
+    if registry.enabled and result.historical_database_path is not None:
+        return
+
+    result.issues.append(
+        _config_issue(
+            "historical_loading.database_path_missing",
+            (
+                "Đã bật tải ảnh lịch sử nhưng chưa cấu hình "
+                "`historical_registry.enabled=true` và `historical_registry.database_path`."
+            ),
+            (
+                "Tắt `historical_loading.enabled` để giữ workflow hiện tại, hoặc cấu hình "
+                "`historical_registry.database_path` trỏ tới SQLite registry trước khi ingest."
+            ),
+        )
+    )
 
 
 def _resolve_runtime_target_assets(config_file: Path, target: TargetConfig) -> None:

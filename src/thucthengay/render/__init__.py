@@ -32,6 +32,8 @@ from thucthengay.render.raster import (
 from thucthengay.render.spec import (
     GeoWindow,
     RenderBackground,
+    RenderComparisonPane,
+    RenderComparisonSpec,
     RenderLayerRef,
     RenderSpec,
     RenderSpecError,
@@ -45,6 +47,8 @@ __all__ = [
     "MapSurroundLayout",
     "PixelRect",
     "RenderBackground",
+    "RenderComparisonPane",
+    "RenderComparisonSpec",
     "RenderError",
     "RenderLayerRef",
     "RenderSpec",

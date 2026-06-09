@@ -4,10 +4,19 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
+from hashlib import sha1
 from pathlib import Path
 
+from thucthengay.config.path_resolver import resolve_config_asset_path
 from thucthengay.config.service import ConfigLoadResult
+from thucthengay.history import (
+    HistoricalImageRecord,
+    HistoricalLoadingPlan,
+    HistoricalLoadingResult,
+    HistoryService,
+)
 from thucthengay.ingestion import (
+    CacheImageInput,
     CompositionCreationResult,
     TargetMatchingResult,
     create_target_date_compositions,
@@ -17,10 +26,21 @@ from thucthengay.ingestion import (
 )
 from thucthengay.jobs.control import JobCancelled, JobControl
 from thucthengay.jobs.progress import JobState, ProgressEvent
-from thucthengay.models import Issue, IssueScope, IssueSeverity, TargetConfig
+from thucthengay.models import (
+    HistoricalLoadingTargetScope,
+    ImageLayer,
+    ImageLayerSourceKind,
+    Issue,
+    IssueScope,
+    IssueSeverity,
+    MetadataSource,
+    MetadataStatus,
+    TargetConfig,
+)
 from thucthengay.workspace import WorkspaceError, WorkspaceService
 
 ProgressPublisher = Callable[[ProgressEvent], None]
+HistoricalLoader = Callable[[HistoricalLoadingPlan], HistoricalLoadingResult]
 
 
 @dataclass(frozen=True)
@@ -34,6 +54,9 @@ class IngestionJobResult:
     matched_image_count: int
     targets_with_images_count: int
     composition_ids: list[str]
+    historical_loading_enabled: bool = False
+    historical_loaded_image_count: int = 0
+    historical_skipped_image_count: int = 0
 
 
 def run_ingestion_job(
@@ -46,6 +69,7 @@ def run_ingestion_job(
     clear_confirmed: bool = False,
     control: JobControl | None = None,
     publish: ProgressPublisher | None = None,
+    historical_loader: HistoricalLoader | None = None,
 ) -> IngestionJobResult:
     """Run the ingestion pipeline and emit progress after every major phase."""
     progress = _ProgressBuilder(job_id=job_id, publish=publish)
@@ -53,12 +77,23 @@ def run_ingestion_job(
     checkpoint = control.checkpoint if control is not None else None
 
     fatal_issues = _fatal_setup_issues(config_result.issues)
+    historical_setup_issue = _historical_loading_setup_issue(config_result)
+    if historical_setup_issue is not None:
+        fatal_issues.append(historical_setup_issue)
     if fatal_issues:
         return _finish_with_error(
             progress,
             job_id=job_id,
             issues=fatal_issues,
             message="Không thể bắt đầu lấy dữ liệu vì cấu hình chưa hợp lệ.",
+        )
+    if not _historical_loading_enabled(config_result):
+        progress.emit(
+            stage="history",
+            message=(
+                "Chế độ ảnh lịch sử: Không tải ảnh lịch sử; "
+                "chỉ xử lý ảnh của phiên hiện tại."
+            ),
         )
 
     try:
@@ -128,6 +163,20 @@ def run_ingestion_job(
         return _finish_with_cancelled(progress, job_id=job_id)
     issues.extend(matching_result.issues)
     _emit_target_match_progress(progress, config_result.enabled_targets, matching_result, issues)
+    historical_cache_inputs: list[CacheImageInput] = []
+    historical_plan = _build_historical_loading_plan(config_result, matching_result)
+    historical_loaded_image_count = 0
+    historical_skipped_image_count = 0
+    if historical_plan.enabled:
+        progress.emit(stage="history", message=_historical_loading_message(historical_plan))
+        loader = historical_loader or _default_historical_loader(historical_plan)
+        if loader is not None:
+            historical_result = loader(historical_plan)
+            issues.extend(historical_result.issues)
+            historical_loaded_image_count = historical_result.loaded_image_count
+            historical_skipped_image_count = historical_result.skipped_image_count
+            historical_cache_inputs = _historical_cache_inputs(historical_result.records)
+            progress.update(issues=issues)
 
     try:
         if checkpoint is not None:
@@ -135,6 +184,7 @@ def run_ingestion_job(
         cache_result = populate_workspace_cache(
             matching_result,
             workspace_service,
+            additional_images=historical_cache_inputs,
             clear_existing=clear_existing,
             clear_confirmed=clear_confirmed,
             checkpoint=checkpoint,
@@ -180,6 +230,9 @@ def run_ingestion_job(
         matched_image_count=progress.matched_image_count,
         targets_with_images_count=progress.targets_with_images_count,
         composition_ids=composition_result.composition_ids,
+        historical_loading_enabled=historical_plan.enabled,
+        historical_loaded_image_count=historical_loaded_image_count,
+        historical_skipped_image_count=historical_skipped_image_count,
     )
 
 
@@ -375,6 +428,7 @@ def _finish_with_cancelled(
         matched_image_count=progress.matched_image_count,
         targets_with_images_count=progress.targets_with_images_count,
         composition_ids=[],
+        historical_loading_enabled=False,
     )
 
 
@@ -395,6 +449,172 @@ def _finish_with_error(
         matched_image_count=progress.matched_image_count,
         targets_with_images_count=progress.targets_with_images_count,
         composition_ids=[],
+        historical_loading_enabled=False,
+    )
+
+
+def _historical_loading_enabled(config_result: ConfigLoadResult) -> bool:
+    return bool(
+        config_result.config is not None
+        and config_result.config.historical_loading.enabled
+    )
+
+
+def _default_historical_loader(
+    plan: HistoricalLoadingPlan,
+) -> HistoricalLoader | None:
+    if plan.database_path is None:
+        return None
+    return HistoryService(plan.database_path).load_historical_images
+
+
+def _historical_cache_inputs(
+    records: list[HistoricalImageRecord],
+) -> list[CacheImageInput]:
+    return [
+        CacheImageInput(
+            target_id=record.target_id,
+            source_path=record.source_path,
+            layer=ImageLayer(
+                layer_id=_historical_layer_id(record),
+                source_path=str(record.source_path),
+                cache_path=record.cache_path,
+                order=0,
+                capture_date=record.capture_date,
+                capture_time=record.capture_time,
+                cloud_percent=record.cloud_percent,
+                metadata_status=(
+                    MetadataStatus.VALID
+                    if record.capture_date is not None and record.capture_time is not None
+                    else MetadataStatus.NEEDS_MANUAL_CORRECTION
+                ),
+                metadata_source=MetadataSource.UNKNOWN,
+                source_kind=ImageLayerSourceKind.HISTORICAL,
+            ),
+        )
+        for record in records
+    ]
+
+
+def _historical_layer_id(record: HistoricalImageRecord) -> str:
+    identity = "|".join(
+        (
+            record.target_id,
+            str(record.source_path),
+            record.capture_date.isoformat() if record.capture_date else "",
+            record.capture_time.isoformat() if record.capture_time else "",
+        )
+    )
+    identity_hash = sha1(identity.encode("utf-8"), usedforsecurity=False).hexdigest()[:12]
+    return f"history__{identity_hash}"
+
+
+def _historical_loading_setup_issue(config_result: ConfigLoadResult) -> Issue | None:
+    if not _historical_loading_enabled(config_result):
+        return None
+    if any(
+        issue.issue_id == "historical_loading.database_path_missing"
+        for issue in config_result.issues
+    ):
+        return None
+
+    config = config_result.config
+    if config is None:
+        return None
+    if config.historical_registry.enabled and _historical_database_path(config_result):
+        return None
+    return _historical_database_path_missing_issue()
+
+
+def _build_historical_loading_plan(
+    config_result: ConfigLoadResult,
+    matching_result: TargetMatchingResult,
+) -> HistoricalLoadingPlan:
+    if not _historical_loading_enabled(config_result) or config_result.config is None:
+        return HistoricalLoadingPlan.disabled()
+
+    loading = config_result.config.historical_loading
+    database_path = _historical_database_path(config_result)
+    target_ids = _historical_target_ids(config_result, matching_result)
+    return HistoricalLoadingPlan(
+        enabled=True,
+        database_path=database_path,
+        target_ids=target_ids,
+        target_scope=loading.target_scope,
+        image_selection=loading.image_selection,
+        current_session_latest_capture_date=_current_session_latest_capture_date(
+            matching_result
+        ),
+    )
+
+
+def _historical_database_path(config_result: ConfigLoadResult) -> Path | None:
+    if config_result.historical_database_path is not None:
+        return config_result.historical_database_path
+    if config_result.config is None:
+        return None
+    database_path = config_result.config.historical_registry.database_path
+    if not database_path:
+        return None
+    return resolve_config_asset_path(config_result.config_path, database_path)
+
+
+def _historical_target_ids(
+    config_result: ConfigLoadResult,
+    matching_result: TargetMatchingResult,
+) -> tuple[str, ...]:
+    if config_result.config is None:
+        return ()
+    scope = config_result.config.historical_loading.target_scope
+    if scope == HistoricalLoadingTargetScope.ALL_ENABLED_TARGETS:
+        return tuple(target.id for target in config_result.enabled_targets)
+    return tuple(
+        target.id
+        for target in config_result.enabled_targets
+        if matching_result.matches.get(target.id)
+    )
+
+
+def _current_session_latest_capture_date(
+    matching_result: TargetMatchingResult,
+):
+    capture_dates = [
+        match.image.layer.capture_date
+        for matches in matching_result.matches.values()
+        for match in matches
+        if match.image.layer.capture_date is not None
+    ]
+    if not capture_dates:
+        return None
+    return max(capture_dates)
+
+
+def _historical_loading_message(plan: HistoricalLoadingPlan) -> str:
+    target_scope = (
+        plan.target_scope.value
+        if isinstance(plan.target_scope, HistoricalLoadingTargetScope)
+        else plan.target_scope
+    )
+    return (
+        "Chế độ ảnh lịch sử: Tải ảnh lịch sử; "
+        f"scope={target_scope}, selection={plan.image_selection.mode.value}, "
+        f"targets={len(plan.target_ids)}."
+    )
+
+
+def _historical_database_path_missing_issue() -> Issue:
+    return Issue(
+        issue_id="historical_loading.database_path_missing",
+        severity=IssueSeverity.ERROR,
+        scope=IssueScope.CONFIG,
+        message=(
+            "Đã bật tải ảnh lịch sử nhưng chưa cấu hình "
+            "`historical_registry.enabled=true` và `historical_registry.database_path`."
+        ),
+        remediation=(
+            "Tắt `historical_loading.enabled` để giữ workflow hiện tại, hoặc cấu hình "
+            "`historical_registry.database_path` trỏ tới SQLite registry trước khi ingest."
+        ),
     )
 
 

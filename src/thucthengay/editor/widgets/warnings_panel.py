@@ -80,6 +80,9 @@ class WarningsPanelWidget(QWidget):
                 text = f"{text}\n  → {issue.remediation}"
             text = f"{text}\n  → điều hướng"
 
+            if _is_historical_path_issue(issue):
+                text = f"{text}\n  -> sua duong dan"
+
             item = QListWidgetItem(text)
             item.setIcon(_severity_icon(issue.severity))
             resolved_target = issue.target_id or target_id
@@ -106,3 +109,11 @@ def _severity_icon(severity: IssueSeverity) -> QIcon:
     if severity is IssueSeverity.WARNING:
         return style.standardIcon(QStyle.StandardPixmap.SP_MessageBoxWarning)
     return style.standardIcon(QStyle.StandardPixmap.SP_MessageBoxInformation)
+
+
+def _is_historical_path_issue(issue: Issue) -> bool:
+    return issue.issue_id in {
+        "historical.path_missing",
+        "historical.geotiff_unreadable",
+        "historical.geotiff_unusable",
+    }

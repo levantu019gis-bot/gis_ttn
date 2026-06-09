@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import shutil
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from hashlib import sha1
 from pathlib import Path
@@ -26,10 +26,20 @@ class CachePopulationResult:
     cache_recreated: bool = False
 
 
+@dataclass(frozen=True)
+class CacheImageInput:
+    """One image already associated with a target and ready for workspace cache copy."""
+
+    target_id: str
+    source_path: Path
+    layer: ImageLayer
+
+
 def populate_workspace_cache(
     matching_result: TargetMatchingResult,
     workspace_service: WorkspaceService,
     *,
+    additional_images: Sequence[CacheImageInput] = (),
     clear_existing: bool = False,
     clear_confirmed: bool = False,
     checkpoint: CheckpointCallback | None = None,
@@ -52,38 +62,75 @@ def populate_workspace_cache(
         for match in matches:
             if checkpoint is not None:
                 checkpoint()
-            source_path = match.image.path.expanduser().resolve()
-            date_key = _date_key(match.image.layer)
-            group_key = (target_id, date_key)
-            layers_by_target_date.setdefault(group_key, [])
-
-            identity = (target_id, date_key, str(source_path))
-            if identity in seen_identities:
-                continue
-            seen_identities.add(identity)
-
-            cache_path = _cache_path_for_source(workspace_service, target_id, date_key, source_path)
-            try:
-                _copy_source_to_cache(source_path, cache_path)
-            except OSError as error:
-                issues.append(_copy_failed_issue(source_path, error))
-                continue
-            if checkpoint is not None:
-                checkpoint()
-
-            layers_by_target_date[group_key].append(
-                _cached_layer(
-                    match.image.layer,
-                    source_path,
-                    workspace_service.paths.root,
-                    cache_path,
-                )
+            _add_cache_input(
+                CacheImageInput(
+                    target_id=target_id,
+                    source_path=match.image.path,
+                    layer=match.image.layer,
+                ),
+                workspace_service,
+                layers_by_target_date=layers_by_target_date,
+                issues=issues,
+                seen_identities=seen_identities,
             )
+
+    for image in additional_images:
+        if checkpoint is not None:
+            checkpoint()
+        _add_cache_input(
+            image,
+            workspace_service,
+            layers_by_target_date=layers_by_target_date,
+            issues=issues,
+            seen_identities=seen_identities,
+        )
+        if checkpoint is not None:
+            checkpoint()
 
     return CachePopulationResult(
         layers_by_target_date=layers_by_target_date,
         issues=issues,
         cache_recreated=cache_recreated,
+    )
+
+
+def _add_cache_input(
+    image: CacheImageInput,
+    workspace_service: WorkspaceService,
+    *,
+    layers_by_target_date: dict[tuple[str, str], list[ImageLayer]],
+    issues: list[Issue],
+    seen_identities: set[tuple[str, str, str]],
+) -> None:
+    source_path = image.source_path.expanduser().resolve()
+    date_key = _date_key(image.layer)
+    group_key = (image.target_id, date_key)
+    layers_by_target_date.setdefault(group_key, [])
+
+    identity = (image.target_id, date_key, str(source_path))
+    if identity in seen_identities:
+        return
+    seen_identities.add(identity)
+
+    cache_path = _cache_path_for_source(
+        workspace_service,
+        image.target_id,
+        date_key,
+        source_path,
+    )
+    try:
+        _copy_source_to_cache(source_path, cache_path)
+    except OSError as error:
+        issues.append(_copy_failed_issue(source_path, error))
+        return
+
+    layers_by_target_date[group_key].append(
+        _cached_layer(
+            image.layer,
+            source_path,
+            workspace_service.paths.root,
+            cache_path,
+        )
     )
 
 

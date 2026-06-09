@@ -27,6 +27,13 @@ class MetadataSource(StrEnum):
     MANUAL = "manual"
 
 
+class ImageLayerSourceKind(StrEnum):
+    """Whether a layer comes from the current ingestion run or historical registry."""
+
+    CURRENT = "current"
+    HISTORICAL = "historical"
+
+
 class ImageLayer(BaseModel):
     """GeoTIFF layer included in a target-date composition."""
 
@@ -42,3 +49,4 @@ class ImageLayer(BaseModel):
     cloud_percent: float | None = Field(default=None, ge=0, le=100)
     metadata_status: MetadataStatus = MetadataStatus.UNKNOWN
     metadata_source: MetadataSource = MetadataSource.UNKNOWN
+    source_kind: ImageLayerSourceKind = ImageLayerSourceKind.CURRENT

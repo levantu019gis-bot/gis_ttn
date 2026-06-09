@@ -101,13 +101,13 @@ development_status:
   epic-8: in-progress
   8-6-implement-defaults-filename-patterns-and-raw-json-views: review
   epic-8-retrospective: optional
-  epic-9: backlog
-  9-1-add-sqlite-history-service-and-registry-schema: backlog
-  9-2-record-included-compositions-into-history: backlog
-  9-3-configure-historical-loading-mode-for-ingestion: backlog
-  9-4-load-historical-imagery-into-new-workspace-ingestion: backlog
-  9-5-validate-and-repair-historical-image-paths: backlog
-  9-6-surface-historical-imagery-status-in-review-edit-and-ingest-summary: backlog
-  9-7-add-temporal-compare-controls-in-review-edit: backlog
-  9-8-render-and-export-split-map-frame-for-temporal-comparison: backlog
+  epic-9: in-progress
+  9-1-add-sqlite-history-service-and-registry-schema: review
+  9-2-record-included-compositions-into-history: review
+  9-3-configure-historical-loading-mode-for-ingestion: review
+  9-4-load-historical-imagery-into-new-workspace-ingestion: review
+  9-5-validate-and-repair-historical-image-paths: review
+  9-6-surface-historical-imagery-status-in-review-edit-and-ingest-summary: review
+  9-7-add-temporal-compare-controls-in-review-edit: review
+  9-8-render-and-export-split-map-frame-for-temporal-comparison: review
   epic-9-retrospective: optional

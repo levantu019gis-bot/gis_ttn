@@ -439,6 +439,62 @@ def test_load_project_config_applies_shared_defaults_with_target_overrides(
     assert loaded_target.export.map_background_color == "#AABBCC"
 
 
+def test_load_project_config_resolves_historical_registry_database_path(
+    tmp_path: Path,
+) -> None:
+    element_id = prepare_target_files(tmp_path, "target_a")
+    write_json(
+        tmp_path / "config.json",
+        {
+            "historical_registry": {
+                "enabled": True,
+                "database_path": "history/target-history.sqlite",
+            },
+            "historical_loading": {
+                "enabled": True,
+                "target_scope": "targets_with_current_matches",
+                "image_selection": {"mode": "latest_date"},
+            },
+            "targets": [target_config("target_a", 1, map_element_id=element_id)],
+        },
+    )
+
+    result = load_project_config(tmp_path / "config.json")
+
+    assert result.ok is True
+    assert result.historical_database_path == (
+        tmp_path / "history" / "target-history.sqlite"
+    ).resolve()
+
+
+def test_load_project_config_blocks_historical_loading_without_registry_path(
+    tmp_path: Path,
+) -> None:
+    element_id = prepare_target_files(tmp_path, "target_a")
+    write_json(
+        tmp_path / "config.json",
+        {
+            "historical_loading": {
+                "enabled": True,
+                "target_scope": "targets_with_current_matches",
+                "image_selection": {"mode": "latest_date"},
+            },
+            "targets": [target_config("target_a", 1, map_element_id=element_id)],
+        },
+    )
+
+    result = load_project_config(tmp_path / "config.json")
+
+    issue = next(
+        issue
+        for issue in result.issues
+        if issue.issue_id == "historical_loading.database_path_missing"
+    )
+    assert result.ok is False
+    assert issue.blocking is True
+    assert "historical_registry.database_path" in issue.message
+
+
 def test_pptx_template_metadata_keeps_map_picture_pixel_size(tmp_path: Path) -> None:
     (tmp_path / "targets").mkdir(parents=True)
     (tmp_path / "targets" / "target_a.geojson").write_text("{}", encoding="utf-8")

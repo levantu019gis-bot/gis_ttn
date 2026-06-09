@@ -10,6 +10,8 @@ from PySide6.QtWidgets import (
     QAbstractItemView,
     QApplication,
     QButtonGroup,
+    QCheckBox,
+    QComboBox,
     QFileDialog,
     QFrame,
     QGridLayout,
@@ -43,6 +45,7 @@ from thucthengay.editor.widgets import (
     confirm_date_change_dialog,
 )
 from thucthengay.export.final_render import final_render_output_size
+from thucthengay.history import HistoryService
 from thucthengay.jobs import (
     JobState,
     PreviewRenderJobResult,
@@ -53,9 +56,12 @@ from thucthengay.models import (
     Composition,
     GridConfig,
     GridInterval,
+    ImageLayer,
+    ImageLayerSourceKind,
     Issue,
     TargetConfig,
     TemplateMetadata,
+    TemporalCompareOrientation,
 )
 from thucthengay.render.core import MapRenderCache, render_map_with_cache
 from thucthengay.render.raster import render_raster_layers
@@ -80,11 +86,13 @@ class ReviewEditMode(QWidget):
         parent: QWidget | None = None,
         *,
         preferences_service: PreferencesService | None = None,
+        history_service: HistoryService | None = None,
     ) -> None:
         super().__init__(parent)
         self.setObjectName("reviewEditMode")
         self.setMinimumSize(960, 560)
         self._preferences_service = preferences_service
+        self._history_service = history_service or HistoryService.disabled()
         self._workspace_service: WorkspaceService | None = None
         self._targets: list[TargetConfig] | None = None
         self.selected_composition: Composition | None = None
@@ -97,6 +105,7 @@ class ReviewEditMode(QWidget):
         self._target_render_thread: QThread | None = None
         self._target_render_worker: RenderWorker | None = None
         self._target_render_token: TargetPreviewRequestToken | None = None
+        self._loading_compare_controls = False
 
         self.tree_model = CompositionTreeModel(self)
         self.tree_view = QTreeView()
@@ -210,6 +219,33 @@ class ReviewEditMode(QWidget):
         self.export_canvas_button.setToolTip("Xuất ảnh đang hiển thị trong GIS editor")
         self.export_canvas_button.clicked.connect(self._export_canvas_image)
         self.export_canvas_button.setEnabled(False)
+        self.compare_enabled_checkbox = QCheckBox("Compare")
+        self.compare_enabled_checkbox.setObjectName("reviewCompareEnabled")
+        self.compare_orientation_combo = QComboBox()
+        self.compare_orientation_combo.setObjectName("reviewCompareOrientation")
+        self.compare_orientation_combo.addItems(
+            [
+                TemporalCompareOrientation.VERTICAL.value,
+                TemporalCompareOrientation.HORIZONTAL.value,
+            ]
+        )
+        self.compare_pane_a_combo = QComboBox()
+        self.compare_pane_a_combo.setObjectName("reviewComparePaneA")
+        self.compare_pane_b_combo = QComboBox()
+        self.compare_pane_b_combo.setObjectName("reviewComparePaneB")
+        self.compare_status_label = QLabel("")
+        self.compare_status_label.setObjectName("reviewCompareStatus")
+        self.compare_status_label.setWordWrap(True)
+        self.compare_enabled_checkbox.toggled.connect(self._persist_temporal_compare_controls)
+        self.compare_orientation_combo.currentTextChanged.connect(
+            self._persist_temporal_compare_controls
+        )
+        self.compare_pane_a_combo.currentIndexChanged.connect(
+            self._persist_temporal_compare_controls
+        )
+        self.compare_pane_b_combo.currentIndexChanged.connect(
+            self._persist_temporal_compare_controls
+        )
 
         self.previous_button = QPushButton("Trước")
         self.previous_button.setObjectName("reviewActionPrevious")
@@ -371,8 +407,25 @@ class ReviewEditMode(QWidget):
         header.addWidget(self.export_canvas_button)
 
         layout.addLayout(header)
+        layout.addWidget(self._build_compare_panel())
         layout.addWidget(self.gis_canvas, 1)
         return frame
+
+    def _build_compare_panel(self) -> QWidget:
+        panel = QWidget()
+        layout = QGridLayout(panel)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setHorizontalSpacing(6)
+        layout.setVerticalSpacing(4)
+        layout.addWidget(self.compare_enabled_checkbox, 0, 0)
+        layout.addWidget(QLabel("Split"), 0, 1)
+        layout.addWidget(self.compare_orientation_combo, 0, 2)
+        layout.addWidget(QLabel("Pane A"), 0, 3)
+        layout.addWidget(self.compare_pane_a_combo, 0, 4)
+        layout.addWidget(QLabel("Pane B"), 0, 5)
+        layout.addWidget(self.compare_pane_b_combo, 0, 6)
+        layout.addWidget(self.compare_status_label, 1, 0, 1, 7)
+        return panel
 
     def _review_action_layout(self) -> QHBoxLayout:
         layout = QHBoxLayout()
@@ -576,19 +629,32 @@ class ReviewEditMode(QWidget):
             return
 
         self.selected_composition = updated
+        history_warning = self._record_included_history(updated)
         try:
             self._persist_included_target_alignment(updated)
         except (ConfigUpdateError, WorkspaceError) as error:
             self._update_detail_panels(updated)
             self._refresh_workspace_projection(updated.composition_id, validate_selection=False)
+            history_note = (
+                f" Lịch sử ảnh cũng không cập nhật được: {history_warning}"
+                if history_warning is not None
+                else ""
+            )
             self.action_summary.setText(
                 f"Đã include composition, nhưng không cập nhật được config target: {error}"
+                f"{history_note}"
             )
             return
-        self.action_summary.setText(
-            "Đã include composition và chuyển sang mục kế tiếp nếu có."
-        )
         self._advance_after_transition(updated.composition_id)
+        if history_warning is not None:
+            self.action_summary.setText(
+                "Đã include composition, nhưng không cập nhật được lịch sử ảnh: "
+                f"{history_warning}"
+            )
+        else:
+            self.action_summary.setText(
+                "Đã include composition và chuyển sang mục kế tiếp nếu có."
+            )
 
     def _skip_selected(self) -> None:
         if self._workspace_service is None or self.selected_composition is None:
@@ -686,6 +752,22 @@ class ReviewEditMode(QWidget):
         for target in self._targets or []:
             if target.id == composition.target_id:
                 return target
+        return None
+
+    def _record_included_history(self, composition: Composition) -> str | None:
+        if self._workspace_service is None:
+            return None
+        target = self._target_for_composition(composition)
+        if target is None:
+            return f"Không tìm thấy target `{composition.target_id}` trong config hiện tại."
+        try:
+            self._history_service.record_included_composition(
+                composition,
+                target=target,
+                workspace_path=self._workspace_service.paths.root,
+            )
+        except Exception as error:  # noqa: BLE001
+            return str(error)
         return None
 
     def _request_canvas_render(self, composition: Composition) -> None:
@@ -1308,6 +1390,7 @@ class ReviewEditMode(QWidget):
         if frame_aspect is not None:
             self.gis_canvas.set_frame_aspect(frame_aspect)
         self.gis_canvas.set_composition(composition)
+        self._load_temporal_compare_controls(composition)
         self._load_grid_controls(composition)
         self.warnings_panel.set_issues(
             (),
@@ -1337,6 +1420,92 @@ class ReviewEditMode(QWidget):
             if aspect is not None:
                 return aspect
         return None
+
+    def _load_temporal_compare_controls(self, composition: Composition) -> None:
+        self._loading_compare_controls = True
+        try:
+            self.compare_pane_a_combo.clear()
+            self.compare_pane_b_combo.clear()
+            options = _usable_compare_layers(composition)
+            for layer in options:
+                label = _compare_layer_label(layer)
+                self.compare_pane_a_combo.addItem(label, layer.layer_id)
+                self.compare_pane_b_combo.addItem(label, layer.layer_id)
+
+            state = composition.temporal_compare
+            orientation_index = self.compare_orientation_combo.findText(state.orientation.value)
+            self.compare_orientation_combo.setCurrentIndex(max(0, orientation_index))
+            self.compare_enabled_checkbox.setChecked(state.enabled)
+            self._select_compare_layer(self.compare_pane_a_combo, state.pane_a_layer_id, 0)
+            self._select_compare_layer(self.compare_pane_b_combo, state.pane_b_layer_id, 1)
+            enough_layers = len(options) >= 2
+            self.compare_orientation_combo.setEnabled(enough_layers and state.enabled)
+            self.compare_pane_a_combo.setEnabled(enough_layers and state.enabled)
+            self.compare_pane_b_combo.setEnabled(enough_layers and state.enabled)
+            if enough_layers:
+                self.compare_status_label.setText(
+                    "Comparison off: single-map workflow is unchanged."
+                    if not state.enabled
+                    else "Comparison state will be used by split render/export."
+                )
+            else:
+                self.compare_status_label.setText(
+                    "Comparison requires two usable time points; single-map review is unchanged."
+                )
+        finally:
+            self._loading_compare_controls = False
+
+    def _select_compare_layer(
+        self,
+        combo: QComboBox,
+        layer_id: str | None,
+        fallback_index: int,
+    ) -> None:
+        index = combo.findData(layer_id) if layer_id is not None else -1
+        if index < 0 and combo.count() > fallback_index:
+            index = fallback_index
+        if index >= 0:
+            combo.setCurrentIndex(index)
+
+    def _persist_temporal_compare_controls(self, *_args: object) -> None:
+        if self._loading_compare_controls:
+            return
+        if self._workspace_service is None or self.selected_composition is None:
+            return
+
+        enabled = self.compare_enabled_checkbox.isChecked()
+        if enabled and self.compare_pane_a_combo.count() < 2:
+            self._loading_compare_controls = True
+            try:
+                self.compare_enabled_checkbox.setChecked(False)
+            finally:
+                self._loading_compare_controls = False
+            self.compare_status_label.setText(
+                "Comparison requires two usable time points; single-map review is unchanged."
+            )
+            return
+
+        pane_a_layer_id = self.compare_pane_a_combo.currentData()
+        pane_b_layer_id = self.compare_pane_b_combo.currentData()
+        orientation = self.compare_orientation_combo.currentText() or (
+            TemporalCompareOrientation.VERTICAL.value
+        )
+        try:
+            updated = self._workspace_service.update_temporal_compare_state(
+                self.selected_composition.composition_id,
+                enabled=enabled,
+                orientation=orientation,
+                pane_a_layer_id=str(pane_a_layer_id) if pane_a_layer_id else None,
+                pane_b_layer_id=str(pane_b_layer_id) if pane_b_layer_id else None,
+            )
+        except (WorkspaceError, ValidationError, ValueError) as error:
+            self.compare_status_label.setText(f"Could not save comparison state: {error}")
+            self._load_temporal_compare_controls(self.selected_composition)
+            return
+
+        self.selected_composition = updated
+        self._update_detail_panels(updated)
+        self._refresh_workspace_projection(updated.composition_id, validate_selection=False)
 
     def _load_grid_controls(self, composition: Composition) -> None:
         grid, source = self._effective_grid_for_composition(composition)
@@ -1420,6 +1589,22 @@ def _has_existing_visible_raster(composition: Composition) -> bool:
         if Path(path).exists():
             return True
     return False
+
+
+def _usable_compare_layers(composition: Composition) -> list[ImageLayer]:
+    return sorted(composition.layers, key=lambda layer: (layer.order, layer.layer_id))
+
+
+def _compare_layer_label(layer: ImageLayer) -> str:
+    source = (
+        "Historical"
+        if layer.source_kind is ImageLayerSourceKind.HISTORICAL
+        else "Current"
+    )
+    date_text = layer.capture_date.isoformat() if layer.capture_date else "unknown-date"
+    time_text = layer.capture_time.strftime("%H:%M") if layer.capture_time else "unknown-time"
+    cloud_text = "--" if layer.cloud_percent is None else f"{layer.cloud_percent:.0f}% cloud"
+    return f"{date_text} {time_text} | {source} | {cloud_text}"
 
 
 def _parse_non_negative_int(raw: str, label: str) -> int:

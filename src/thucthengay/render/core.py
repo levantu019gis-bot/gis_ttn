@@ -13,6 +13,7 @@ from typing import Any
 import numpy as np
 import rasterio
 
+from thucthengay.models import TemporalCompareOrientation
 from thucthengay.models.issue import Issue, IssueScope, IssueSeverity
 from thucthengay.render.frame import (
     MapSurroundLayout,
@@ -27,7 +28,13 @@ from thucthengay.render.raster import (
     RenderError,
     render_raster_layers_to_size,
 )
-from thucthengay.render.spec import MAX_RENDER_PIXELS, GeoWindow, RenderLayerRef, RenderSpec
+from thucthengay.render.spec import (
+    MAX_RENDER_PIXELS,
+    GeoWindow,
+    RenderComparisonSpec,
+    RenderLayerRef,
+    RenderSpec,
+)
 
 _MIN_LON = -180.0
 _MAX_LON = 180.0
@@ -599,14 +606,23 @@ def _render_map(
     ):
         raise RenderError([_peak_too_large_issue(spec)])
 
-    result = _render_raster_base(
-        render_spec,
-        output_width=inner.width,
-        output_height=inner.height,
-        dataset_opener=dataset_opener,
-        is_cancelled=is_cancelled,
-        raster_cache=raster_cache,
-    )
+    if render_spec.temporal_compare.enabled:
+        result = _render_temporal_compare_base(
+            render_spec,
+            inner,
+            dataset_opener=dataset_opener,
+            is_cancelled=is_cancelled,
+            raster_cache=raster_cache,
+        )
+    else:
+        result = _render_raster_base(
+            render_spec,
+            output_width=inner.width,
+            output_height=inner.height,
+            dataset_opener=dataset_opener,
+            is_cancelled=is_cancelled,
+            raster_cache=raster_cache,
+        )
     if is_cancelled is not None and is_cancelled():
         raise RenderError([*result.issues, _cancelled_issue(spec)])
 
@@ -683,6 +699,90 @@ def _apply_map_surround_frame(
         pixels, mask = cached
 
     canvas[mask] = pixels[mask]
+
+
+def _render_temporal_compare_base(
+    spec: RenderSpec,
+    inner: PixelRect,
+    *,
+    dataset_opener: DatasetOpener,
+    is_cancelled: CancelCallback | None,
+    raster_cache: RasterBaseCache | None,
+) -> RasterRenderResult:
+    comparison = spec.temporal_compare
+    pane_a_rect, pane_b_rect = _split_compare_inner_map(inner, comparison.orientation)
+    bg = _parse_hex_color(spec.background.color)
+    canvas = np.empty((inner.height, inner.width, 3), dtype=np.uint8)
+    canvas[:, :] = bg
+    issues: list[Issue] = []
+    painted_layer_ids: list[str] = []
+
+    for pane_rect, pane in (
+        (pane_a_rect, comparison.pane_a),
+        (pane_b_rect, comparison.pane_b),
+    ):
+        pane_spec = _spec_for_inner_map(
+            spec.model_copy(
+                update={
+                    "visible_layers": pane.layers,
+                    "temporal_compare": RenderComparisonSpec(),
+                }
+            ),
+            pane_rect,
+        )
+        pane_result = _render_raster_base(
+            pane_spec,
+            output_width=pane_rect.width,
+            output_height=pane_rect.height,
+            dataset_opener=dataset_opener,
+            is_cancelled=is_cancelled,
+            raster_cache=raster_cache,
+        )
+        issues.extend(pane_result.issues)
+        painted_layer_ids.extend(pane_result.painted_layer_ids)
+        top = pane_rect.top - inner.top
+        bottom = pane_rect.bottom - inner.top
+        left = pane_rect.left - inner.left
+        right = pane_rect.right - inner.left
+        canvas[top:bottom, left:right, :] = pane_result.canvas
+
+    _draw_compare_divider(canvas, inner, pane_a_rect, comparison.orientation)
+    return RasterRenderResult(
+        canvas=canvas,
+        issues=tuple(issues),
+        painted_layer_ids=tuple(dict.fromkeys(painted_layer_ids)),
+    )
+
+
+def _split_compare_inner_map(
+    inner: PixelRect,
+    orientation: TemporalCompareOrientation,
+) -> tuple[PixelRect, PixelRect]:
+    if orientation == TemporalCompareOrientation.HORIZONTAL:
+        mid = inner.top + inner.height // 2
+        return (
+            PixelRect(left=inner.left, top=inner.top, right=inner.right, bottom=mid),
+            PixelRect(left=inner.left, top=mid, right=inner.right, bottom=inner.bottom),
+        )
+    mid = inner.left + inner.width // 2
+    return (
+        PixelRect(left=inner.left, top=inner.top, right=mid, bottom=inner.bottom),
+        PixelRect(left=mid, top=inner.top, right=inner.right, bottom=inner.bottom),
+    )
+
+
+def _draw_compare_divider(
+    canvas: np.ndarray,
+    inner: PixelRect,
+    pane_a: PixelRect,
+    orientation: TemporalCompareOrientation,
+) -> None:
+    if orientation == TemporalCompareOrientation.HORIZONTAL:
+        row = max(0, min(canvas.shape[0] - 1, pane_a.bottom - inner.top))
+        canvas[max(0, row - 1) : min(canvas.shape[0], row + 1), :, :] = 0
+        return
+    col = max(0, min(canvas.shape[1] - 1, pane_a.right - inner.left))
+    canvas[:, max(0, col - 1) : min(canvas.shape[1], col + 1), :] = 0
 
 
 def _build_frame_overlay(

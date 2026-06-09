@@ -1,6 +1,7 @@
 """Imagery ingestion package."""
 
 from thucthengay.ingestion.cache_builder import (
+    CacheImageInput,
     CachePopulationResult,
     populate_workspace_cache,
 )
@@ -27,6 +28,7 @@ from thucthengay.ingestion.scanner import (
 
 __all__ = [
     "CachePopulationResult",
+    "CacheImageInput",
     "CompositionCreationResult",
     "ImageryScanResult",
     "ImageryTargetMatch",

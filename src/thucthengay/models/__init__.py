@@ -4,6 +4,8 @@ from thucthengay.models.composition import (
     Composition,
     CompositionArtifacts,
     PersistedValidationState,
+    TemporalCompareOrientation,
+    TemporalCompareState,
     ValidationSummary,
     ViewState,
 )
@@ -13,6 +15,12 @@ from thucthengay.models.config import (
     GridConfig,
     GridDefaultsConfig,
     GridInterval,
+    HistoricalImageSelectionConfig,
+    HistoricalLoadingConfig,
+    HistoricalLoadingTargetScope,
+    HistoricalLookbackAnchor,
+    HistoricalRegistryConfig,
+    HistoricalSelectionMode,
     ProjectConfig,
     ProjectDefaultsConfig,
     TargetConfig,
@@ -46,7 +54,12 @@ from thucthengay.models.export import (
     SkippedComposition,
 )
 from thucthengay.models.issue import Issue, IssueScope, IssueSeverity
-from thucthengay.models.layer import ImageLayer, MetadataSource, MetadataStatus
+from thucthengay.models.layer import (
+    ImageLayer,
+    ImageLayerSourceKind,
+    MetadataSource,
+    MetadataStatus,
+)
 from thucthengay.models.render import (
     FinalRenderCurrentness,
     FinalRenderLog,
@@ -98,7 +111,14 @@ __all__ = [
     "GridConfig",
     "GridDefaultsConfig",
     "GridInterval",
+    "HistoricalImageSelectionConfig",
+    "HistoricalLoadingConfig",
+    "HistoricalLoadingTargetScope",
+    "HistoricalLookbackAnchor",
+    "HistoricalRegistryConfig",
+    "HistoricalSelectionMode",
     "ImageLayer",
+    "ImageLayerSourceKind",
     "Issue",
     "IssueScope",
     "IssueSeverity",
@@ -114,6 +134,8 @@ __all__ = [
     "TargetConfig",
     "TargetExportConfig",
     "TargetGroupConfig",
+    "TemporalCompareOrientation",
+    "TemporalCompareState",
     "target_group_order_key",
     "target_order_key",
     "TemplateMetadata",

@@ -55,11 +55,13 @@ from thucthengay.models import (
     GridConfig,
     GridInterval,
     ImageLayer,
+    ImageLayerSourceKind,
     MetadataSource,
     MetadataStatus,
     TargetConfig,
     TargetExportConfig,
     TargetGroupConfig,
+    TemporalCompareOrientation,
     ValidationSummary,
     ViewState,
 )
@@ -176,6 +178,33 @@ def composition(
             )
         ],
     )
+
+
+class RecordingHistoryService:
+    def __init__(self) -> None:
+        self.records: list[tuple[Composition, TargetConfig, Path]] = []
+
+    def record_included_composition(
+        self,
+        composition: Composition,
+        *,
+        target: TargetConfig,
+        workspace_path: str | Path,
+    ) -> object:
+        self.records.append((composition, target, Path(workspace_path)))
+        return object()
+
+
+class FailingHistoryService:
+    def record_included_composition(
+        self,
+        composition: Composition,
+        *,
+        target: TargetConfig,
+        workspace_path: str | Path,
+    ) -> object:
+        msg = f"history unavailable for {composition.composition_id}"
+        raise RuntimeError(msg)
 
 
 def _preview_spec(composition_id: str, *, width: int = 1200, height: int = 800) -> RenderSpec:
@@ -459,7 +488,8 @@ def test_review_edit_uses_template_metadata_map_frame_aspect(
         composition("alpha__20260525", "alpha", date(2026, 5, 25), needs_revalidation=False)
     )
 
-    mode = ReviewEditMode()
+    history = RecordingHistoryService()
+    mode = ReviewEditMode(history_service=history)
     mode._request_canvas_render = lambda _composition: None  # noqa: SLF001
     target = target_config("alpha", sort_order=1, name="Alpha Target").model_copy(
         update={
@@ -1820,6 +1850,67 @@ def test_review_edit_action_bar_includes_and_advances_on_passing_gate(
     assert mode.previous_button.isEnabled()
 
 
+def test_review_edit_include_records_history_after_workspace_include(
+    tmp_path: Path,
+) -> None:
+    qapp()
+    config_path = tmp_path / "config.json"
+    write_project_config(config_path)
+    service = WorkspaceService(tmp_path / "workspace")
+    service.initialize(config_path=config_path)
+    service.write_composition(
+        composition("alpha__20260525", "alpha", date(2026, 5, 25), needs_revalidation=False)
+    )
+    history = RecordingHistoryService()
+
+    mode = ReviewEditMode(history_service=history)
+    mode.load_workspace(
+        service,
+        targets=[target_config("alpha", sort_order=1, name="Alpha Target")],
+    )
+    target_index = mode.tree_model.index(0, 0)
+    mode.tree_view.setCurrentIndex(mode.tree_model.index(0, 0, target_index))
+
+    mode.include_validate_button.click()
+
+    included = service.read_composition("alpha__20260525")
+    assert included.include is True
+    assert len(history.records) == 1
+    recorded_composition, recorded_target, recorded_workspace = history.records[0]
+    assert recorded_composition.composition_id == "alpha__20260525"
+    assert recorded_target.id == "alpha"
+    assert recorded_workspace == service.paths.root
+
+
+def test_review_edit_history_failure_does_not_rollback_workspace_include(
+    tmp_path: Path,
+) -> None:
+    qapp()
+    config_path = tmp_path / "config.json"
+    write_project_config(config_path)
+    service = WorkspaceService(tmp_path / "workspace")
+    service.initialize(config_path=config_path)
+    service.write_composition(
+        composition("alpha__20260525", "alpha", date(2026, 5, 25), needs_revalidation=False)
+    )
+
+    mode = ReviewEditMode(history_service=FailingHistoryService())
+    mode.load_workspace(
+        service,
+        targets=[target_config("alpha", sort_order=1, name="Alpha Target")],
+    )
+    target_index = mode.tree_model.index(0, 0)
+    mode.tree_view.setCurrentIndex(mode.tree_model.index(0, 0, target_index))
+
+    mode.include_validate_button.click()
+
+    included = service.read_composition("alpha__20260525")
+    assert included.reviewed is True
+    assert included.ready is True
+    assert included.include is True
+    assert "history unavailable for alpha__20260525" in mode.action_summary.text()
+
+
 def test_review_edit_actions_advance_by_visible_group_tree_order(
     tmp_path: Path,
 ) -> None:
@@ -1922,6 +2013,108 @@ def test_review_edit_include_persists_target_interval_and_scale_to_config(
     assert mode._targets[0].grid.interval.minutes == 2  # noqa: SLF001
 
 
+def test_workspace_updates_temporal_compare_state_and_marks_stale(tmp_path: Path) -> None:
+    service = WorkspaceService(tmp_path / "workspace")
+    service.initialize(config_path="config.json")
+    comp = composition(
+        "alpha__20260525",
+        "alpha",
+        date(2026, 5, 25),
+        ready=True,
+        include=True,
+        needs_revalidation=False,
+    )
+    comp = comp.model_copy(
+        update={
+            "layers": [
+                comp.layers[0].model_copy(update={"layer_id": "current"}),
+                comp.layers[0].model_copy(
+                    update={
+                        "layer_id": "history",
+                        "order": 1,
+                        "source_kind": ImageLayerSourceKind.HISTORICAL,
+                    }
+                ),
+            ]
+        }
+    )
+    service.write_composition(comp)
+
+    updated = service.update_temporal_compare_state(
+        "alpha__20260525",
+        enabled=True,
+        orientation=TemporalCompareOrientation.VERTICAL,
+        pane_a_layer_id="current",
+        pane_b_layer_id="history",
+    )
+
+    assert updated.temporal_compare.enabled is True
+    assert updated.temporal_compare.orientation == TemporalCompareOrientation.VERTICAL
+    assert updated.temporal_compare.pane_b_layer_id == "history"
+    assert updated.needs_revalidation is True
+    assert updated.ready is False
+    assert updated.include is False
+
+
+def test_review_edit_temporal_compare_controls_persist_selection(tmp_path: Path) -> None:
+    qapp()
+    service = WorkspaceService(tmp_path / "workspace")
+    service.initialize(config_path="config.json")
+    comp = composition("alpha__20260525", "alpha", date(2026, 5, 25), needs_revalidation=False)
+    comp = comp.model_copy(
+        update={
+            "layers": [
+                comp.layers[0].model_copy(update={"layer_id": "current"}),
+                comp.layers[0].model_copy(
+                    update={
+                        "layer_id": "history",
+                        "order": 1,
+                        "source_kind": ImageLayerSourceKind.HISTORICAL,
+                    }
+                ),
+            ]
+        }
+    )
+    service.write_composition(comp)
+
+    mode = ReviewEditMode()
+    mode._request_canvas_render = lambda _composition: None  # noqa: SLF001
+    mode.load_workspace(service, targets=[target_config("alpha", sort_order=1, name="Alpha")])
+    mode.tree_view.setCurrentIndex(mode.tree_model.index_for_composition_id("alpha__20260525"))
+
+    assert mode.compare_enabled_checkbox.isEnabled()
+    assert mode.compare_pane_a_combo.count() == 2
+    mode.compare_enabled_checkbox.setChecked(True)
+    mode.compare_orientation_combo.setCurrentText("horizontal")
+    mode.compare_pane_a_combo.setCurrentIndex(0)
+    mode.compare_pane_b_combo.setCurrentIndex(1)
+
+    reloaded = service.read_composition("alpha__20260525")
+    assert reloaded.temporal_compare.enabled is True
+    assert reloaded.temporal_compare.orientation == TemporalCompareOrientation.HORIZONTAL
+    assert reloaded.temporal_compare.pane_a_layer_id == "current"
+    assert reloaded.temporal_compare.pane_b_layer_id == "history"
+
+
+def test_review_edit_temporal_compare_requires_two_usable_layers(tmp_path: Path) -> None:
+    qapp()
+    service = WorkspaceService(tmp_path / "workspace")
+    service.initialize(config_path="config.json")
+    service.write_composition(
+        composition("alpha__20260525", "alpha", date(2026, 5, 25), needs_revalidation=False)
+    )
+
+    mode = ReviewEditMode()
+    mode.load_workspace(service, targets=[target_config("alpha", sort_order=1, name="Alpha")])
+    mode.tree_view.setCurrentIndex(mode.tree_model.index_for_composition_id("alpha__20260525"))
+
+    mode.compare_enabled_checkbox.setChecked(True)
+
+    assert "two usable" in mode.compare_status_label.text()
+    assert service.read_composition("alpha__20260525").temporal_compare.enabled is False
+    assert mode.include_validate_button.isEnabled()
+
+
 def test_review_edit_action_bar_blocks_include_and_supports_skip_previous(
     tmp_path: Path,
 ) -> None:
@@ -1942,7 +2135,8 @@ def test_review_edit_action_bar_blocks_include_and_supports_skip_previous(
         composition("alpha__20260526", "alpha", date(2026, 5, 26), needs_revalidation=False)
     )
 
-    mode = ReviewEditMode()
+    history = RecordingHistoryService()
+    mode = ReviewEditMode(history_service=history)
     mode.load_workspace(
         service,
         targets=[target_config("alpha", sort_order=1, name="Alpha Target")],
@@ -1962,6 +2156,7 @@ def test_review_edit_action_bar_blocks_include_and_supports_skip_previous(
         "alpha__20260525"
     )
     assert mode.tree_view.currentIndex().data(CompositionTreeRole.ISSUE_COUNT) > 0
+    assert history.records == []
 
     mode.skip_button.click()
 
@@ -1973,6 +2168,7 @@ def test_review_edit_action_bar_blocks_include_and_supports_skip_previous(
     assert mode.tree_model.composition_id_for_index(mode.tree_view.currentIndex()) == (
         "alpha__20260526"
     )
+    assert history.records == []
 
     second_before = service.read_composition("alpha__20260526")
     mode.previous_button.click()

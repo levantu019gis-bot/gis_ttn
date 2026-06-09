@@ -19,6 +19,8 @@ from thucthengay.models import (
     TargetConfig,
     TargetExportConfig,
     TemplateMetadata,
+    TemporalCompareOrientation,
+    TemporalCompareState,
     ViewState,
 )
 from thucthengay.models.template import MapFrame
@@ -218,6 +220,47 @@ class TestLayerOrdering:
             output_height=720,
         )
         assert spec.visible_layers == []
+
+    def test_disabled_temporal_compare_preserves_legacy_visible_layers(self) -> None:
+        spec = build_render_spec(
+            composition=_composition(layers=[_layer("A", order=0), _layer("B", order=1)]),
+            target=_target(),
+            template=_template(),
+            template_metadata_file="t.json",
+            output_width=1280,
+            output_height=720,
+        )
+
+        assert spec.temporal_compare.enabled is False
+        assert [ref.layer_id for ref in spec.visible_layers] == ["A", "B"]
+
+    def test_enabled_temporal_compare_builds_pane_refs_from_selected_layers(self) -> None:
+        comp = _composition(layers=[_layer("current", order=0), _layer("history", order=1)])
+        comp = comp.model_copy(
+            update={
+                "temporal_compare": TemporalCompareState(
+                    enabled=True,
+                    orientation=TemporalCompareOrientation.HORIZONTAL,
+                    pane_a_layer_id="current",
+                    pane_b_layer_id="history",
+                )
+            }
+        )
+
+        spec = build_render_spec(
+            composition=comp,
+            target=_target(),
+            template=_template(),
+            template_metadata_file="t.json",
+            output_width=1280,
+            output_height=720,
+        )
+
+        assert spec.temporal_compare.enabled is True
+        assert spec.temporal_compare.orientation == TemporalCompareOrientation.HORIZONTAL
+        assert spec.temporal_compare.pane_a.layer_id == "current"
+        assert spec.temporal_compare.pane_b.layer_id == "history"
+        assert [ref.layer_id for ref in spec.visible_layers] == ["current", "history"]
 
 
 class TestGridOverride:

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from datetime import date, time
 from pathlib import Path
 
 import numpy as np
@@ -8,6 +9,7 @@ import rasterio
 from rasterio.transform import from_origin
 
 from thucthengay.config.service import ConfigLoadResult, ResolvedTargetPaths
+from thucthengay.history import HistoricalLoadingPlan, HistoricalLoadingResult, HistoryService
 from thucthengay.jobs import (
     ActiveJobProgressModel,
     JobControl,
@@ -17,14 +19,19 @@ from thucthengay.jobs import (
     run_ingestion_job,
 )
 from thucthengay.models import (
+    Composition,
     GridConfig,
     GridInterval,
+    ImageLayer,
     Issue,
     IssueScope,
     IssueSeverity,
+    MetadataSource,
+    MetadataStatus,
     ProjectConfig,
     TargetConfig,
     TargetExportConfig,
+    ViewState,
 )
 from thucthengay.workspace import WorkspaceService
 
@@ -97,6 +104,32 @@ def write_geojson(path: Path) -> None:
         ],
     }
     path.write_text(json.dumps(data), encoding="utf-8")
+
+
+def _included_history_composition(source_path: Path) -> Composition:
+    layer = ImageLayer(
+        layer_id=source_path.stem,
+        source_path=str(source_path),
+        cache_path=f"cache/target_001/20260525/{source_path.name}",
+        order=0,
+        capture_date=date(2026, 5, 25),
+        capture_time=time(10, 11, 12),
+        cloud_percent=12,
+        metadata_status=MetadataStatus.VALID,
+        metadata_source=MetadataSource.FILENAME,
+    )
+    return Composition(
+        composition_id="target_001__20260525",
+        target_id="target_001",
+        capture_date=date(2026, 5, 25),
+        layers=[layer],
+        view=ViewState(center=[106.0, 11.0], scale=50000),
+        reviewed=True,
+        ready=True,
+        include=True,
+        needs_revalidation=False,
+        review_order=1,
+    )
 
 
 def test_progress_model_ignores_stale_job_updates_and_marks_active_completion() -> None:
@@ -202,6 +235,261 @@ def test_ingestion_job_preserves_nonfatal_warnings_for_summary(tmp_path: Path) -
     assert events[-1].state == JobState.WARNING
     assert events[-1].warning_count == 1
     assert events[-1].issues == result.issues
+
+
+def test_ingestion_job_does_not_call_historical_loader_when_loading_disabled(
+    tmp_path: Path,
+) -> None:
+    imagery = tmp_path / "imagery"
+    geotiff = imagery / "20260525_101112_scene_cloud12.tif"
+    boundary = tmp_path / "target_001.geojson"
+    write_geotiff(geotiff)
+    write_geojson(boundary)
+    calls: list[HistoricalLoadingPlan] = []
+
+    def historical_loader(plan: HistoricalLoadingPlan) -> HistoricalLoadingResult:
+        calls.append(plan)
+        return HistoricalLoadingResult()
+
+    result = run_ingestion_job(
+        job_id="job-history-disabled",
+        config_result=config_result_for(target_config(), boundary),
+        imagery_folder=imagery,
+        workspace_service=WorkspaceService(tmp_path / "workspace"),
+        historical_loader=historical_loader,
+    )
+
+    assert result.state == JobState.SUCCESS
+    assert calls == []
+
+
+def test_ingestion_job_passes_enabled_historical_loading_plan_before_cache(
+    tmp_path: Path,
+) -> None:
+    imagery = tmp_path / "imagery"
+    geotiff = imagery / "20260525_101112_scene_cloud12.tif"
+    boundary = tmp_path / "target_001.geojson"
+    database_path = tmp_path / "history" / "target-history.sqlite"
+    write_geotiff(geotiff)
+    write_geojson(boundary)
+    target = target_config()
+    config_result = ConfigLoadResult(
+        config_path=tmp_path / "config.json",
+        config=ProjectConfig.model_validate(
+            {
+                "historical_registry": {
+                    "enabled": True,
+                    "database_path": "history/target-history.sqlite",
+                },
+                "historical_loading": {
+                    "enabled": True,
+                    "target_scope": "targets_with_current_matches",
+                    "image_selection": {
+                        "mode": "latest_images",
+                        "limit_per_target": 2,
+                    },
+                },
+                "targets": [target.model_dump(mode="json")],
+            }
+        ),
+        enabled_targets=[target],
+        target_paths={
+            target.id: ResolvedTargetPaths(
+                target_id=target.id,
+                geojson_file=boundary,
+                template_metadata_file=tmp_path / f"{target.id}.template.json",
+            )
+        },
+        historical_database_path=database_path,
+    )
+    calls: list[HistoricalLoadingPlan] = []
+    events: list[ProgressEvent] = []
+
+    def historical_loader(plan: HistoricalLoadingPlan) -> HistoricalLoadingResult:
+        calls.append(plan)
+        return HistoricalLoadingResult()
+
+    result = run_ingestion_job(
+        job_id="job-history-enabled",
+        config_result=config_result,
+        imagery_folder=imagery,
+        workspace_service=WorkspaceService(tmp_path / "workspace"),
+        publish=events.append,
+        historical_loader=historical_loader,
+    )
+
+    assert result.state == JobState.SUCCESS
+    assert len(calls) == 1
+    plan = calls[0]
+    assert plan.enabled is True
+    assert plan.database_path == database_path
+    assert plan.target_ids == ("target_001",)
+    assert plan.image_selection.mode == "latest_images"
+    assert plan.image_selection.limit_per_target == 2
+    event_stages = [event.stage for event in events]
+    assert event_stages.index("history") < event_stages.index("cache")
+    assert "Tải ảnh lịch sử" in events[event_stages.index("history")].message
+
+
+def test_ingestion_job_loads_historical_imagery_into_workspace_cache(
+    tmp_path: Path,
+) -> None:
+    imagery = tmp_path / "imagery"
+    imagery.mkdir()
+    boundary = tmp_path / "target_001.geojson"
+    history_source = tmp_path / "history-source" / "20260525_101112_scene_cloud12.tif"
+    database_path = tmp_path / "history" / "target-history.sqlite"
+    write_geojson(boundary)
+    write_geotiff(history_source)
+    target = target_config()
+    HistoryService(database_path).record_included_composition(
+        _included_history_composition(history_source),
+        target=target,
+        workspace_path=tmp_path / "old-workspace",
+    )
+    config_result = ConfigLoadResult(
+        config_path=tmp_path / "config.json",
+        config=ProjectConfig.model_validate(
+            {
+                "historical_registry": {
+                    "enabled": True,
+                    "database_path": str(database_path),
+                },
+                "historical_loading": {
+                    "enabled": True,
+                    "target_scope": "all_enabled_targets",
+                    "image_selection": {"mode": "latest_date"},
+                },
+                "targets": [target.model_dump(mode="json")],
+            }
+        ),
+        enabled_targets=[target],
+        target_paths={
+            target.id: ResolvedTargetPaths(
+                target_id=target.id,
+                geojson_file=boundary,
+                template_metadata_file=tmp_path / f"{target.id}.template.json",
+            )
+        },
+        historical_database_path=database_path,
+    )
+    workspace = WorkspaceService(tmp_path / "workspace")
+
+    result = run_ingestion_job(
+        job_id="job-history-e2e",
+        config_result=config_result,
+        imagery_folder=imagery,
+        workspace_service=workspace,
+    )
+
+    composition = workspace.read_composition("target_001__20260525")
+    assert result.state == JobState.SUCCESS
+    assert result.composition_ids == ["target_001__20260525"]
+    assert len(composition.layers) == 1
+    assert composition.layers[0].source_path == str(history_source)
+    assert composition.layers[0].source_kind == "historical"
+    assert composition.layers[0].cache_path is not None
+    assert (workspace.paths.root / composition.layers[0].cache_path).is_file()
+
+
+def test_ingestion_job_skips_invalid_historical_paths_and_reports_issue(
+    tmp_path: Path,
+) -> None:
+    imagery = tmp_path / "imagery"
+    imagery.mkdir()
+    boundary = tmp_path / "target_001.geojson"
+    missing_history_source = tmp_path / "missing-history" / "missing.tif"
+    database_path = tmp_path / "history" / "target-history.sqlite"
+    write_geojson(boundary)
+    target = target_config()
+    HistoryService(database_path).record_included_composition(
+        _included_history_composition(missing_history_source),
+        target=target,
+        workspace_path=tmp_path / "old-workspace",
+    )
+    config_result = ConfigLoadResult(
+        config_path=tmp_path / "config.json",
+        config=ProjectConfig.model_validate(
+            {
+                "historical_registry": {
+                    "enabled": True,
+                    "database_path": str(database_path),
+                },
+                "historical_loading": {
+                    "enabled": True,
+                    "target_scope": "all_enabled_targets",
+                    "image_selection": {"mode": "latest_date"},
+                },
+                "targets": [target.model_dump(mode="json")],
+            }
+        ),
+        enabled_targets=[target],
+        target_paths={
+            target.id: ResolvedTargetPaths(
+                target_id=target.id,
+                geojson_file=boundary,
+                template_metadata_file=tmp_path / f"{target.id}.template.json",
+            )
+        },
+        historical_database_path=database_path,
+    )
+
+    result = run_ingestion_job(
+        job_id="job-history-missing",
+        config_result=config_result,
+        imagery_folder=imagery,
+        workspace_service=WorkspaceService(tmp_path / "workspace"),
+    )
+
+    assert result.state == JobState.WARNING
+    assert result.composition_ids == []
+    assert [issue.issue_id for issue in result.issues] == ["historical.path_missing"]
+    assert result.issues[0].target_id == "target_001"
+
+
+def test_ingestion_job_deduplicates_current_and_historical_source(
+    tmp_path: Path,
+) -> None:
+    imagery = tmp_path / "imagery"
+    current_source = imagery / "20260525_101112_scene_cloud12.tif"
+    boundary = tmp_path / "target_001.geojson"
+    database_path = tmp_path / "history" / "target-history.sqlite"
+    write_geotiff(current_source)
+    write_geojson(boundary)
+    target = target_config()
+    HistoryService(database_path).record_included_composition(
+        _included_history_composition(current_source),
+        target=target,
+        workspace_path=tmp_path / "old-workspace",
+    )
+    config_result = config_result_for(target, boundary)
+    config_result.config = ProjectConfig.model_validate(
+        {
+            "historical_registry": {
+                "enabled": True,
+                "database_path": str(database_path),
+            },
+            "historical_loading": {
+                "enabled": True,
+                "target_scope": "targets_with_current_matches",
+                "image_selection": {"mode": "latest_date"},
+            },
+            "targets": [target.model_dump(mode="json")],
+        }
+    )
+    config_result.historical_database_path = database_path
+    workspace = WorkspaceService(tmp_path / "workspace")
+
+    result = run_ingestion_job(
+        job_id="job-history-dedupe",
+        config_result=config_result,
+        imagery_folder=imagery,
+        workspace_service=workspace,
+    )
+
+    composition = workspace.read_composition("target_001__20260525")
+    assert result.state == JobState.SUCCESS
+    assert len(composition.layers) == 1
 
 
 def test_ingestion_job_reports_fatal_setup_error_without_workspace_completion(

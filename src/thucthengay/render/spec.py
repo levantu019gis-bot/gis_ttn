@@ -12,6 +12,7 @@ import math
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator, model_validator
 from pyproj import Geod
 
+from thucthengay.models import TemporalCompareOrientation
 from thucthengay.models.composition import Composition
 from thucthengay.models.config import GridConfig, TargetConfig
 from thucthengay.models.issue import Issue, IssueScope, IssueSeverity
@@ -96,6 +97,26 @@ class RenderBackground(BaseModel):
         return f"#{text.upper()}"
 
 
+class RenderComparisonPane(BaseModel):
+    """One selected side of a temporal comparison render."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    layer_id: str | None = None
+    layers: list[RenderLayerRef] = Field(default_factory=list)
+
+
+class RenderComparisonSpec(BaseModel):
+    """Render-time temporal comparison pane selections."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    enabled: bool = False
+    orientation: TemporalCompareOrientation = TemporalCompareOrientation.VERTICAL
+    pane_a: RenderComparisonPane = Field(default_factory=RenderComparisonPane)
+    pane_b: RenderComparisonPane = Field(default_factory=RenderComparisonPane)
+
+
 class RenderSpec(BaseModel):
     """Normalized render specification consumed by preview and final renderers."""
 
@@ -113,6 +134,7 @@ class RenderSpec(BaseModel):
     visible_layers: list[RenderLayerRef] = Field(default_factory=list)
     grid: GridConfig
     background: RenderBackground = Field(default_factory=RenderBackground)
+    temporal_compare: RenderComparisonSpec = Field(default_factory=RenderComparisonSpec)
     template_metadata_file: str
     template_pptx: str
     slide_index: int = Field(ge=0)
@@ -277,6 +299,21 @@ def build_render_spec(
         )
         for layer in visible_layers
     ]
+    temporal_compare = _build_temporal_compare_spec(
+        composition=composition,
+        visible_refs=visible_refs,
+        target=target,
+    )
+    if temporal_compare.enabled:
+        visible_refs = [
+            *temporal_compare.pane_a.layers,
+            *(
+                layer
+                for layer in temporal_compare.pane_b.layers
+                if layer.layer_id
+                not in {pane_layer.layer_id for pane_layer in temporal_compare.pane_a.layers}
+            ),
+        ]
 
     grid = composition.grid_override if composition.grid_override is not None else target.grid
 
@@ -318,7 +355,45 @@ def build_render_spec(
         visible_layers=visible_refs,
         grid=grid,
         background=target_render_background(target),
+        temporal_compare=temporal_compare,
         template_metadata_file=template_metadata_file,
         template_pptx=template.template_pptx,
         slide_index=template.slide_index,
+    )
+
+
+def _build_temporal_compare_spec(
+    *,
+    composition: Composition,
+    visible_refs: list[RenderLayerRef],
+    target: TargetConfig,
+) -> RenderComparisonSpec:
+    state = composition.temporal_compare
+    if not state.enabled:
+        return RenderComparisonSpec()
+
+    refs_by_id = {layer.layer_id: layer for layer in visible_refs}
+    pane_a = refs_by_id.get(state.pane_a_layer_id or "")
+    pane_b = refs_by_id.get(state.pane_b_layer_id or "")
+    if pane_a is None or pane_b is None or pane_a.layer_id == pane_b.layer_id:
+        raise RenderSpecError(
+            [
+                _issue(
+                    "render.spec.temporal_compare_invalid",
+                    "Temporal comparison pane selections are not valid.",
+                    (
+                        "Select two different visible layers for Pane A and Pane B before "
+                        "render/export."
+                    ),
+                    target_id=target.id,
+                    composition_id=composition.composition_id,
+                )
+            ]
+        )
+
+    return RenderComparisonSpec(
+        enabled=True,
+        orientation=state.orientation,
+        pane_a=RenderComparisonPane(layer_id=pane_a.layer_id, layers=[pane_a]),
+        pane_b=RenderComparisonPane(layer_id=pane_b.layer_id, layers=[pane_b]),
     )

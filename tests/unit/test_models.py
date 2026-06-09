@@ -15,7 +15,13 @@ from thucthengay.models import (
     FinalRenderStatus,
     GridConfig,
     GridInterval,
+    HistoricalImageSelectionConfig,
+    HistoricalLoadingConfig,
+    HistoricalLoadingTargetScope,
+    HistoricalRegistryConfig,
+    HistoricalSelectionMode,
     ImageLayer,
+    ImageLayerSourceKind,
     Issue,
     IssueScope,
     IssueSeverity,
@@ -27,6 +33,8 @@ from thucthengay.models import (
     TemplateMetadata,
     TemplatePlaceholder,
     TemplatePlaceholderSelector,
+    TemporalCompareOrientation,
+    TemporalCompareState,
     ValidationSummary,
     ViewState,
     WorkspaceManifest,
@@ -63,6 +71,8 @@ def test_project_config_supports_target_specific_template_pptx() -> None:
 
     target = config.targets[0]
 
+    assert config.historical_registry == HistoricalRegistryConfig()
+    assert config.historical_loading == HistoricalLoadingConfig()
     assert target.export.template_pptx_file == "templates/target_001.pptx"
     assert target.export.placeholders[0].element_id == 2
     assert target.geojson_file == "targets/target_001.geojson"
@@ -145,6 +155,90 @@ def test_project_config_applies_shared_target_defaults() -> None:
     assert target.export.date_format == "dd.MM.yy"
     assert target.export.time_format == "HH:mm"
     assert target.export.map_background_color == "#AABBCC"
+
+
+def test_historical_registry_config_requires_database_path_when_enabled() -> None:
+    with pytest.raises(ValidationError) as exc_info:
+        ProjectConfig.model_validate(
+            {
+                "historical_registry": {"enabled": True},
+                "targets": [valid_target_dict()],
+            }
+        )
+
+    assert ("historical_registry",) in {
+        tuple(error["loc"]) for error in exc_info.value.errors()
+    }
+
+
+def test_historical_registry_config_accepts_enabled_database_path() -> None:
+    config = ProjectConfig.model_validate(
+        {
+            "historical_registry": {
+                "enabled": True,
+                "database_path": "history/target-history.sqlite",
+            },
+            "targets": [valid_target_dict()],
+        }
+    )
+
+    assert config.historical_registry.enabled is True
+    assert config.historical_registry.database_path == "history/target-history.sqlite"
+
+
+def test_historical_loading_config_accepts_explicit_scope_and_latest_images() -> None:
+    config = ProjectConfig.model_validate(
+        {
+            "historical_registry": {
+                "enabled": True,
+                "database_path": "history/target-history.sqlite",
+            },
+            "historical_loading": {
+                "enabled": True,
+                "target_scope": "all_enabled_targets",
+                "image_selection": {
+                    "mode": "latest_images",
+                    "limit_per_target": 3,
+                },
+            },
+            "targets": [valid_target_dict()],
+        }
+    )
+
+    assert config.historical_loading.enabled is True
+    assert (
+        config.historical_loading.target_scope
+        == HistoricalLoadingTargetScope.ALL_ENABLED_TARGETS
+    )
+    assert config.historical_loading.image_selection.mode == HistoricalSelectionMode.LATEST_IMAGES
+    assert config.historical_loading.image_selection.limit_per_target == 3
+
+
+def test_historical_loading_latest_images_requires_positive_limit() -> None:
+    with pytest.raises(ValidationError) as exc_info:
+        HistoricalImageSelectionConfig.model_validate({"mode": "latest_images"})
+
+    assert "limit_per_target is required" in exc_info.value.errors()[0]["msg"]
+
+
+def test_historical_loading_date_range_requires_ordered_dates() -> None:
+    with pytest.raises(ValidationError) as exc_info:
+        HistoricalImageSelectionConfig.model_validate(
+            {
+                "mode": "date_range",
+                "start_date": "2026-06-10",
+                "end_date": "2026-06-09",
+            }
+        )
+
+    assert "start_date must be before or equal to end_date" in exc_info.value.errors()[0]["msg"]
+
+
+def test_historical_loading_lookback_days_requires_positive_window() -> None:
+    with pytest.raises(ValidationError) as exc_info:
+        HistoricalImageSelectionConfig.model_validate({"mode": "lookback_days"})
+
+    assert "lookback_days is required" in exc_info.value.errors()[0]["msg"]
 
 
 def test_project_config_validation_error_locations_are_specific() -> None:
@@ -289,6 +383,52 @@ def test_composition_defaults_and_round_trip_are_json_friendly() -> None:
     assert dumped["include"] is False
     assert dumped["needs_revalidation"] is True
     assert restored.layers[0].order == 0
+    assert restored.layers[0].source_kind == ImageLayerSourceKind.CURRENT
+
+
+def test_image_layer_source_kind_round_trips_for_historical_layers() -> None:
+    layer = ImageLayer(
+        layer_id="history_001",
+        source_path="history/raw.tif",
+        order=0,
+        source_kind=ImageLayerSourceKind.HISTORICAL,
+    )
+
+    dumped = layer.model_dump(mode="json")
+    restored = ImageLayer.model_validate(dumped)
+
+    assert dumped["source_kind"] == "historical"
+    assert restored.source_kind == ImageLayerSourceKind.HISTORICAL
+
+
+def test_composition_temporal_compare_defaults_and_round_trip() -> None:
+    composition = Composition(
+        composition_id="target_001__20260525",
+        target_id="target_001",
+        capture_date=date(2026, 5, 25),
+        view=ViewState(center=[106.7, 10.8], scale=50000),
+        layers=[],
+    )
+
+    assert composition.temporal_compare == TemporalCompareState()
+    assert composition.temporal_compare.enabled is False
+
+    updated = composition.model_copy(
+        update={
+            "temporal_compare": TemporalCompareState(
+                enabled=True,
+                orientation=TemporalCompareOrientation.HORIZONTAL,
+                pane_a_layer_id="current",
+                pane_b_layer_id="history",
+            )
+        }
+    )
+    dumped = updated.model_dump(mode="json")
+    restored = Composition.model_validate(dumped)
+
+    assert dumped["temporal_compare"]["orientation"] == "horizontal"
+    assert restored.temporal_compare.enabled is True
+    assert restored.temporal_compare.pane_a_layer_id == "current"
 
 
 def test_issue_contract_serializes_vietnamese_message_and_blocking_flag() -> None:

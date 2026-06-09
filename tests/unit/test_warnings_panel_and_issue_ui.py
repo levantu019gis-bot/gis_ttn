@@ -19,6 +19,7 @@ from thucthengay.editor.widgets.warnings_panel import WarningsPanelWidget
 from thucthengay.models import (
     Composition,
     ImageLayer,
+    ImageLayerSourceKind,
     Issue,
     IssueScope,
     IssueSeverity,
@@ -294,6 +295,28 @@ class TestLayerStackIssueColumn:
         text = model.data(idx, int(Qt.ItemDataRole.DisplayRole))
         assert text == ""
 
+    def test_layer_stack_filename_shows_current_or_historical_source_text(self) -> None:
+        qapp()
+        model = LayerStackModel()
+        current = self._make_layer("current")
+        historical = self._make_layer("historical").model_copy(
+            update={"source_kind": ImageLayerSourceKind.HISTORICAL, "order": 1}
+        )
+        comp = _make_composition("tgt__20260525", "tgt", layers=[current, historical])
+        model.set_composition(comp)
+
+        current_text = model.data(
+            model.index(0, int(LayerStackColumn.FILENAME)),
+            int(Qt.ItemDataRole.DisplayRole),
+        )
+        historical_text = model.data(
+            model.index(1, int(LayerStackColumn.FILENAME)),
+            int(Qt.ItemDataRole.DisplayRole),
+        )
+
+        assert "Current" in current_text
+        assert "Historical" in historical_text
+
 
 # --- WarningsPanelWidget tests (AC 3) ---
 
@@ -401,3 +424,26 @@ class TestWarningsPanelWidget:
         target_id, comp_id, _ = data
         assert target_id == "fallback_tgt"
         assert comp_id == "fallback_comp"
+
+    def test_historical_path_issue_mentions_repair_availability(self) -> None:
+        qapp()
+        panel = WarningsPanelWidget()
+        issue = _make_issue(
+            "historical.path_missing",
+            IssueSeverity.WARNING,
+            scope=IssueScope.LAYER,
+            target_id="target_001",
+            composition_id="target_001__20260525",
+            layer_id="42",
+            message="Khong tim thay anh lich su",
+        )
+
+        panel.set_issues([issue])
+
+        item_text = panel._list.item(0).text()
+        data = panel._list.item(0).data(1000)
+        assert "target:target_001" in item_text
+        assert "comp:target_001__20260525" in item_text
+        assert "layer:42" in item_text
+        assert "sua duong dan" in item_text.lower()
+        assert data == ("target_001", "target_001__20260525", "42")

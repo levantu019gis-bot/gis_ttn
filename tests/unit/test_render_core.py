@@ -13,12 +13,15 @@ from rasterio.transform import from_bounds
 
 import thucthengay.render.core as render_core
 from thucthengay.gis.crs import GEOGRAPHIC_CRS
+from thucthengay.models import TemporalCompareOrientation
 from thucthengay.models.config import GridConfig, GridInterval
 from thucthengay.models.template import MapFrame
 from thucthengay.render import (
     GeoWindow,
     RasterRenderResult,
     RenderBackground,
+    RenderComparisonPane,
+    RenderComparisonSpec,
     RenderError,
     RenderLayerRef,
     RenderSpec,
@@ -52,6 +55,55 @@ def _spec(
         template_pptx="t.pptx",
         slide_index=0,
     )
+
+
+def test_temporal_compare_vertical_split_renders_selected_layers_per_pane(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls: list[tuple[tuple[str, ...], int, int]] = []
+
+    def fake_raster_base(
+        render_spec: RenderSpec,
+        *,
+        output_width: int,
+        output_height: int,
+        **_kwargs,
+    ):
+        layer_ids = tuple(layer.layer_id for layer in render_spec.visible_layers)
+        calls.append((layer_ids, output_width, output_height))
+        color = (255, 0, 0) if layer_ids == ("A",) else (0, 0, 255)
+        canvas = np.zeros((output_height, output_width, 3), dtype=np.uint8)
+        canvas[:, :] = color
+        return RasterRenderResult(canvas=canvas, painted_layer_ids=layer_ids)
+
+    monkeypatch.setattr(render_core, "_render_raster_base", fake_raster_base)
+    spec = _spec(layers=[RenderLayerRef(layer_id="A", source_path="A.tif", order=0)])
+    spec = spec.model_copy(
+        update={
+            "temporal_compare": RenderComparisonSpec(
+                enabled=True,
+                orientation=TemporalCompareOrientation.VERTICAL,
+                pane_a=RenderComparisonPane(
+                    layer_id="A",
+                    layers=[RenderLayerRef(layer_id="A", source_path="A.tif", order=0)],
+                ),
+                pane_b=RenderComparisonPane(
+                    layer_id="B",
+                    layers=[RenderLayerRef(layer_id="B", source_path="B.tif", order=0)],
+                ),
+            )
+        }
+    )
+
+    result = render_core.render_map_with_cache(spec, render_cache=None)
+
+    assert calls[0][0] == ("A",)
+    assert calls[1][0] == ("B",)
+    assert calls[0][1] != calls[1][1] or calls[0][2] == calls[1][2]
+    mid_y = result.canvas.shape[0] // 2
+    assert result.canvas[mid_y, 20, 0] > 200
+    assert result.canvas[mid_y, -20, 2] > 200
+    assert set(result.painted_layer_ids) == {"A", "B"}
 
 
 def _make_memfile(

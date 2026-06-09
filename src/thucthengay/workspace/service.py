@@ -19,6 +19,8 @@ from thucthengay.models import (
     ImageLayer,
     MetadataSource,
     MetadataStatus,
+    TemporalCompareOrientation,
+    TemporalCompareState,
     ValidationSummary,
     ViewState,
     WorkspaceManifest,
@@ -499,6 +501,43 @@ class WorkspaceService:
         view = ViewState(center=center, scale=scale, rotation=0)
         updated = _mark_composition_edit_stale(
             _validated_composition_update(composition, {"view": view})
+        )
+        self.write_composition(updated)
+        return updated
+
+    def update_temporal_compare_state(
+        self,
+        composition_id: str,
+        *,
+        enabled: bool,
+        orientation: TemporalCompareOrientation | str,
+        pane_a_layer_id: str | None,
+        pane_b_layer_id: str | None,
+    ) -> Composition:
+        """Persist temporal comparison selections and mark render/export stale."""
+        composition = self.read_composition(composition_id)
+        layer_ids = {layer.layer_id for layer in composition.layers}
+        if enabled:
+            missing = [
+                layer_id
+                for layer_id in (pane_a_layer_id, pane_b_layer_id)
+                if layer_id is None or layer_id not in layer_ids
+            ]
+            if missing:
+                msg = "Comparison panes must reference existing composition layers."
+                raise WorkspaceError(msg)
+            if pane_a_layer_id == pane_b_layer_id:
+                msg = "Comparison panes must use two different layers."
+                raise WorkspaceError(msg)
+
+        state = TemporalCompareState(
+            enabled=enabled,
+            orientation=orientation,
+            pane_a_layer_id=pane_a_layer_id if enabled else None,
+            pane_b_layer_id=pane_b_layer_id if enabled else None,
+        )
+        updated = _mark_composition_edit_stale(
+            _validated_composition_update(composition, {"temporal_compare": state})
         )
         self.write_composition(updated)
         return updated

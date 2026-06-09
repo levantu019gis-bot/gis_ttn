@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from datetime import date
+from enum import StrEnum
 from typing import Any
 
 from pydantic import AliasChoices, BaseModel, ConfigDict, Field, field_validator, model_validator
@@ -162,6 +164,97 @@ class ProjectDefaultsConfig(BaseModel):
     export: ExportDefaultsConfig = Field(default_factory=ExportDefaultsConfig)
 
 
+class HistoricalRegistryConfig(BaseModel):
+    """Optional SQLite registry used by Epic 9 historical imagery features."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    enabled: bool = False
+    database_path: str | None = None
+
+    @model_validator(mode="after")
+    def enabled_registry_requires_database_path(self) -> HistoricalRegistryConfig:
+        if self.enabled and not self.database_path:
+            msg = "historical registry database_path is required when enabled"
+            raise ValueError(msg)
+        return self
+
+
+class HistoricalLoadingTargetScope(StrEnum):
+    """Targets considered when seeding a workspace from historical imagery."""
+
+    TARGETS_WITH_CURRENT_MATCHES = "targets_with_current_matches"
+    ALL_ENABLED_TARGETS = "all_enabled_targets"
+
+
+class HistoricalSelectionMode(StrEnum):
+    """Historical image selection strategy used during ingestion."""
+
+    LATEST_DATE = "latest_date"
+    LATEST_IMAGES = "latest_images"
+    DATE_RANGE = "date_range"
+    LOOKBACK_DAYS = "lookback_days"
+
+
+class HistoricalLookbackAnchor(StrEnum):
+    """Anchor date used for historical lookback windows."""
+
+    TODAY = "today"
+    CURRENT_SESSION_LATEST_DATE = "current_session_latest_date"
+
+
+class HistoricalImageSelectionConfig(BaseModel):
+    """Configurable historical image selector for future registry queries."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    mode: HistoricalSelectionMode = HistoricalSelectionMode.LATEST_DATE
+    limit_per_target: int | None = Field(default=None, ge=1)
+    start_date: date | None = None
+    end_date: date | None = None
+    lookback_days: int | None = Field(default=None, ge=1)
+    lookback_anchor: HistoricalLookbackAnchor = (
+        HistoricalLookbackAnchor.CURRENT_SESSION_LATEST_DATE
+    )
+
+    @model_validator(mode="after")
+    def mode_specific_settings_must_be_complete(
+        self,
+    ) -> HistoricalImageSelectionConfig:
+        if self.mode == HistoricalSelectionMode.LATEST_IMAGES:
+            if self.limit_per_target is None:
+                msg = "limit_per_target is required when mode is latest_images"
+                raise ValueError(msg)
+        if self.mode == HistoricalSelectionMode.DATE_RANGE:
+            if self.start_date is None or self.end_date is None:
+                msg = "start_date and end_date are required when mode is date_range"
+                raise ValueError(msg)
+            if self.start_date > self.end_date:
+                msg = "start_date must be before or equal to end_date"
+                raise ValueError(msg)
+        if (
+            self.mode == HistoricalSelectionMode.LOOKBACK_DAYS
+            and self.lookback_days is None
+        ):
+            msg = "lookback_days is required when mode is lookback_days"
+            raise ValueError(msg)
+        return self
+
+
+class HistoricalLoadingConfig(BaseModel):
+    """Explicit ingestion-time historical imagery loading mode."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    enabled: bool = False
+    target_scope: HistoricalLoadingTargetScope = (
+        HistoricalLoadingTargetScope.TARGETS_WITH_CURRENT_MATCHES
+    )
+    image_selection: HistoricalImageSelectionConfig = Field(
+        default_factory=HistoricalImageSelectionConfig
+    )
+
+
 class TargetGroupConfig(BaseModel):
     """Business grouping metadata for a reporting target."""
 
@@ -245,6 +338,12 @@ class ProjectConfig(BaseModel):
 
     schema_version: str = "1.0"
     defaults: ProjectDefaultsConfig = Field(default_factory=ProjectDefaultsConfig)
+    historical_registry: HistoricalRegistryConfig = Field(
+        default_factory=HistoricalRegistryConfig
+    )
+    historical_loading: HistoricalLoadingConfig = Field(
+        default_factory=HistoricalLoadingConfig
+    )
     filename_patterns: list[FilenamePatternConfig] = Field(default_factory=list)
     targets: list[TargetConfig]
 

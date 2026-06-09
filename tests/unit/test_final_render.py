@@ -7,7 +7,13 @@ from pathlib import Path
 import numpy as np
 from PIL import Image
 
-from thucthengay.models import FinalRenderStatus, Issue, IssueScope, IssueSeverity
+from thucthengay.models import (
+    FinalRenderStatus,
+    Issue,
+    IssueScope,
+    IssueSeverity,
+    TemporalCompareOrientation,
+)
 from thucthengay.models.config import GridConfig, GridInterval
 from thucthengay.models.template import MapFrame
 from thucthengay.render import (
@@ -15,6 +21,8 @@ from thucthengay.render import (
     GeoWindow,
     RasterRenderResult,
     RenderBackground,
+    RenderComparisonPane,
+    RenderComparisonSpec,
     RenderError,
     RenderLayerRef,
     RenderSpec,
@@ -94,6 +102,28 @@ def test_final_render_writes_jpeg_and_success_log(tmp_path: Path) -> None:
     assert entry["render_spec_hash"] == render_spec_hash(spec)
     assert entry["visible_layer_refs"] == ["L1", "L2"]
     assert entry["timestamp"] == "2026-05-26T08:30:00Z"
+
+
+def test_render_spec_hash_includes_temporal_compare_state() -> None:
+    base = _spec()
+    compare = base.model_copy(
+        update={
+            "temporal_compare": RenderComparisonSpec(
+                enabled=True,
+                orientation=TemporalCompareOrientation.VERTICAL,
+                pane_a=RenderComparisonPane(
+                    layer_id="L1",
+                    layers=[base.visible_layers[0]],
+                ),
+                pane_b=RenderComparisonPane(
+                    layer_id="L2",
+                    layers=[base.visible_layers[1]],
+                ),
+            )
+        }
+    )
+
+    assert render_spec_hash(base) != render_spec_hash(compare)
 
 
 def test_final_render_failure_writes_failure_log_without_success_output(

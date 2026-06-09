@@ -56,6 +56,24 @@ class PersistedValidationState(StrEnum):
     STALE = "stale"
 
 
+class TemporalCompareOrientation(StrEnum):
+    """Split orientation for a two-time comparison map frame."""
+
+    VERTICAL = "vertical"
+    HORIZONTAL = "horizontal"
+
+
+class TemporalCompareState(BaseModel):
+    """Persisted temporal comparison selections for one composition."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    enabled: bool = False
+    orientation: TemporalCompareOrientation = TemporalCompareOrientation.VERTICAL
+    pane_a_layer_id: str | None = None
+    pane_b_layer_id: str | None = None
+
+
 class CompositionArtifacts(BaseModel):
     """Workspace-relative artifacts generated for a composition."""
 
@@ -86,6 +104,7 @@ class Composition(BaseModel):
     notes: str = ""
     validation_summary: ValidationSummary = Field(default_factory=ValidationSummary)
     artifacts: CompositionArtifacts = Field(default_factory=CompositionArtifacts)
+    temporal_compare: TemporalCompareState = Field(default_factory=TemporalCompareState)
 
     @property
     def persisted_validation_state(self) -> PersistedValidationState:

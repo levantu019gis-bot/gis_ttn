@@ -10,7 +10,14 @@ from typing import Any
 
 from PySide6.QtCore import QAbstractTableModel, QModelIndex, QObject, Qt
 
-from thucthengay.models import Composition, ImageLayer, Issue, IssueSeverity, MetadataStatus
+from thucthengay.models import (
+    Composition,
+    ImageLayer,
+    ImageLayerSourceKind,
+    Issue,
+    IssueSeverity,
+    MetadataStatus,
+)
 
 
 class LayerStackColumn(IntEnum):
@@ -35,6 +42,7 @@ class LayerStackRole(IntEnum):
     NO_VISIBLE_WARNING = int(Qt.ItemDataRole.UserRole) + 4
     ORDER_VALUE = int(Qt.ItemDataRole.UserRole) + 5
     METADATA_STATUS = int(Qt.ItemDataRole.UserRole) + 6
+    SOURCE_KIND = int(Qt.ItemDataRole.UserRole) + 7
 
 
 class LayerStackModel(QAbstractTableModel):
@@ -152,6 +160,8 @@ class LayerStackModel(QAbstractTableModel):
             return layer.order
         if role == LayerStackRole.METADATA_STATUS:
             return layer.metadata_status
+        if role == LayerStackRole.SOURCE_KIND:
+            return layer.source_kind
         return None
 
     def setData(
@@ -239,7 +249,7 @@ def _display_text(layer: ImageLayer, column: LayerStackColumn, row: int) -> str:
     if column is LayerStackColumn.METADATA:
         return _metadata_status_label(layer.metadata_status)
     if column is LayerStackColumn.FILENAME:
-        return _short_filename(layer.source_path)
+        return f"{_source_kind_label(layer.source_kind)} | {_short_filename(layer.source_path)}"
     if column is LayerStackColumn.ACTIONS:
         return "..."
     return ""
@@ -295,9 +305,16 @@ def _full_path(layer: ImageLayer) -> str:
     return layer.source_path
 
 
+def _source_kind_label(source_kind: ImageLayerSourceKind) -> str:
+    if source_kind is ImageLayerSourceKind.HISTORICAL:
+        return "Historical"
+    return "Current"
+
+
 def _tooltip(layer: ImageLayer) -> str:
     return (
         f"Layer: {layer.layer_id}\n"
+        f"Source: {_source_kind_label(layer.source_kind)}\n"
         f"File: {_full_path(layer)}\n"
         f"Metadata: {_metadata_status_label(layer.metadata_status)} "
         f"({layer.metadata_source.value})"
