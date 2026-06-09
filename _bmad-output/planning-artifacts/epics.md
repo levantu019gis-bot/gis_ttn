@@ -200,15 +200,31 @@ HIR-FR7: Allow Operators to repair missing historical image paths, including sin
 
 HIR-FR8: Record historical registry entries only after a composition successfully passes validation and is included; skipped or validation-failed compositions must not be written as included history.
 
+HIR-FR9: Provide an explicit application/workspace option to load or not load historical images during ingestion; when disabled, ingestion, Review/Edit, render, and export must behave like the current workspace-only workflow.
+
+HIR-FR10: Provide a Review/Edit comparison mode that can be toggled on or off per composition; when off, the map frame remains the current single-map frame, and when on, the map frame is split into two comparison panes.
+
+HIR-FR11: Support both comparison split orientations: vertical split for left/right panes and horizontal split for top/bottom panes.
+
+HIR-FR12: In comparison mode, allow the Operator to choose which target-date image/layer is displayed in each pane from the selected target's current-session and loaded historical imagery.
+
 HIR-AR1: Implement registry access behind a `HistoryService` in a new core module such as `src/thucthengay/history/`; PySide UI must not query or mutate SQLite directly.
 
 HIR-AR2: Use Python's built-in `sqlite3` with schema migrations, transactions, parameter binding, foreign keys, and short write operations; WAL mode is allowed only for local database files and must be avoided or configurable for network-share database locations.
 
 HIR-AR3: Historical images loaded into a workspace should be copied into workspace cache before review/render/export when available, preserving the existing workspace isolation and render/export reliability.
 
+HIR-AR4: Comparison rendering must be implemented through render/model service boundaries, not by duplicating render business logic inside PySide widgets; final export must use the same comparison state as Review/Edit preview.
+
 HIR-UX1: Ingest summary and Review/Edit must distinguish current-session imagery from historical imagery through text/icon status, not color alone.
 
 HIR-UX2: Missing historical paths must be visible in the Warnings panel and navigable to the affected target/composition/layer, with a clear repair action.
+
+HIR-UX3: Historical loading controls must make the two modes explicit: `Không tải ảnh lịch sử` and `Tải ảnh lịch sử`, with the disabled path presented as the safe/default current workflow unless project config says otherwise.
+
+HIR-UX4: Comparison controls must stay close to the GIS canvas and expose only the required decisions: enable comparison, split orientation, Pane A image/time, and Pane B image/time.
+
+HIR-UX5: Comparison panes must show visible labels for target, capture date/time, current/historical source, cloud percent where available, and missing/unreadable status where relevant.
 
 ### FR Coverage Map
 
@@ -241,9 +257,9 @@ AR17: Epic 7 - Windows packaging readiness.
 CM-FR1-CM-FR8: Epic 8 - Config Manager tab.
 CM-AR1-CM-AR2: Epic 8 - Config editing service and UI boundary.
 CM-UX1-CM-UX3: Epic 8 - Approved Config Manager layout and interactions.
-HIR-FR1-HIR-FR8: Epic 9 - Historical image registry and workspace seeding.
-HIR-AR1-HIR-AR3: Epic 9 - SQLite service boundary, migrations, and cache integration.
-HIR-UX1-HIR-UX2: Epic 9 - Historical imagery visibility and missing-path repair UX.
+HIR-FR1-HIR-FR12: Epic 9 - Historical image registry, workspace seeding, and temporal comparison.
+HIR-AR1-HIR-AR4: Epic 9 - SQLite service boundary, migrations, cache integration, and comparison render boundary.
+HIR-UX1-HIR-UX5: Epic 9 - Historical imagery visibility, explicit loading mode, and comparison UX.
 
 
 ## Epic List
@@ -1802,9 +1818,9 @@ So that changes to targets, groups, geometry, templates, or defaults do not surp
 **Then** it receives the saved config through existing config service boundaries
 **And** no downstream UI reads the config JSON file directly.
 
-## Epic 9: Historical Image Registry
+## Epic 9: Historical Image Registry and Temporal Compare View
 
-**Goal:** Operator có thể dùng lại ảnh lịch sử đã từng include cho target trong các workspace trước, giúp workspace mới tự bổ sung ảnh cũ phù hợp để so sánh/đưa vào composition, đồng thời vẫn giữ workspace hiện tại là source of truth và báo rõ khi đường dẫn ảnh lịch sử bị mất.
+**Goal:** Operator có thể chọn rõ có tải ảnh lịch sử hay không, dùng lại ảnh đã từng Include cho target trong các workspace trước, và khi cần có thể bật chế độ so sánh 2 thời điểm trong cùng khung bản đồ. Khi chế độ so sánh tắt, Review/Edit, render, và export giữ hành vi một khung bản đồ như hiện tại. Khi bật, khung bản đồ được chia thành 2 phần theo chiều dọc hoặc chiều ngang, mỗi phần hiển thị ảnh/layer của cùng target tại một thời điểm được chỉ định. Workspace JSON hiện tại vẫn là source of truth cho phiên làm việc; SQLite chỉ là registry tham chiếu dài hạn.
 
 ### Story 9.1: Add SQLite History Service and Registry Schema
 
@@ -1864,13 +1880,43 @@ So that images I approved can appear in future workspaces.
 **Then** the composition remains included in the workspace
 **And** the Operator sees a non-blocking warning explaining that history was not updated.
 
-### Story 9.3: Load Historical Imagery into New Workspace Ingestion
+### Story 9.3: Configure Historical Loading Mode for Ingestion
+
+As an Operator,
+I want an explicit choice to load or not load historical images,
+So that I can keep the current simple workflow or opt into historical comparison deliberately.
+
+**Requirement References:** HIR-FR2, HIR-FR3, HIR-FR4, HIR-FR9, HIR-UX3, NFR5
+
+**Acceptance Criteria:**
+
+**Given** historical loading is disabled
+**When** ingestion runs
+**Then** the app scans and matches only current-session imagery
+**And** no historical registry query is executed
+**And** Review/Edit, render, export, and validation behave like the current workspace-only workflow.
+
+**Given** historical loading is enabled
+**When** ingestion starts
+**Then** the app displays or applies the configured target scope and image selection settings before querying history.
+
+**Given** no historical database path is configured
+**When** the Operator enables historical loading
+**Then** the app reports a clear validation issue or setup message
+**And** does not silently fall back to an unknown database location.
+
+**Given** the historical loading mode is changed in config or setup UI
+**When** downstream code reads the setting
+**Then** it receives the saved value through config/service boundaries
+**And** no PySide widget reads or writes config JSON directly.
+
+### Story 9.4: Load Historical Imagery into New Workspace Ingestion
 
 As an Operator,
 I want new workspaces to include relevant historical imagery for targets in scope,
 So that I can compare current and previous satellite scenes in the same review queue.
 
-**Requirement References:** HIR-FR2, HIR-FR3, HIR-FR4, HIR-FR5, HIR-AR3, HIR-UX1
+**Requirement References:** HIR-FR2, HIR-FR3, HIR-FR4, HIR-FR5, HIR-FR9, HIR-AR3, HIR-UX1
 
 **Acceptance Criteria:**
 
@@ -1902,7 +1948,7 @@ So that I can compare current and previous satellite scenes in the same review q
 **When** composition inputs are merged
 **Then** the image appears only once for the same target/date.
 
-### Story 9.4: Validate and Repair Historical Image Paths
+### Story 9.5: Validate and Repair Historical Image Paths
 
 As an Operator,
 I want missing historical paths to be detected and repairable,
@@ -1929,7 +1975,7 @@ So that moved LAN/local imagery can be reused without corrupting the current wor
 **When** the Operator applies a bulk path-prefix replacement
 **Then** the app previews affected rows and requires explicit confirmation before updating the registry.
 
-### Story 9.5: Surface Historical Imagery Status in Review/Edit and Ingest Summary
+### Story 9.6: Surface Historical Imagery Status in Review/Edit and Ingest Summary
 
 As an Operator,
 I want historical imagery to be visibly distinguishable from current-session imagery,
@@ -1956,3 +2002,80 @@ So that I understand which layers are new, historical, missing, or repaired whil
 **When** ingestion completes
 **Then** the app reports that no historical images matched the configured target scope and image selection
 **And** this is informational rather than blocking.
+
+### Story 9.7: Add Temporal Compare Controls in Review/Edit
+
+As an Operator,
+I want to enable a two-time comparison for the selected target,
+So that I can choose which current or historical image appears in each map pane.
+
+**Requirement References:** HIR-FR10, HIR-FR11, HIR-FR12, HIR-UX4, HIR-UX5, UX-DR3, UX-DR6, UX-DR14
+
+**Acceptance Criteria:**
+
+**Given** a composition is selected in Review/Edit
+**When** comparison mode is off
+**Then** the GIS canvas, layer stack, grid controls, Include/Validate behavior, and export preview remain the current single-map workflow.
+
+**Given** comparison mode is enabled
+**When** the comparison control panel is shown
+**Then** it exposes only these primary controls: enable/disable comparison, split orientation, Pane A image/time, and Pane B image/time.
+
+**Given** comparison mode is enabled
+**When** the Operator selects split orientation
+**Then** `vertical` shows left/right panes
+**And** `horizontal` shows top/bottom panes.
+
+**Given** current and historical imagery are available for the selected target
+**When** the Operator opens the Pane A or Pane B selector
+**Then** options are grouped or labelled by capture date/time
+**And** each option shows current/historical source, cloud percent where available, and missing/unreadable status where relevant.
+
+**Given** fewer than two usable images are available for the selected target
+**When** comparison mode is enabled
+**Then** the UI explains that two usable time points are required
+**And** this does not block normal single-map review when comparison mode is disabled.
+
+**Given** the Operator changes comparison pane selection or orientation
+**When** the change is saved
+**Then** the comparison state is persisted in workspace/composition state through `WorkspaceService`
+**And** the composition is marked for revalidation when the change affects render/export output.
+
+### Story 9.8: Render and Export Split Map Frame for Temporal Comparison
+
+As an Operator,
+I want the final map output to show two selected time points in one split map frame,
+So that the exported report can compare target imagery across time without manual PowerPoint editing.
+
+**Requirement References:** HIR-FR10, HIR-FR11, HIR-FR12, HIR-AR4, HIR-UX5, AR15, NFR2, NFR3
+
+**Acceptance Criteria:**
+
+**Given** comparison mode is disabled
+**When** preview or final render runs
+**Then** the renderer uses the existing single-map `RenderSpec` behavior.
+
+**Given** comparison mode is enabled with valid Pane A and Pane B selections
+**When** preview render runs
+**Then** the GIS canvas shows the map frame split according to the selected orientation
+**And** each pane renders only the selected image/layer set for its configured time point.
+
+**Given** comparison mode is enabled
+**When** final render/export runs
+**Then** the exported map image uses the same comparison state as Review/Edit preview
+**And** PPTX export inserts the split comparison render into the existing map placeholder.
+
+**Given** comparison mode is enabled
+**When** grid/frame rendering is applied
+**Then** each pane has clear map-frame boundaries and coordinate context
+**And** pane labels identify target, capture date/time, current/historical source, and cloud percent where available.
+
+**Given** a selected historical image becomes missing or unreadable
+**When** validation/preflight runs
+**Then** the app creates a structured issue pointing to the affected pane and layer
+**And** export is blocked only when the selected comparison output cannot be rendered safely.
+
+**Given** comparison rendering processes large rasters
+**When** preview/final render runs
+**Then** existing cancellation, cache, max-pixel, and memory safeguards continue to apply
+**And** PySide widgets do not duplicate render business logic.
