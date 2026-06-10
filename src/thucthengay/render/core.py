@@ -20,6 +20,8 @@ from thucthengay.render.frame import (
     PixelRect,
     build_map_surround_layout,
     draw_map_surround_frame,
+    draw_map_surround_outline,
+    draw_map_surround_pane_frame,
 )
 from thucthengay.render.raster import (
     CancelCallback,
@@ -31,6 +33,7 @@ from thucthengay.render.raster import (
 from thucthengay.render.spec import (
     MAX_RENDER_PIXELS,
     GeoWindow,
+    RenderComparisonPane,
     RenderComparisonSpec,
     RenderLayerRef,
     RenderSpec,
@@ -44,6 +47,7 @@ _ASPECT_EPSILON = 1e-10
 _DEFAULT_RASTER_BASE_CACHE_BYTES = 256 * 1024 * 1024
 _DEFAULT_FRAME_OVERLAY_CACHE_BYTES = 64 * 1024 * 1024
 _DEFAULT_FULL_MAP_CACHE_BYTES = 256 * 1024 * 1024
+_DEFAULT_TEMPORAL_COMPARE_PANE_GAP_PX = 8
 
 
 @dataclass(frozen=True)
@@ -646,14 +650,23 @@ def _render_map(
     try:
         if is_cancelled is not None and is_cancelled():
             raise RenderError([_cancelled_issue(spec)])
-        _apply_map_surround_frame(
-            canvas,
-            render_spec,
-            layout,
-            background=bg,
-            frame_cache=frame_cache,
-            is_cancelled=is_cancelled,
-        )
+        if render_spec.temporal_compare.enabled:
+            draw_map_surround_outline(canvas, render_spec, layout, draw_inner=False)
+            _draw_temporal_compare_pane_frames(
+                canvas,
+                render_spec,
+                layout,
+                is_cancelled=is_cancelled,
+            )
+        else:
+            _apply_map_surround_frame(
+                canvas,
+                render_spec,
+                layout,
+                background=bg,
+                frame_cache=frame_cache,
+                is_cancelled=is_cancelled,
+            )
     except MemoryError as exc:
         raise RenderError([*result.issues, _memory_issue(spec)]) from exc
     except RenderError as exc:
@@ -710,10 +723,15 @@ def _render_temporal_compare_base(
     raster_cache: RasterBaseCache | None,
 ) -> RasterRenderResult:
     comparison = spec.temporal_compare
-    pane_a_rect, pane_b_rect = _split_compare_inner_map(inner, comparison.orientation)
-    bg = _parse_hex_color(spec.background.color)
+    pane_gap_px = _temporal_compare_pane_gap_px(spec)
+    pane_a_rect, pane_b_rect = _split_compare_inner_map(
+        inner,
+        comparison.orientation,
+        gap_px=pane_gap_px,
+    )
+    gap_color = _temporal_compare_gap_color(spec)
     canvas = np.empty((inner.height, inner.width, 3), dtype=np.uint8)
-    canvas[:, :] = bg
+    canvas[:, :] = gap_color
     issues: list[Issue] = []
     painted_layer_ids: list[str] = []
 
@@ -721,19 +739,10 @@ def _render_temporal_compare_base(
         (pane_a_rect, comparison.pane_a),
         (pane_b_rect, comparison.pane_b),
     ):
-        pane_spec = _spec_for_inner_map(
-            spec.model_copy(
-                update={
-                    "visible_layers": pane.layers,
-                    "temporal_compare": RenderComparisonSpec(),
-                }
-            ),
+        pane_result = _render_temporal_compare_pane(
+            spec,
+            pane,
             pane_rect,
-        )
-        pane_result = _render_raster_base(
-            pane_spec,
-            output_width=pane_rect.width,
-            output_height=pane_rect.height,
             dataset_opener=dataset_opener,
             is_cancelled=is_cancelled,
             raster_cache=raster_cache,
@@ -746,7 +755,6 @@ def _render_temporal_compare_base(
         right = pane_rect.right - inner.left
         canvas[top:bottom, left:right, :] = pane_result.canvas
 
-    _draw_compare_divider(canvas, inner, pane_a_rect, comparison.orientation)
     return RasterRenderResult(
         canvas=canvas,
         issues=tuple(issues),
@@ -754,35 +762,169 @@ def _render_temporal_compare_base(
     )
 
 
-def _split_compare_inner_map(
-    inner: PixelRect,
-    orientation: TemporalCompareOrientation,
-) -> tuple[PixelRect, PixelRect]:
-    if orientation == TemporalCompareOrientation.HORIZONTAL:
-        mid = inner.top + inner.height // 2
-        return (
-            PixelRect(left=inner.left, top=inner.top, right=inner.right, bottom=mid),
-            PixelRect(left=inner.left, top=mid, right=inner.right, bottom=inner.bottom),
+def _draw_temporal_compare_pane_frames(
+    canvas: np.ndarray,
+    spec: RenderSpec,
+    layout: MapSurroundLayout,
+    *,
+    is_cancelled: CancelCallback | None,
+) -> None:
+    comparison = spec.temporal_compare
+    pane_gap_px = _temporal_compare_pane_gap_px(spec)
+    pane_a_rect, pane_b_rect = _split_compare_inner_map(
+        layout.inner_map,
+        comparison.orientation,
+        gap_px=pane_gap_px,
+    )
+    internal_gap_px = _compare_pane_gap(pane_a_rect, pane_b_rect, comparison.orientation)
+    for pane_rect, pane in (
+        (pane_a_rect, comparison.pane_a),
+        (pane_b_rect, comparison.pane_b),
+    ):
+        pane_spec = _spec_for_compare_pane(spec, pane, pane_rect)
+        draw_map_surround_pane_frame(
+            canvas,
+            pane_spec,
+            layout,
+            pane_rect,
+            is_cancelled=is_cancelled,
+            internal_gap_px=internal_gap_px,
         )
-    mid = inner.left + inner.width // 2
-    return (
-        PixelRect(left=inner.left, top=inner.top, right=mid, bottom=inner.bottom),
-        PixelRect(left=mid, top=inner.top, right=inner.right, bottom=inner.bottom),
+
+
+def _render_temporal_compare_pane(
+    spec: RenderSpec,
+    pane: RenderComparisonPane,
+    pane_rect: PixelRect,
+    *,
+    dataset_opener: DatasetOpener,
+    is_cancelled: CancelCallback | None,
+    raster_cache: RasterBaseCache | None,
+) -> RasterRenderResult:
+    pane_spec = _spec_for_compare_pane(spec, pane, pane_rect)
+    return _render_raster_base(
+        pane_spec,
+        output_width=pane_rect.width,
+        output_height=pane_rect.height,
+        dataset_opener=dataset_opener,
+        is_cancelled=is_cancelled,
+        raster_cache=raster_cache,
     )
 
 
-def _draw_compare_divider(
-    canvas: np.ndarray,
+def _spec_for_compare_pane(
+    spec: RenderSpec,
+    pane: RenderComparisonPane,
+    pane_rect: PixelRect,
+) -> RenderSpec:
+    updates: dict[str, object] = {
+        "visible_layers": pane.layers,
+        "temporal_compare": RenderComparisonSpec(),
+    }
+    if pane.geo_window is not None:
+        updates["geo_window"] = pane.geo_window
+    if pane.view_center is not None:
+        updates["view_center"] = pane.view_center
+    if pane.view_scale is not None:
+        updates["view_scale"] = pane.view_scale
+    return _spec_for_inner_map(spec.model_copy(update=updates), pane_rect)
+
+
+def _split_compare_inner_map(
     inner: PixelRect,
-    pane_a: PixelRect,
     orientation: TemporalCompareOrientation,
-) -> None:
+    *,
+    gap_px: int | None = None,
+) -> tuple[PixelRect, PixelRect]:
+    resolved_gap_px = _compare_gap_px(inner, orientation, gap_px=gap_px)
     if orientation == TemporalCompareOrientation.HORIZONTAL:
-        row = max(0, min(canvas.shape[0] - 1, pane_a.bottom - inner.top))
-        canvas[max(0, row - 1) : min(canvas.shape[0], row + 1), :, :] = 0
-        return
-    col = max(0, min(canvas.shape[1] - 1, pane_a.right - inner.left))
-    canvas[:, max(0, col - 1) : min(canvas.shape[1], col + 1), :] = 0
+        mid = inner.top + inner.height // 2
+        pane_a_bottom = mid - resolved_gap_px // 2
+        pane_b_top = pane_a_bottom + resolved_gap_px
+        return (
+            PixelRect(
+                left=inner.left,
+                top=inner.top,
+                right=inner.right,
+                bottom=pane_a_bottom,
+            ),
+            PixelRect(
+                left=inner.left,
+                top=pane_b_top,
+                right=inner.right,
+                bottom=inner.bottom,
+            ),
+        )
+    mid = inner.left + inner.width // 2
+    pane_a_right = mid - resolved_gap_px // 2
+    pane_b_left = pane_a_right + resolved_gap_px
+    return (
+        PixelRect(
+            left=inner.left,
+            top=inner.top,
+            right=pane_a_right,
+            bottom=inner.bottom,
+        ),
+        PixelRect(
+            left=pane_b_left,
+            top=inner.top,
+            right=inner.right,
+            bottom=inner.bottom,
+        ),
+    )
+
+
+def _compare_gap_px(
+    inner: PixelRect,
+    orientation: TemporalCompareOrientation,
+    *,
+    gap_px: int | None = None,
+) -> int:
+    split_size = (
+        inner.height
+        if orientation == TemporalCompareOrientation.HORIZONTAL
+        else inner.width
+    )
+    requested_gap_px = (
+        _DEFAULT_TEMPORAL_COMPARE_PANE_GAP_PX if gap_px is None else max(0, gap_px)
+    )
+    return min(requested_gap_px, max(0, split_size - 2))
+
+
+def _compare_pane_gap(
+    pane_a: PixelRect,
+    pane_b: PixelRect,
+    orientation: TemporalCompareOrientation,
+) -> int:
+    if orientation == TemporalCompareOrientation.HORIZONTAL:
+        return max(0, pane_b.top - pane_a.bottom)
+    return max(0, pane_b.left - pane_a.right)
+
+
+def _temporal_compare_pane_gap_px(spec: RenderSpec) -> int:
+    value = spec.grid.style.get("temporal_compare_pane_gap_px")
+    if isinstance(value, bool):
+        return _DEFAULT_TEMPORAL_COMPARE_PANE_GAP_PX
+    if isinstance(value, int):
+        return max(0, value)
+    if isinstance(value, float) and math.isfinite(value):
+        return max(0, int(round(value)))
+    if isinstance(value, str):
+        try:
+            return max(0, int(round(float(value.strip()))))
+        except ValueError:
+            return _DEFAULT_TEMPORAL_COMPARE_PANE_GAP_PX
+    return _DEFAULT_TEMPORAL_COMPARE_PANE_GAP_PX
+
+
+def _temporal_compare_gap_color(spec: RenderSpec) -> tuple[int, int, int]:
+    value = spec.grid.style.get("temporal_compare_gap_color", "#FFFFFF")
+    if not isinstance(value, str):
+        return (255, 255, 255)
+    try:
+        return _parse_hex_color(value)
+    except ValueError:
+        return (255, 255, 255)
 
 
 def _build_frame_overlay(

@@ -8,9 +8,15 @@ from pptx import Presentation
 from pptx.enum.shapes import MSO_SHAPE
 from pptx.util import Inches
 
-from thucthengay.config import load_project_config, update_target_alignment_defaults
+from thucthengay.config import (
+    apply_historical_loading_override,
+    load_project_config,
+    read_historical_loading_enabled,
+    update_target_alignment_defaults,
+)
 from thucthengay.export.final_render import final_render_output_size
 from thucthengay.models import GridInterval
+from thucthengay.models.config import HistoricalImageSelectionConfig, HistoricalSelectionMode
 
 
 def write_json(path: Path, data: dict[str, object]) -> None:
@@ -493,6 +499,96 @@ def test_load_project_config_blocks_historical_loading_without_registry_path(
     assert result.ok is False
     assert issue.blocking is True
     assert "historical_registry.database_path" in issue.message
+
+
+def test_read_historical_loading_enabled_reads_config_flag(tmp_path: Path) -> None:
+    write_json(
+        tmp_path / "config.json",
+        {
+            "historical_loading": {"enabled": True},
+            "targets": [],
+        },
+    )
+
+    assert read_historical_loading_enabled(tmp_path / "config.json") is True
+    assert read_historical_loading_enabled(tmp_path / "missing.json") is False
+
+
+def test_historical_loading_override_revalidates_registry_requirement(
+    tmp_path: Path,
+) -> None:
+    element_id = prepare_target_files(tmp_path, "target_a")
+    config_path = tmp_path / "config.json"
+    write_json(
+        config_path,
+        {
+            "historical_loading": {
+                "enabled": True,
+                "target_scope": "targets_with_current_matches",
+                "image_selection": {"mode": "latest_date"},
+            },
+            "targets": [target_config("target_a", 1, map_element_id=element_id)],
+        },
+    )
+
+    result = load_project_config(config_path)
+    assert result.ok is False
+
+    apply_historical_loading_override(result, enabled=False)
+
+    assert result.ok is True
+    assert result.config is not None
+    assert result.config.historical_loading.enabled is False
+    assert not any(
+        issue.issue_id == "historical_loading.database_path_missing"
+        for issue in result.issues
+    )
+
+
+def test_historical_loading_override_can_enable_with_registry_path(
+    tmp_path: Path,
+) -> None:
+    element_id = prepare_target_files(tmp_path, "target_a")
+    config_path = tmp_path / "config.json"
+    write_json(
+        config_path,
+        {
+            "historical_registry": {
+                "enabled": True,
+                "database_path": "history/target-history.sqlite",
+            },
+            "historical_loading": {
+                "enabled": False,
+                "target_scope": "targets_with_current_matches",
+                "image_selection": {"mode": "latest_date"},
+            },
+            "targets": [target_config("target_a", 1, map_element_id=element_id)],
+        },
+    )
+
+    result = load_project_config(config_path)
+    apply_historical_loading_override(
+        result,
+        enabled=True,
+        image_selection=HistoricalImageSelectionConfig(
+            mode=HistoricalSelectionMode.DATE_RANGE,
+            start_date="2026-05-01",
+            end_date="2026-05-31",
+        ),
+    )
+
+    assert result.ok is True
+    assert result.config is not None
+    assert result.config.historical_loading.enabled is True
+    assert (
+        result.config.historical_loading.image_selection.mode
+        == HistoricalSelectionMode.DATE_RANGE
+    )
+    assert str(result.config.historical_loading.image_selection.start_date) == "2026-05-01"
+    assert str(result.config.historical_loading.image_selection.end_date) == "2026-05-31"
+    assert result.historical_database_path == (
+        tmp_path / "history" / "target-history.sqlite"
+    ).resolve()
 
 
 def test_pptx_template_metadata_keeps_map_picture_pixel_size(tmp_path: Path) -> None:

@@ -15,6 +15,7 @@ from thucthengay.editor.modes.export_mode import ExportMode
 from thucthengay.editor.modes.review_edit_mode import ReviewEditMode
 from thucthengay.editor.modes.setup_mode import SetupMode, SetupPaths
 from thucthengay.editor.preferences import PreferencesService, RecentProjectEntry
+from thucthengay.history import HistoryService
 from thucthengay.jobs import IngestionJobResult, IngestionSummary, JobControl, JobState
 from thucthengay.utils.path_safety import is_absolute_path_text
 from thucthengay.workspace import WorkspaceError, WorkspaceService
@@ -79,6 +80,8 @@ class AppShell(QMainWindow):
             imagery_folder=setup_paths.imagery_input_folder,
             workspace_service=workspace_service,
             control=control,
+            historical_loading_enabled=setup_paths.historical_loading_enabled,
+            historical_image_selection=setup_paths.historical_image_selection,
         )
         worker.moveToThread(thread)
 
@@ -145,6 +148,7 @@ class AppShell(QMainWindow):
             workspace_service,
             targets=config_result.enabled_targets,
         )
+        self.review_edit_mode.set_history_service(_history_service_from_config(config_result))
         self.export_mode.load_workspace(
             workspace_service,
             targets=config_result.enabled_targets,
@@ -175,6 +179,7 @@ class AppShell(QMainWindow):
             workspace_service,
             targets=config_result.enabled_targets,
         )
+        self.review_edit_mode.set_history_service(_history_service_from_config(config_result))
         self.export_mode.load_workspace(
             workspace_service,
             targets=config_result.enabled_targets,
@@ -220,6 +225,7 @@ class AppShell(QMainWindow):
                 f"{_config_issue_summary(config_result)}"
             )
             return
+        self.review_edit_mode.set_history_service(_history_service_from_config(config_result))
         self.review_edit_mode.refresh_config_targets(config_result.enabled_targets)
         self.export_mode.refresh_config_targets(config_result.enabled_targets)
         self.config_mode.downstream_label.setText(
@@ -268,6 +274,17 @@ def _manifest_config_path(config_path: str, workspace_root: Path) -> Path:
     if workspace_relative.exists():
         return workspace_relative
     return path.resolve()
+
+
+def _history_service_from_config(config_result: ConfigLoadResult) -> HistoryService:
+    config = config_result.config
+    if (
+        config is None
+        or not config.historical_registry.enabled
+        or config_result.historical_database_path is None
+    ):
+        return HistoryService.disabled()
+    return HistoryService(config_result.historical_database_path)
 
 
 def _fallback_manifest_config_path(config_path: str, workspace_root: Path) -> Path | None:

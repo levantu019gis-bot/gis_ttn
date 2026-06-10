@@ -102,8 +102,29 @@ class RenderComparisonPane(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
+    composition_id: str | None = None
     layer_id: str | None = None
+    view_center: list[float] | None = None
+    view_scale: int | None = Field(default=None, gt=0)
+    geo_window: GeoWindow | None = None
     layers: list[RenderLayerRef] = Field(default_factory=list)
+
+    @field_validator("view_center")
+    @classmethod
+    def view_center_must_be_lon_lat(cls, value: list[float] | None) -> list[float] | None:
+        if value is None:
+            return value
+        if len(value) != 2:
+            msg = "view_center must contain exactly [lon, lat]"
+            raise ValueError(msg)
+        lon, lat = value
+        if not -180 <= lon <= 180:
+            msg = "view_center longitude must be between -180 and 180"
+            raise ValueError(msg)
+        if not -90 <= lat <= 90:
+            msg = "view_center latitude must be between -90 and 90"
+            raise ValueError(msg)
+        return value
 
 
 class RenderComparisonSpec(BaseModel):
@@ -229,6 +250,7 @@ def build_render_spec(
     template_metadata_file: str,
     output_width: int,
     output_height: int,
+    compare_compositions: list[Composition] | None = None,
 ) -> RenderSpec:
     """Build a :class:`RenderSpec` from composition + target + template + output size."""
     issues: list[Issue] = []
@@ -286,35 +308,6 @@ def build_render_spec(
     if issues:
         raise RenderSpecError(issues)
 
-    visible_layers = sorted(
-        (layer for layer in composition.layers if layer.visible),
-        key=lambda layer: layer.order,
-    )
-    visible_refs = [
-        RenderLayerRef(
-            layer_id=layer.layer_id,
-            source_path=layer.source_path,
-            cache_path=layer.cache_path,
-            order=layer.order,
-        )
-        for layer in visible_layers
-    ]
-    temporal_compare = _build_temporal_compare_spec(
-        composition=composition,
-        visible_refs=visible_refs,
-        target=target,
-    )
-    if temporal_compare.enabled:
-        visible_refs = [
-            *temporal_compare.pane_a.layers,
-            *(
-                layer
-                for layer in temporal_compare.pane_b.layers
-                if layer.layer_id
-                not in {pane_layer.layer_id for pane_layer in temporal_compare.pane_a.layers}
-            ),
-        ]
-
     grid = composition.grid_override if composition.grid_override is not None else target.grid
 
     center_lon, center_lat = composition.view.center
@@ -341,6 +334,17 @@ def build_render_spec(
         raise RenderSpecError(issues) from exc
 
     map_frame_aspect = template.map_frame.width / template.map_frame.height
+    visible_refs = _visible_layer_refs(composition)
+    temporal_compare = _build_temporal_compare_spec(
+        composition=composition,
+        visible_refs=visible_refs,
+        compare_compositions=compare_compositions or [],
+        target=target,
+        template=template,
+        base_geo_window=geo_window,
+    )
+    if temporal_compare.enabled:
+        visible_refs = [*temporal_compare.pane_a.layers, *temporal_compare.pane_b.layers]
 
     return RenderSpec(
         composition_id=composition.composition_id,
@@ -366,11 +370,22 @@ def _build_temporal_compare_spec(
     *,
     composition: Composition,
     visible_refs: list[RenderLayerRef],
+    compare_compositions: list[Composition],
     target: TargetConfig,
+    template: TemplateMetadata,
+    base_geo_window: GeoWindow,
 ) -> RenderComparisonSpec:
     state = composition.temporal_compare
     if not state.enabled:
         return RenderComparisonSpec()
+
+    if state.pane_a_composition_id or state.pane_b_composition_id:
+        return _build_composition_temporal_compare_spec(
+            composition=composition,
+            compare_compositions=compare_compositions,
+            target=target,
+            template=template,
+        )
 
     refs_by_id = {layer.layer_id: layer for layer in visible_refs}
     pane_a = refs_by_id.get(state.pane_a_layer_id or "")
@@ -394,6 +409,147 @@ def _build_temporal_compare_spec(
     return RenderComparisonSpec(
         enabled=True,
         orientation=state.orientation,
-        pane_a=RenderComparisonPane(layer_id=pane_a.layer_id, layers=[pane_a]),
-        pane_b=RenderComparisonPane(layer_id=pane_b.layer_id, layers=[pane_b]),
+        pane_a=RenderComparisonPane(
+            layer_id=pane_a.layer_id,
+            view_center=list(composition.view.center),
+            view_scale=composition.view.scale,
+            geo_window=base_geo_window,
+            layers=[pane_a],
+        ),
+        pane_b=RenderComparisonPane(
+            layer_id=pane_b.layer_id,
+            view_center=list(composition.view.center),
+            view_scale=composition.view.scale,
+            geo_window=base_geo_window,
+            layers=[pane_b],
+        ),
     )
+
+
+def _build_composition_temporal_compare_spec(
+    *,
+    composition: Composition,
+    compare_compositions: list[Composition],
+    target: TargetConfig,
+    template: TemplateMetadata,
+) -> RenderComparisonSpec:
+    state = composition.temporal_compare
+    compare_by_id = {item.composition_id: item for item in compare_compositions}
+    pane_a = compare_by_id.get(state.pane_a_composition_id or "")
+    pane_b = compare_by_id.get(state.pane_b_composition_id or "")
+    if pane_a is None or pane_b is None or pane_a.composition_id == pane_b.composition_id:
+        raise RenderSpecError(
+            [
+                _issue(
+                    "render.spec.temporal_compare_invalid",
+                    "Temporal comparison pane selections are not valid.",
+                    (
+                        "Select two different compositions/time points for Pane A and "
+                        "Pane B before render/export."
+                    ),
+                    target_id=target.id,
+                    composition_id=composition.composition_id,
+                )
+            ]
+        )
+    if pane_a.target_id != composition.target_id or pane_b.target_id != composition.target_id:
+        raise RenderSpecError(
+            [
+                _issue(
+                    "render.spec.temporal_compare_target_mismatch",
+                    "Temporal comparison panes do not belong to the selected target.",
+                    "Select two compositions from the same target before render/export.",
+                    target_id=target.id,
+                    composition_id=composition.composition_id,
+                )
+            ]
+        )
+
+    pane_a_layers = _visible_layer_refs(pane_a)
+    pane_b_layers = _visible_layer_refs(pane_b)
+    if not pane_a_layers or not pane_b_layers:
+        raise RenderSpecError(
+            [
+                _issue(
+                    "render.spec.temporal_compare_empty_pane",
+                    "Temporal comparison pane has no visible layers.",
+                    "Enable at least one layer in each selected comparison composition.",
+                    target_id=target.id,
+                    composition_id=composition.composition_id,
+                )
+            ]
+        )
+
+    return RenderComparisonSpec(
+        enabled=True,
+        orientation=state.orientation,
+        pane_a=RenderComparisonPane(
+            composition_id=pane_a.composition_id,
+            view_center=list(pane_a.view.center),
+            view_scale=pane_a.view.scale,
+            geo_window=_comparison_pane_geo_window(
+                pane_a,
+                target=target,
+                template=template,
+            ),
+            layers=pane_a_layers,
+        ),
+        pane_b=RenderComparisonPane(
+            composition_id=pane_b.composition_id,
+            view_center=list(pane_b.view.center),
+            view_scale=pane_b.view.scale,
+            geo_window=_comparison_pane_geo_window(
+                pane_b,
+                target=target,
+                template=template,
+            ),
+            layers=pane_b_layers,
+        ),
+    )
+
+
+def _comparison_pane_geo_window(
+    composition: Composition,
+    *,
+    target: TargetConfig,
+    template: TemplateMetadata,
+) -> GeoWindow:
+    center_lon, center_lat = composition.view.center
+    try:
+        return _compute_geo_window(
+            center_lon=center_lon,
+            center_lat=center_lat,
+            scale_denom=composition.view.scale,
+            map_frame=template.map_frame,
+        )
+    except (ValueError, ValidationError) as exc:
+        raise RenderSpecError(
+            [
+                _issue(
+                    "render.spec.temporal_compare_geo_window_invalid",
+                    "Khong tinh duoc vung ban do hop le cho comparison pane.",
+                    (
+                        "Kiem tra center/scale cua composition duoc chon cho pane "
+                        f"'{composition.composition_id}'. Chi tiet: {exc}"
+                    ),
+                    target_id=target.id,
+                    composition_id=composition.composition_id,
+                )
+            ]
+        ) from exc
+
+
+def _visible_layer_refs(composition: Composition) -> list[RenderLayerRef]:
+    visible_layers = sorted(
+        (layer for layer in composition.layers if layer.visible),
+        key=lambda layer: layer.order,
+    )
+    return [
+        RenderLayerRef(
+            layer_id=layer.layer_id,
+            source_path=layer.source_path,
+            cache_path=layer.cache_path,
+            order=layer.order,
+        )
+        for layer in visible_layers
+    ]

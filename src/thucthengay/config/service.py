@@ -7,6 +7,7 @@ import os
 import tempfile
 from collections.abc import Sequence
 from dataclasses import dataclass, field
+from datetime import date
 from json import JSONDecodeError
 from pathlib import Path
 from typing import Any
@@ -22,6 +23,8 @@ from thucthengay.export import (
     template_compatibility_issues,
 )
 from thucthengay.models import (
+    HistoricalImageSelectionConfig,
+    HistoricalSelectionMode,
     Issue,
     IssueScope,
     IssueSeverity,
@@ -72,6 +75,19 @@ class ConfigLoadResult:
     @property
     def ok(self) -> bool:
         return not any(issue.blocking for issue in self.issues)
+
+
+@dataclass(frozen=True)
+class HistoricalLoadingSettings:
+    """Historical loading defaults read for Setup runtime controls."""
+
+    enabled: bool = False
+    image_selection: HistoricalImageSelectionConfig = field(
+        default_factory=lambda: HistoricalImageSelectionConfig(
+            mode=HistoricalSelectionMode.LATEST_IMAGES,
+            limit_per_target=1,
+        )
+    )
 
 
 def load_project_config(config_path: str | Path) -> ConfigLoadResult:
@@ -134,6 +150,92 @@ def load_project_config(config_path: str | Path) -> ConfigLoadResult:
 
     result.issues.extend(template_compatibility_issues(result.loaded_templates.values()))
     return result
+
+
+def read_historical_loading_enabled(config_path: str | Path) -> bool:
+    """Read only the configured historical loading flag for Setup UI defaults."""
+    return read_historical_loading_settings(config_path).enabled
+
+
+def read_historical_loading_settings(config_path: str | Path) -> HistoricalLoadingSettings:
+    """Read configured historical loading defaults for Setup UI controls."""
+    try:
+        raw_config = load_json_file(Path(config_path).expanduser())
+    except (OSError, JSONDecodeError, ValueError):
+        return HistoricalLoadingSettings()
+
+    historical_loading = raw_config.get("historical_loading")
+    if not isinstance(historical_loading, dict):
+        return HistoricalLoadingSettings()
+    return HistoricalLoadingSettings(
+        enabled=historical_loading.get("enabled") is True,
+        image_selection=_historical_selection_for_setup(
+            historical_loading.get("image_selection")
+        ),
+    )
+
+
+def apply_historical_loading_override(
+    result: ConfigLoadResult,
+    *,
+    enabled: bool,
+    image_selection: HistoricalImageSelectionConfig | None = None,
+) -> ConfigLoadResult:
+    """Apply the Setup historical-loading choice to a loaded config result."""
+    if result.config is None:
+        return result
+
+    update: dict[str, object] = {"enabled": enabled}
+    if image_selection is not None:
+        update["image_selection"] = image_selection
+    result.config = result.config.model_copy(
+        update={
+            "historical_loading": result.config.historical_loading.model_copy(update=update)
+        }
+    )
+    result.historical_database_path = None
+    result.issues = [
+        issue
+        for issue in result.issues
+        if issue.issue_id != "historical_loading.database_path_missing"
+    ]
+    _resolve_historical_registry_path(result.config_path, result)
+    return result
+
+
+def _historical_selection_for_setup(raw_selection: object) -> HistoricalImageSelectionConfig:
+    if not isinstance(raw_selection, dict):
+        return _latest_historical_image_selection()
+
+    if raw_selection.get("mode") == HistoricalSelectionMode.DATE_RANGE.value:
+        start_date = _date_from_raw(raw_selection.get("start_date"))
+        end_date = _date_from_raw(raw_selection.get("end_date"))
+        if start_date is not None and end_date is not None and start_date <= end_date:
+            return HistoricalImageSelectionConfig(
+                mode=HistoricalSelectionMode.DATE_RANGE,
+                start_date=start_date,
+                end_date=end_date,
+            )
+
+    return _latest_historical_image_selection()
+
+
+def _latest_historical_image_selection() -> HistoricalImageSelectionConfig:
+    return HistoricalImageSelectionConfig(
+        mode=HistoricalSelectionMode.LATEST_IMAGES,
+        limit_per_target=1,
+    )
+
+
+def _date_from_raw(value: object) -> date | None:
+    if isinstance(value, date):
+        return value
+    if not isinstance(value, str):
+        return None
+    try:
+        return date.fromisoformat(value)
+    except ValueError:
+        return None
 
 
 def update_target_alignment_defaults(

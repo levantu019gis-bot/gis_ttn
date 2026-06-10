@@ -511,13 +511,34 @@ class WorkspaceService:
         *,
         enabled: bool,
         orientation: TemporalCompareOrientation | str,
-        pane_a_layer_id: str | None,
-        pane_b_layer_id: str | None,
+        pane_a_composition_id: str | None = None,
+        pane_b_composition_id: str | None = None,
+        pane_a_layer_id: str | None = None,
+        pane_b_layer_id: str | None = None,
     ) -> Composition:
         """Persist temporal comparison selections and mark render/export stale."""
         composition = self.read_composition(composition_id)
-        layer_ids = {layer.layer_id for layer in composition.layers}
-        if enabled:
+        use_compositions = bool(pane_a_composition_id or pane_b_composition_id)
+        if enabled and use_compositions:
+            if not pane_a_composition_id or not pane_b_composition_id:
+                msg = "Comparison panes must reference two compositions."
+                raise WorkspaceError(msg)
+            if pane_a_composition_id == pane_b_composition_id:
+                msg = "Comparison panes must use two different compositions."
+                raise WorkspaceError(msg)
+            pane_a = self.read_composition(pane_a_composition_id)
+            pane_b = self.read_composition(pane_b_composition_id)
+            if (
+                pane_a.target_id != composition.target_id
+                or pane_b.target_id != composition.target_id
+            ):
+                msg = "Comparison panes must belong to the selected composition target."
+                raise WorkspaceError(msg)
+            if not _has_visible_layer(pane_a) or not _has_visible_layer(pane_b):
+                msg = "Comparison pane compositions must have at least one visible layer."
+                raise WorkspaceError(msg)
+        elif enabled:
+            layer_ids = {layer.layer_id for layer in composition.layers}
             missing = [
                 layer_id
                 for layer_id in (pane_a_layer_id, pane_b_layer_id)
@@ -533,8 +554,10 @@ class WorkspaceService:
         state = TemporalCompareState(
             enabled=enabled,
             orientation=orientation,
-            pane_a_layer_id=pane_a_layer_id if enabled else None,
-            pane_b_layer_id=pane_b_layer_id if enabled else None,
+            pane_a_composition_id=pane_a_composition_id if enabled and use_compositions else None,
+            pane_b_composition_id=pane_b_composition_id if enabled and use_compositions else None,
+            pane_a_layer_id=pane_a_layer_id if enabled and not use_compositions else None,
+            pane_b_layer_id=pane_b_layer_id if enabled and not use_compositions else None,
         )
         updated = _mark_composition_edit_stale(
             _validated_composition_update(composition, {"temporal_compare": state})
@@ -723,6 +746,10 @@ def _mark_composition_edit_stale(composition: Composition) -> Composition:
             "review_order": None,
         },
     )
+
+
+def _has_visible_layer(composition: Composition) -> bool:
+    return any(layer.visible for layer in composition.layers)
 
 
 def _validate_render_artifact_path(value: str) -> str:

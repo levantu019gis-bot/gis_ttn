@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import sqlite3
 from datetime import date, time
 from pathlib import Path
 
@@ -22,6 +23,7 @@ from PySide6.QtWidgets import (
 )
 
 import thucthengay.editor.modes.review_edit_mode as review_edit_mode
+from thucthengay.config import ConfigLoadResult
 from thucthengay.editor.app_shell import AppShell
 from thucthengay.editor.models.composition_tree_model import (
     CompositionTreeModel,
@@ -45,6 +47,7 @@ from thucthengay.editor.widgets import (
     TargetPreviewWidget,
 )
 from thucthengay.jobs import (
+    IngestionJobResult,
     JobState,
     PreviewRenderController,
     PreviewRenderJobResult,
@@ -58,10 +61,12 @@ from thucthengay.models import (
     ImageLayerSourceKind,
     MetadataSource,
     MetadataStatus,
+    ProjectConfig,
     TargetConfig,
     TargetExportConfig,
     TargetGroupConfig,
     TemporalCompareOrientation,
+    TemporalCompareState,
     ValidationSummary,
     ViewState,
 )
@@ -1882,6 +1887,56 @@ def test_review_edit_include_records_history_after_workspace_include(
     assert recorded_workspace == service.paths.root
 
 
+def test_app_shell_wires_configured_history_service_after_ingestion(
+    tmp_path: Path,
+) -> None:
+    qapp()
+    config_path = tmp_path / "config.json"
+    database_path = tmp_path / "history" / "target-history.sqlite"
+    target = target_config("alpha", sort_order=1, name="Alpha Target")
+    service = WorkspaceService(tmp_path / "workspace")
+    service.initialize(config_path=config_path)
+    service.write_composition(
+        composition("alpha__20260525", "alpha", date(2026, 5, 25), needs_revalidation=False)
+    )
+    config_result = ConfigLoadResult(
+        config_path=config_path,
+        config=ProjectConfig(
+            targets=[target],
+            historical_registry={
+                "enabled": True,
+                "database_path": "history/target-history.sqlite",
+            },
+        ),
+        enabled_targets=[target],
+        historical_database_path=database_path,
+    )
+    result = IngestionJobResult(
+        job_id="ingestion-test",
+        state=JobState.SUCCESS,
+        issues=[],
+        scanned_image_count=1,
+        matched_image_count=1,
+        targets_with_images_count=1,
+        composition_ids=["alpha__20260525"],
+    )
+
+    shell = AppShell(preferences_service=PreferencesService(tmp_path / "preferences.json"))
+    shell._finish_ingestion(result, config_result, service)
+    shell.review_edit_mode.tree_view.setCurrentIndex(
+        shell.review_edit_mode.tree_model.index_for_composition_id("alpha__20260525")
+    )
+
+    shell.review_edit_mode.include_validate_button.click()
+
+    assert database_path.exists()
+    with sqlite3.connect(database_path) as connection:
+        image_count = connection.execute("SELECT COUNT(*) FROM image_asset").fetchone()[0]
+        event_count = connection.execute("SELECT COUNT(*) FROM include_event").fetchone()[0]
+    assert image_count == 1
+    assert event_count == 1
+
+
 def test_review_edit_history_failure_does_not_rollback_workspace_include(
     tmp_path: Path,
 ) -> None:
@@ -2039,18 +2094,20 @@ def test_workspace_updates_temporal_compare_state_and_marks_stale(tmp_path: Path
         }
     )
     service.write_composition(comp)
+    other = composition("alpha__20260526", "alpha", date(2026, 5, 26), needs_revalidation=False)
+    service.write_composition(other)
 
     updated = service.update_temporal_compare_state(
         "alpha__20260525",
         enabled=True,
         orientation=TemporalCompareOrientation.VERTICAL,
-        pane_a_layer_id="current",
-        pane_b_layer_id="history",
+        pane_a_composition_id="alpha__20260525",
+        pane_b_composition_id="alpha__20260526",
     )
 
     assert updated.temporal_compare.enabled is True
     assert updated.temporal_compare.orientation == TemporalCompareOrientation.VERTICAL
-    assert updated.temporal_compare.pane_b_layer_id == "history"
+    assert updated.temporal_compare.pane_b_composition_id == "alpha__20260526"
     assert updated.needs_revalidation is True
     assert updated.ready is False
     assert updated.include is False
@@ -2076,6 +2133,9 @@ def test_review_edit_temporal_compare_controls_persist_selection(tmp_path: Path)
         }
     )
     service.write_composition(comp)
+    service.write_composition(
+        composition("alpha__20260526", "alpha", date(2026, 5, 26), needs_revalidation=False)
+    )
 
     mode = ReviewEditMode()
     mode._request_canvas_render = lambda _composition: None  # noqa: SLF001
@@ -2092,8 +2152,8 @@ def test_review_edit_temporal_compare_controls_persist_selection(tmp_path: Path)
     reloaded = service.read_composition("alpha__20260525")
     assert reloaded.temporal_compare.enabled is True
     assert reloaded.temporal_compare.orientation == TemporalCompareOrientation.HORIZONTAL
-    assert reloaded.temporal_compare.pane_a_layer_id == "current"
-    assert reloaded.temporal_compare.pane_b_layer_id == "history"
+    assert reloaded.temporal_compare.pane_a_composition_id == "alpha__20260525"
+    assert reloaded.temporal_compare.pane_b_composition_id == "alpha__20260526"
 
 
 def test_review_edit_temporal_compare_requires_two_usable_layers(tmp_path: Path) -> None:
@@ -2108,11 +2168,53 @@ def test_review_edit_temporal_compare_requires_two_usable_layers(tmp_path: Path)
     mode.load_workspace(service, targets=[target_config("alpha", sort_order=1, name="Alpha")])
     mode.tree_view.setCurrentIndex(mode.tree_model.index_for_composition_id("alpha__20260525"))
 
-    mode.compare_enabled_checkbox.setChecked(True)
-
+    assert not mode.compare_enabled_checkbox.isEnabled()
     assert "two usable" in mode.compare_status_label.text()
     assert service.read_composition("alpha__20260525").temporal_compare.enabled is False
     assert mode.include_validate_button.isEnabled()
+
+
+def test_review_edit_compare_render_spec_error_surfaces_on_canvas(
+    tmp_path: Path,
+) -> None:
+    qapp()
+    raster_path = tmp_path / "alpha.tif"
+    raster_path.touch()
+    selected = composition(
+        "alpha__20260525",
+        "alpha",
+        date(2026, 5, 25),
+        needs_revalidation=False,
+    ).model_copy(
+        update={
+            "layers": [
+                ImageLayer(
+                    layer_id="alpha-layer",
+                    source_path=str(raster_path),
+                    order=0,
+                    capture_date=date(2026, 5, 25),
+                    capture_time=time(8, 30),
+                    metadata_status=MetadataStatus.VALID,
+                )
+            ],
+            "temporal_compare": TemporalCompareState(
+                enabled=True,
+                pane_a_composition_id="alpha__20260525",
+                pane_b_composition_id="alpha__missing",
+            ),
+        }
+    )
+    service = WorkspaceService(tmp_path / "workspace")
+    service.initialize(config_path="config.json")
+    service.write_composition(selected)
+
+    mode = ReviewEditMode()
+    mode.load_workspace(service, targets=[target_config("alpha", sort_order=1, name="Alpha")])
+
+    mode._request_canvas_render(selected)  # noqa: SLF001
+
+    assert mode.gis_canvas.state() == GisCanvasState.ERROR
+    assert "Temporal comparison pane selections are not valid" in mode.gis_canvas.state_text()
 
 
 def test_review_edit_action_bar_blocks_include_and_supports_skip_previous(

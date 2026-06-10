@@ -30,6 +30,7 @@ from thucthengay.render import (
     render_map,
     render_raster_layers_to_size,
 )
+from thucthengay.render.frame import PixelRect
 
 
 def _spec(
@@ -99,11 +100,240 @@ def test_temporal_compare_vertical_split_renders_selected_layers_per_pane(
 
     assert calls[0][0] == ("A",)
     assert calls[1][0] == ("B",)
-    assert calls[0][1] != calls[1][1] or calls[0][2] == calls[1][2]
-    mid_y = result.canvas.shape[0] // 2
-    assert result.canvas[mid_y, 20, 0] > 200
-    assert result.canvas[mid_y, -20, 2] > 200
+    full_layout = build_map_surround_layout(spec.output_width, spec.output_height, spec.grid.style)
+    pane_a, pane_b = render_core._split_compare_inner_map(
+        full_layout.inner_map,
+        TemporalCompareOrientation.VERTICAL,
+    )
+    assert calls[0][1:] == (pane_a.width, pane_a.height)
+    assert calls[1][1:] == (pane_b.width, pane_b.height)
+    pane_a_sample = (
+        pane_a.center_y,
+        pane_a.center_x,
+    )
+    pane_b_sample = (
+        pane_b.center_y,
+        pane_b.center_x,
+    )
+    assert result.canvas[pane_a_sample][0] > 200
+    assert result.canvas[pane_b_sample][2] > 200
     assert set(result.painted_layer_ids) == {"A", "B"}
+
+
+def test_temporal_compare_split_keeps_outer_inner_map_and_defaults_to_8px_gap() -> None:
+    inner = PixelRect(left=10, top=20, right=110, bottom=80)
+
+    vertical_a, vertical_b = render_core._split_compare_inner_map(
+        inner,
+        TemporalCompareOrientation.VERTICAL,
+    )
+    assert vertical_a == PixelRect(left=10, top=20, right=56, bottom=80)
+    assert vertical_b == PixelRect(left=64, top=20, right=110, bottom=80)
+    assert vertical_b.left - vertical_a.right == 8
+
+    horizontal_a, horizontal_b = render_core._split_compare_inner_map(
+        inner,
+        TemporalCompareOrientation.HORIZONTAL,
+    )
+    assert horizontal_a == PixelRect(left=10, top=20, right=110, bottom=46)
+    assert horizontal_b == PixelRect(left=10, top=54, right=110, bottom=80)
+    assert horizontal_b.top - horizontal_a.bottom == 8
+
+
+def test_temporal_compare_split_uses_configured_gap_from_grid_style() -> None:
+    inner = PixelRect(left=10, top=20, right=110, bottom=80)
+
+    vertical_a, vertical_b = render_core._split_compare_inner_map(
+        inner,
+        TemporalCompareOrientation.VERTICAL,
+        gap_px=12,
+    )
+
+    assert vertical_a == PixelRect(left=10, top=20, right=54, bottom=80)
+    assert vertical_b == PixelRect(left=66, top=20, right=110, bottom=80)
+    assert vertical_b.left - vertical_a.right == 12
+
+
+def test_temporal_compare_gap_remains_clear_between_independent_panes(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def fake_raster_base(
+        render_spec: RenderSpec,
+        *,
+        output_width: int,
+        output_height: int,
+        **_kwargs,
+    ) -> RasterRenderResult:
+        layer_ids = tuple(layer.layer_id for layer in render_spec.visible_layers)
+        color = tuple(
+            int(render_spec.background.color.lstrip("#")[index : index + 2], 16)
+            for index in (0, 2, 4)
+        )
+        canvas = np.zeros((output_height, output_width, 3), dtype=np.uint8)
+        canvas[:, :] = color
+        return RasterRenderResult(canvas=canvas, painted_layer_ids=layer_ids)
+
+    monkeypatch.setattr(render_core, "_render_raster_base", fake_raster_base)
+    monkeypatch.setattr(
+        render_core,
+        "draw_map_surround_pane_frame",
+        lambda canvas, *_args, **_kwargs: canvas,
+    )
+
+    spec = _spec(layers=[RenderLayerRef(layer_id="A", source_path="A.tif", order=0)])
+    spec = spec.model_copy(
+        update={
+            "temporal_compare": RenderComparisonSpec(
+                enabled=True,
+                orientation=TemporalCompareOrientation.VERTICAL,
+                pane_a=RenderComparisonPane(
+                    layer_id="A",
+                    layers=[RenderLayerRef(layer_id="A", source_path="A.tif", order=0)],
+                ),
+                pane_b=RenderComparisonPane(
+                    layer_id="B",
+                    layers=[RenderLayerRef(layer_id="B", source_path="B.tif", order=0)],
+                ),
+            )
+        }
+    )
+
+    result = render_core.render_map_with_cache(spec, render_cache=None)
+
+    layout = build_map_surround_layout(spec.output_width, spec.output_height, spec.grid.style)
+    pane_a, pane_b = render_core._split_compare_inner_map(
+        layout.inner_map,
+        TemporalCompareOrientation.VERTICAL,
+    )
+    gap_x = (pane_a.right + pane_b.left) // 2
+    assert tuple(result.canvas[pane_a.center_y, pane_a.center_x]) == (17, 34, 51)
+    assert tuple(result.canvas[pane_b.center_y, pane_b.center_x]) == (17, 34, 51)
+    assert tuple(result.canvas[layout.inner_map.center_y, gap_x]) == (255, 255, 255)
+
+
+def test_temporal_compare_gap_color_can_be_configured(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def fake_raster_base(
+        render_spec: RenderSpec,
+        *,
+        output_width: int,
+        output_height: int,
+        **_kwargs,
+    ) -> RasterRenderResult:
+        layer_ids = tuple(layer.layer_id for layer in render_spec.visible_layers)
+        canvas = np.zeros((output_height, output_width, 3), dtype=np.uint8)
+        canvas[:, :] = (255, 0, 0) if layer_ids == ("A",) else (0, 0, 255)
+        return RasterRenderResult(canvas=canvas, painted_layer_ids=layer_ids)
+
+    monkeypatch.setattr(render_core, "_render_raster_base", fake_raster_base)
+    monkeypatch.setattr(
+        render_core,
+        "draw_map_surround_pane_frame",
+        lambda canvas, *_args, **_kwargs: canvas,
+    )
+
+    spec = _spec(layers=[RenderLayerRef(layer_id="A", source_path="A.tif", order=0)])
+    spec.grid.style["temporal_compare_gap_color"] = "#EDEDED"
+    spec = spec.model_copy(
+        update={
+            "temporal_compare": RenderComparisonSpec(
+                enabled=True,
+                orientation=TemporalCompareOrientation.VERTICAL,
+                pane_a=RenderComparisonPane(
+                    layer_id="A",
+                    layers=[RenderLayerRef(layer_id="A", source_path="A.tif", order=0)],
+                ),
+                pane_b=RenderComparisonPane(
+                    layer_id="B",
+                    layers=[RenderLayerRef(layer_id="B", source_path="B.tif", order=0)],
+                ),
+            )
+        }
+    )
+
+    result = render_core.render_map_with_cache(spec, render_cache=None)
+
+    layout = build_map_surround_layout(spec.output_width, spec.output_height, spec.grid.style)
+    pane_a, pane_b = render_core._split_compare_inner_map(
+        layout.inner_map,
+        TemporalCompareOrientation.VERTICAL,
+    )
+    gap_x = (pane_a.right + pane_b.left) // 2
+    assert tuple(result.canvas[layout.inner_map.center_y, gap_x]) == (237, 237, 237)
+
+
+def test_temporal_compare_draws_independent_coordinate_overlay_per_pane(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    pane_frame_calls: list[tuple[tuple[str, ...], GeoWindow, PixelRect, PixelRect, int]] = []
+
+    def fake_raster_base(
+        render_spec: RenderSpec,
+        *,
+        output_width: int,
+        output_height: int,
+        **_kwargs,
+    ) -> RasterRenderResult:
+        layer_ids = tuple(layer.layer_id for layer in render_spec.visible_layers)
+        canvas = np.zeros((output_height, output_width, 3), dtype=np.uint8)
+        canvas[:, :] = (255, 0, 0) if layer_ids == ("A",) else (0, 0, 255)
+        return RasterRenderResult(canvas=canvas, painted_layer_ids=layer_ids)
+
+    def fake_pane_frame(
+        canvas: np.ndarray,
+        render_spec: RenderSpec,
+        layout,
+        pane_rect: PixelRect,
+        internal_gap_px: int,
+        **_kwargs,
+    ) -> np.ndarray:
+        layer_ids = tuple(layer.layer_id for layer in render_spec.visible_layers)
+        pane_frame_calls.append(
+            (layer_ids, render_spec.geo_window, pane_rect, layout.inner_map, internal_gap_px)
+        )
+        return canvas
+
+    monkeypatch.setattr(render_core, "_render_raster_base", fake_raster_base)
+    monkeypatch.setattr(render_core, "draw_map_surround_pane_frame", fake_pane_frame)
+
+    pane_a_window = GeoWindow(min_lon=106.0, min_lat=10.0, max_lon=107.0, max_lat=11.0)
+    pane_b_window = GeoWindow(min_lon=108.0, min_lat=12.0, max_lon=109.0, max_lat=13.0)
+    spec = _spec(layers=[RenderLayerRef(layer_id="A", source_path="A.tif", order=0)])
+    spec.grid.style["temporal_compare_pane_gap_px"] = 12
+    spec = spec.model_copy(
+        update={
+            "temporal_compare": RenderComparisonSpec(
+                enabled=True,
+                orientation=TemporalCompareOrientation.VERTICAL,
+                pane_a=RenderComparisonPane(
+                    layer_id="A",
+                    view_center=[106.5, 10.5],
+                    view_scale=50000,
+                    geo_window=pane_a_window,
+                    layers=[RenderLayerRef(layer_id="A", source_path="A.tif", order=0)],
+                ),
+                pane_b=RenderComparisonPane(
+                    layer_id="B",
+                    view_center=[108.5, 12.5],
+                    view_scale=50000,
+                    geo_window=pane_b_window,
+                    layers=[RenderLayerRef(layer_id="B", source_path="B.tif", order=0)],
+                ),
+            )
+        }
+    )
+
+    render_core.render_map_with_cache(spec, render_cache=None)
+
+    assert [call[0] for call in pane_frame_calls] == [("A",), ("B",)]
+    assert pane_frame_calls[0][1].min_lon < 107.0
+    assert pane_frame_calls[1][1].min_lon > 107.0
+    assert pane_frame_calls[0][2].left == pane_frame_calls[0][3].left
+    assert pane_frame_calls[1][2].right == pane_frame_calls[1][3].right
+    assert pane_frame_calls[1][2].left - pane_frame_calls[0][2].right == 12
+    assert pane_frame_calls[0][4] == 12
+    assert pane_frame_calls[1][4] == 12
 
 
 def _make_memfile(

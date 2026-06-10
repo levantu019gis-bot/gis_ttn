@@ -89,6 +89,10 @@ GPT-5 Codex
 - Added a clear pane divider while preserving existing map surround/grid frame behavior.
 - Final render hash includes comparison state, so export final renders are invalidated when pane/orientation changes.
 - PPTX export remains unchanged because the split comparison output is still one final map image.
+- After review, comparison panes are split directly from the original inner map. Each pane remains a raster canvas sized from that split, with a config-driven gap between panes that defaults to 8px; pane-specific DMS ticks/labels are drawn as an overlay on the original map surround, and internal ticks use the same length as the pane gap.
+- Compare mode no longer draws a shared inner-map outline or divider through the pane gap, so the two panes remain visually separated instead of connected along pane edges.
+- Pane raster backgrounds continue to use each target's `map_background_color`; the gap between panes now uses `defaults.grid.style.temporal_compare_gap_color`, defaulting to white.
+- Internal pane ticks extend outward into the pane gap, including the top/bottom shared edges used by horizontal comparison.
 
 ### File List
 
@@ -104,3 +108,8 @@ GPT-5 Codex
 
 - 2026-06-09: Created story context for implementation.
 - 2026-06-09: Implemented split comparison render spec/core path; status moved to review.
+- 2026-06-10: Aligned temporal compare pane coordinate labels/ticks with the standard map-surround design without nesting a second map frame inside each pane.
+- 2026-06-10: Changed temporal compare pane gap to config-driven `defaults.grid.style.temporal_compare_pane_gap_px`, defaulting to 8px when absent.
+- 2026-06-10: Removed shared inner outline/divider in temporal compare mode so pane edges do not connect across the gap.
+- 2026-06-10: Added configurable temporal compare gap color and kept pane backgrounds tied to target `map_background_color`.
+- 2026-06-10: Corrected horizontal comparison internal tick direction so ticks point outward into the gap.

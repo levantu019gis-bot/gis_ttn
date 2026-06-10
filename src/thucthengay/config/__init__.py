@@ -11,8 +11,12 @@ from thucthengay.config.editor_service import (
 from thucthengay.config.service import (
     ConfigLoadResult,
     ConfigUpdateError,
+    HistoricalLoadingSettings,
     ResolvedTargetPaths,
+    apply_historical_loading_override,
     load_project_config,
+    read_historical_loading_enabled,
+    read_historical_loading_settings,
     update_target_alignment_defaults,
 )
 
@@ -25,7 +29,11 @@ __all__ = [
     "ConfigLoadResult",
     "ConfigUpdateError",
     "FilenamePatternTestResult",
+    "HistoricalLoadingSettings",
     "ResolvedTargetPaths",
+    "apply_historical_loading_override",
     "load_project_config",
+    "read_historical_loading_enabled",
+    "read_historical_loading_settings",
     "update_target_alignment_defaults",
 ]

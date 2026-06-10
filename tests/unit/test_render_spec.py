@@ -262,6 +262,54 @@ class TestLayerOrdering:
         assert spec.temporal_compare.pane_b.layer_id == "history"
         assert [ref.layer_id for ref in spec.visible_layers] == ["current", "history"]
 
+    def test_enabled_temporal_compare_builds_panes_from_selected_compositions(self) -> None:
+        pane_a = _composition(
+            layers=[_layer("A1", order=0), _layer("A2", order=1)],
+        )
+        pane_b = _composition(
+            layers=[_layer("B1", order=0), _layer("B2", order=1, visible=False)],
+        ).model_copy(
+            update={
+                "composition_id": "tgt__20260526",
+                "capture_date": date(2026, 5, 26),
+                "view": ViewState(center=[106.9, 10.9], scale=25000),
+            }
+        )
+        comp = pane_a.model_copy(
+            update={
+                "temporal_compare": TemporalCompareState(
+                    enabled=True,
+                    orientation=TemporalCompareOrientation.VERTICAL,
+                    pane_a_composition_id="tgt__20260525",
+                    pane_b_composition_id="tgt__20260526",
+                )
+            }
+        )
+
+        spec = build_render_spec(
+            composition=comp,
+            target=_target(),
+            template=_template(),
+            template_metadata_file="t.json",
+            output_width=1280,
+            output_height=720,
+            compare_compositions=[pane_a, pane_b],
+        )
+
+        assert spec.temporal_compare.enabled is True
+        assert spec.temporal_compare.pane_a.composition_id == "tgt__20260525"
+        assert spec.temporal_compare.pane_b.composition_id == "tgt__20260526"
+        assert spec.temporal_compare.pane_a.view_center == [106.7, 10.8]
+        assert spec.temporal_compare.pane_b.view_center == [106.9, 10.9]
+        assert spec.temporal_compare.pane_a.view_scale == 50000
+        assert spec.temporal_compare.pane_b.view_scale == 25000
+        assert spec.temporal_compare.pane_a.geo_window is not None
+        assert spec.temporal_compare.pane_b.geo_window is not None
+        assert spec.temporal_compare.pane_a.geo_window != spec.temporal_compare.pane_b.geo_window
+        assert [ref.layer_id for ref in spec.temporal_compare.pane_a.layers] == ["A1", "A2"]
+        assert [ref.layer_id for ref in spec.temporal_compare.pane_b.layers] == ["B1"]
+        assert [ref.layer_id for ref in spec.visible_layers] == ["A1", "A2", "B1"]
+
 
 class TestGridOverride:
     def test_grid_override_used_when_present(self) -> None:

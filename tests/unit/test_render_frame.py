@@ -19,6 +19,7 @@ from thucthengay.render import (
     build_map_surround_layout,
     draw_coordinate_frame,
     draw_map_surround_frame,
+    draw_map_surround_pane_frame,
     fit_rect_to_aspect,
 )
 
@@ -299,6 +300,35 @@ class TestMapSurroundFrame:
         assert tuple(canvas[lat_tick_y, layout.inner_map.left - 15].tolist()) == (255, 255, 255)
         assert tuple(canvas[lat_tick_y, layout.inner_map.right + 13].tolist()) == (0, 0, 0)
         assert tuple(canvas[lat_tick_y, layout.inner_map.right + 14].tolist()) == (255, 255, 255)
+
+    def test_horizontal_compare_pane_internal_lon_ticks_extend_into_gap(self) -> None:
+        spec = _spec(
+            width=120,
+            height=100,
+            interval=GridInterval(minutes=30),
+            grid_style={
+                "surround_tick_stroke_width": 1,
+                "surround_inner_stroke_width": 1,
+            },
+        )
+        layout = MapSurroundLayout(
+            outer_frame=PixelRect(left=0, top=0, right=120, bottom=100),
+            inner_map=PixelRect(left=10, top=10, right=110, bottom=90),
+        )
+        top_pane = PixelRect(left=10, top=10, right=110, bottom=46)
+        bottom_pane = PixelRect(left=10, top=54, right=110, bottom=90)
+        tick_x = top_pane.center_x
+
+        canvas = np.zeros((spec.output_height, spec.output_width, 3), dtype=np.uint8)
+        canvas[:, :] = (255, 255, 255)
+
+        draw_map_surround_pane_frame(canvas, spec, layout, top_pane, internal_gap_px=8)
+        draw_map_surround_pane_frame(canvas, spec, layout, bottom_pane, internal_gap_px=8)
+
+        assert tuple(canvas[top_pane.bottom + 7, tick_x].tolist()) == (0, 0, 0)
+        assert tuple(canvas[top_pane.bottom - 9, tick_x].tolist()) == (255, 255, 255)
+        assert tuple(canvas[bottom_pane.top - 8, tick_x].tolist()) == (0, 0, 0)
+        assert tuple(canvas[bottom_pane.top + 8, tick_x].tolist()) == (255, 255, 255)
 
     def test_map_surround_tick_length_can_be_configured_from_grid_style(self) -> None:
         spec = _spec(

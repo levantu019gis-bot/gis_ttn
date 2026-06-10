@@ -56,8 +56,6 @@ from thucthengay.models import (
     Composition,
     GridConfig,
     GridInterval,
-    ImageLayer,
-    ImageLayerSourceKind,
     Issue,
     TargetConfig,
     TemplateMetadata,
@@ -314,6 +312,10 @@ class ReviewEditMode(QWidget):
         if self._preferences_service is None:
             return
         self._preferences_service.update_review_splitter_sizes(self.main_splitter.sizes())
+
+    def set_history_service(self, history_service: HistoryService | None) -> None:
+        """Set the SQLite-backed history service used by Include/Validate."""
+        self._history_service = history_service or HistoryService.disabled()
 
     def load_workspace(
         self,
@@ -785,7 +787,9 @@ class ReviewEditMode(QWidget):
         if context.template_metadata is None:
             return
         render_composition = self._workspace_service.resolve_composition_layer_paths(composition)
-        if not _has_existing_visible_raster(render_composition):
+        compare_compositions = self._resolved_compare_compositions_for_render(composition)
+        raster_sources = compare_compositions if compare_compositions else [render_composition]
+        if not all(_has_existing_visible_raster(item) for item in raster_sources):
             self.gis_canvas.set_error("Không tìm thấy file raster visible để render canvas.")
             return
         canvas_width, canvas_height = final_render_output_size(context.template_metadata)
@@ -797,8 +801,10 @@ class ReviewEditMode(QWidget):
                 template_metadata_file=target.export.template_metadata_file,
                 output_width=canvas_width,
                 output_height=canvas_height,
+                compare_compositions=compare_compositions,
             )
-        except (RenderSpecError, ValidationError):
+        except (RenderSpecError, ValidationError) as error:
+            self.gis_canvas.set_error(_render_spec_error_message(error))
             return
         request = PreviewRenderRequest(
             job_id=f"canvas:{composition.composition_id}:{self.gis_canvas.generation}",
@@ -833,6 +839,25 @@ class ReviewEditMode(QWidget):
             render_cache=self._canvas_render_cache,
             is_cancelled=is_cancelled,
         )
+
+    def _resolved_compare_compositions_for_render(
+        self,
+        composition: Composition,
+    ) -> list[Composition]:
+        if self._workspace_service is None or not composition.temporal_compare.enabled:
+            return []
+        state = composition.temporal_compare
+        pane_ids = [state.pane_a_composition_id, state.pane_b_composition_id]
+        if not all(pane_ids):
+            return []
+        resolved: list[Composition] = []
+        for pane_id in pane_ids:
+            try:
+                pane = self._workspace_service.read_composition(str(pane_id))
+            except WorkspaceError:
+                return []
+            resolved.append(self._workspace_service.resolve_composition_layer_paths(pane))
+        return resolved
 
     def _request_target_preview(self, composition: Composition) -> None:
         """Build a full-coverage target preview and render it in a background thread."""
@@ -1426,27 +1451,36 @@ class ReviewEditMode(QWidget):
         try:
             self.compare_pane_a_combo.clear()
             self.compare_pane_b_combo.clear()
-            options = _usable_compare_layers(composition)
-            for layer in options:
-                label = _compare_layer_label(layer)
-                self.compare_pane_a_combo.addItem(label, layer.layer_id)
-                self.compare_pane_b_combo.addItem(label, layer.layer_id)
+            options = self._usable_compare_compositions(composition)
+            for option in options:
+                label = _compare_composition_label(option)
+                self.compare_pane_a_combo.addItem(label, option.composition_id)
+                self.compare_pane_b_combo.addItem(label, option.composition_id)
 
             state = composition.temporal_compare
             orientation_index = self.compare_orientation_combo.findText(state.orientation.value)
             self.compare_orientation_combo.setCurrentIndex(max(0, orientation_index))
             self.compare_enabled_checkbox.setChecked(state.enabled)
-            self._select_compare_layer(self.compare_pane_a_combo, state.pane_a_layer_id, 0)
-            self._select_compare_layer(self.compare_pane_b_combo, state.pane_b_layer_id, 1)
-            enough_layers = len(options) >= 2
-            self.compare_orientation_combo.setEnabled(enough_layers and state.enabled)
-            self.compare_pane_a_combo.setEnabled(enough_layers and state.enabled)
-            self.compare_pane_b_combo.setEnabled(enough_layers and state.enabled)
-            if enough_layers:
+            self._select_compare_composition(
+                self.compare_pane_a_combo,
+                state.pane_a_composition_id,
+                0,
+            )
+            self._select_compare_composition(
+                self.compare_pane_b_combo,
+                state.pane_b_composition_id,
+                1,
+            )
+            enough_options = len(options) >= 2
+            self.compare_enabled_checkbox.setEnabled(enough_options or state.enabled)
+            self.compare_orientation_combo.setEnabled(enough_options and state.enabled)
+            self.compare_pane_a_combo.setEnabled(enough_options and state.enabled)
+            self.compare_pane_b_combo.setEnabled(enough_options and state.enabled)
+            if enough_options:
                 self.compare_status_label.setText(
                     "Comparison off: single-map workflow is unchanged."
                     if not state.enabled
-                    else "Comparison state will be used by split render/export."
+                    else "Comparison panes render the selected compositions/time points."
                 )
             else:
                 self.compare_status_label.setText(
@@ -1455,13 +1489,29 @@ class ReviewEditMode(QWidget):
         finally:
             self._loading_compare_controls = False
 
-    def _select_compare_layer(
+    def _usable_compare_compositions(self, composition: Composition) -> list[Composition]:
+        if self._workspace_service is None:
+            return [composition] if _has_visible_layer(composition) else []
+        try:
+            compositions = self._workspace_service.list_compositions()
+        except WorkspaceError:
+            return [composition] if _has_visible_layer(composition) else []
+        return sorted(
+            (
+                item
+                for item in compositions
+                if item.target_id == composition.target_id and _has_visible_layer(item)
+            ),
+            key=lambda item: (item.capture_date, item.composition_id),
+        )
+
+    def _select_compare_composition(
         self,
         combo: QComboBox,
-        layer_id: str | None,
+        composition_id: str | None,
         fallback_index: int,
     ) -> None:
-        index = combo.findData(layer_id) if layer_id is not None else -1
+        index = combo.findData(composition_id) if composition_id is not None else -1
         if index < 0 and combo.count() > fallback_index:
             index = fallback_index
         if index >= 0:
@@ -1485,8 +1535,8 @@ class ReviewEditMode(QWidget):
             )
             return
 
-        pane_a_layer_id = self.compare_pane_a_combo.currentData()
-        pane_b_layer_id = self.compare_pane_b_combo.currentData()
+        pane_a_composition_id = self.compare_pane_a_combo.currentData()
+        pane_b_composition_id = self.compare_pane_b_combo.currentData()
         orientation = self.compare_orientation_combo.currentText() or (
             TemporalCompareOrientation.VERTICAL.value
         )
@@ -1495,17 +1545,22 @@ class ReviewEditMode(QWidget):
                 self.selected_composition.composition_id,
                 enabled=enabled,
                 orientation=orientation,
-                pane_a_layer_id=str(pane_a_layer_id) if pane_a_layer_id else None,
-                pane_b_layer_id=str(pane_b_layer_id) if pane_b_layer_id else None,
+                pane_a_composition_id=(
+                    str(pane_a_composition_id) if pane_a_composition_id else None
+                ),
+                pane_b_composition_id=(
+                    str(pane_b_composition_id) if pane_b_composition_id else None
+                ),
             )
         except (WorkspaceError, ValidationError, ValueError) as error:
-            self.compare_status_label.setText(f"Could not save comparison state: {error}")
             self._load_temporal_compare_controls(self.selected_composition)
+            self.compare_status_label.setText(f"Could not save comparison state: {error}")
             return
 
         self.selected_composition = updated
         self._update_detail_panels(updated)
         self._refresh_workspace_projection(updated.composition_id, validate_selection=False)
+        self._request_canvas_render(updated)
 
     def _load_grid_controls(self, composition: Composition) -> None:
         grid, source = self._effective_grid_for_composition(composition)
@@ -1591,20 +1646,40 @@ def _has_existing_visible_raster(composition: Composition) -> bool:
     return False
 
 
-def _usable_compare_layers(composition: Composition) -> list[ImageLayer]:
-    return sorted(composition.layers, key=lambda layer: (layer.order, layer.layer_id))
+def _has_visible_layer(composition: Composition) -> bool:
+    return any(layer.visible for layer in composition.layers)
 
 
-def _compare_layer_label(layer: ImageLayer) -> str:
-    source = (
-        "Historical"
-        if layer.source_kind is ImageLayerSourceKind.HISTORICAL
-        else "Current"
+def _compare_composition_label(composition: Composition) -> str:
+    visible_layers = [layer for layer in composition.layers if layer.visible]
+    date_text = composition.capture_date.isoformat()
+    times = sorted(layer.capture_time for layer in visible_layers if layer.capture_time is not None)
+    time_text = times[0].strftime("%H:%M") if times else "unknown-time"
+    source_text = _compare_composition_source_label(composition)
+    clouds = [layer.cloud_percent for layer in visible_layers if layer.cloud_percent is not None]
+    cloud_text = "--" if not clouds else f"{sum(clouds) / len(clouds):.0f}% cloud"
+    return (
+        f"{date_text} {time_text} | {source_text} | {cloud_text} | "
+        f"{len(visible_layers)} layer(s)"
     )
-    date_text = layer.capture_date.isoformat() if layer.capture_date else "unknown-date"
-    time_text = layer.capture_time.strftime("%H:%M") if layer.capture_time else "unknown-time"
-    cloud_text = "--" if layer.cloud_percent is None else f"{layer.cloud_percent:.0f}% cloud"
-    return f"{date_text} {time_text} | {source} | {cloud_text}"
+
+
+def _compare_composition_source_label(composition: Composition) -> str:
+    source_values = {layer.source_kind.value for layer in composition.layers if layer.visible}
+    if not source_values:
+        return "No visible layers"
+    if len(source_values) == 1:
+        return "Historical" if "historical" in source_values else "Current"
+    return "Mixed"
+
+
+def _render_spec_error_message(error: RenderSpecError | ValidationError) -> str:
+    if isinstance(error, RenderSpecError) and error.issues:
+        return error.issues[0].message
+    text = str(error).strip()
+    if text:
+        return f"Không tạo được render spec cho GIS canvas: {text}"
+    return "Không tạo được render spec cho GIS canvas."
 
 
 def _parse_non_negative_int(raw: str, label: str) -> int:

@@ -20,6 +20,8 @@ from thucthengay.render.frame import (
     build_map_surround_layout,
     draw_coordinate_frame,
     draw_map_surround_frame,
+    draw_map_surround_outline,
+    draw_map_surround_pane_frame,
     fit_rect_to_aspect,
 )
 from thucthengay.render.raster import (
@@ -63,6 +65,8 @@ __all__ = [
     "build_map_surround_layout",
     "draw_coordinate_frame",
     "draw_map_surround_frame",
+    "draw_map_surround_outline",
+    "draw_map_surround_pane_frame",
     "fit_rect_to_aspect",
     "is_final_render_current",
     "render_final_png",

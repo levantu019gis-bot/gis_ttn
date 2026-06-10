@@ -2,11 +2,13 @@ from __future__ import annotations
 
 import os
 import time
+from datetime import date
 from pathlib import Path
 from types import MethodType
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
+from PySide6.QtCore import QDate
 from PySide6.QtWidgets import QApplication
 
 from thucthengay.config import ConfigLoadResult
@@ -20,7 +22,13 @@ from thucthengay.editor.widgets.path_picker import (
     validate_selected_path,
 )
 from thucthengay.jobs import IngestionJobResult, JobState, ProgressEvent
-from thucthengay.models import GridConfig, GridInterval, TargetConfig
+from thucthengay.models import (
+    GridConfig,
+    GridInterval,
+    HistoricalSelectionMode,
+    ProjectConfig,
+    TargetConfig,
+)
 from thucthengay.workspace import WorkspaceService
 
 
@@ -95,6 +103,68 @@ def test_setup_mode_disables_ingest_until_all_required_paths_are_valid(tmp_path:
     assert selected_paths.config_file == config_file.resolve()
     assert selected_paths.imagery_input_folder == imagery_folder.resolve()
     assert selected_paths.workspace_folder == workspace_folder.resolve()
+    assert selected_paths.historical_loading_enabled is False
+
+
+def test_setup_mode_exposes_historical_loading_choice_from_config(tmp_path: Path) -> None:
+    qapp()
+    config_file = tmp_path / "project.json"
+    config_file.write_text(
+        '{"historical_loading": {"enabled": true}, "targets": []}',
+        encoding="utf-8",
+    )
+    imagery_folder = tmp_path / "imagery"
+    imagery_folder.mkdir()
+    workspace_folder = tmp_path / "workspace"
+    workspace_folder.mkdir()
+
+    setup = SetupMode()
+    assert setup.historical_loading_checkbox.text() == "Load historical images"
+    assert setup.historical_loading_checkbox.objectName() == "setupHistoricalLoadingEnabled"
+
+    setup.config_row.set_path(config_file)
+    setup.imagery_row.set_path(imagery_folder)
+    setup.workspace_row.set_path(workspace_folder)
+
+    selected_paths = setup.selected_paths()
+    assert selected_paths is not None
+    assert setup.historical_loading_checkbox.isChecked()
+    assert selected_paths.historical_loading_enabled is True
+    assert selected_paths.historical_image_selection is not None
+    assert selected_paths.historical_image_selection.mode == HistoricalSelectionMode.LATEST_IMAGES
+    assert selected_paths.historical_image_selection.limit_per_target == 1
+
+
+def test_setup_mode_exposes_historical_date_range_from_config(tmp_path: Path) -> None:
+    qapp()
+    config_file = tmp_path / "project.json"
+    config_file.write_text(
+        (
+            '{"historical_loading": {"enabled": true, "image_selection": {'
+            '"mode": "date_range", "start_date": "2026-05-01", '
+            '"end_date": "2026-05-31"}}, "targets": []}'
+        ),
+        encoding="utf-8",
+    )
+    imagery_folder = tmp_path / "imagery"
+    imagery_folder.mkdir()
+    workspace_folder = tmp_path / "workspace"
+    workspace_folder.mkdir()
+
+    setup = SetupMode()
+    setup.config_row.set_path(config_file)
+    setup.imagery_row.set_path(imagery_folder)
+    setup.workspace_row.set_path(workspace_folder)
+
+    selected_paths = setup.selected_paths()
+    assert selected_paths is not None
+    assert setup.historical_mode_combo.currentData() == "date_range"
+    assert setup.historical_start_date_edit.isEnabled()
+    assert setup.historical_end_date_edit.isEnabled()
+    assert selected_paths.historical_image_selection is not None
+    assert selected_paths.historical_image_selection.mode == HistoricalSelectionMode.DATE_RANGE
+    assert selected_paths.historical_image_selection.start_date == date(2026, 5, 1)
+    assert selected_paths.historical_image_selection.end_date == date(2026, 5, 31)
 
 
 def test_setup_mode_can_request_opening_existing_workspace_with_workspace_only(
@@ -347,6 +417,7 @@ def test_app_shell_runs_ingestion_when_setup_requests_it(
     )
     config_result = ConfigLoadResult(
         config_path=config_file.resolve(),
+        config=ProjectConfig(targets=[target]),
         enabled_targets=[target],
     )
     calls: dict[str, object] = {}
@@ -425,6 +496,12 @@ def test_app_shell_runs_ingestion_when_setup_requests_it(
     shell.setup_mode.config_row.set_path(config_file)
     shell.setup_mode.imagery_row.set_path(imagery_folder)
     shell.setup_mode.workspace_row.set_path(workspace_folder)
+    shell.setup_mode.historical_loading_checkbox.setChecked(True)
+    shell.setup_mode.historical_mode_combo.setCurrentIndex(
+        shell.setup_mode.historical_mode_combo.findData("date_range")
+    )
+    shell.setup_mode.historical_start_date_edit.setDate(QDate(2026, 5, 1))
+    shell.setup_mode.historical_end_date_edit.setDate(QDate(2026, 5, 31))
 
     shell.setup_mode.ingest_button.click()
     deadline = time.monotonic() + 3
@@ -435,6 +512,11 @@ def test_app_shell_runs_ingestion_when_setup_requests_it(
     assert calls["config_path"] == config_file.resolve()
     job_kwargs = calls["job_kwargs"]
     assert job_kwargs["config_result"] is config_result
+    assert job_kwargs["config_result"].config.historical_loading.enabled is True
+    selection = job_kwargs["config_result"].config.historical_loading.image_selection
+    assert selection.mode == HistoricalSelectionMode.DATE_RANGE
+    assert selection.start_date == date(2026, 5, 1)
+    assert selection.end_date == date(2026, 5, 31)
     assert job_kwargs["imagery_folder"] == imagery_folder.resolve()
     assert job_kwargs["workspace_service"].paths.root == workspace_folder.resolve()
     assert callable(job_kwargs["publish"])

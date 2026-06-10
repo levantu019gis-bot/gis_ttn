@@ -797,6 +797,298 @@ def draw_map_surround_frame(
     return canvas
 
 
+def draw_map_surround_outline(
+    canvas: np.ndarray,
+    spec: RenderSpec,
+    layout: MapSurroundLayout | None = None,
+    *,
+    draw_inner: bool = True,
+) -> np.ndarray:
+    """Draw only the map-surround outline, optionally without the inner map edge."""
+    if canvas.ndim != 3 or canvas.shape[2] != 3:
+        raise RenderError(
+            [
+                _issue(
+                    "render.frame.canvas_invalid",
+                    "Canvas render khong dung dinh dang RGB.",
+                    "Render frame can canvas numpy co shape (height, width, 3).",
+                    composition_id=spec.composition_id,
+                    target_id=spec.target_id,
+                )
+            ]
+        )
+
+    height, width = canvas.shape[:2]
+    if width <= 1 or height <= 1:
+        raise _frame_issue(
+            spec,
+            "render.frame.canvas_too_small",
+            "Canvas render qua nho de ve coordinate frame.",
+            "Tang output_width/output_height truoc khi render.",
+        )
+
+    frame_style = spec.grid.style
+    style = _frame_style(spec.grid)
+    layout = layout or build_map_surround_layout(width, height, frame_style)
+    outer = layout.outer_frame
+
+    image = Image.fromarray(canvas, mode="RGB")
+    draw = ImageDraw.Draw(image)
+    draw.rectangle(
+        (outer.left, outer.top, outer.right - 1, outer.bottom - 1),
+        outline=style.frame_color,
+        width=_surround_outer_stroke_width(frame_style),
+    )
+    if draw_inner:
+        inner = layout.inner_map
+        draw.rectangle(
+            (inner.left, inner.top, inner.right - 1, inner.bottom - 1),
+            outline=style.frame_color,
+            width=_surround_inner_stroke_width(frame_style),
+        )
+
+    np.copyto(canvas, np.asarray(image, dtype=np.uint8))
+    return canvas
+
+
+def draw_map_surround_pane_frame(
+    canvas: np.ndarray,
+    spec: RenderSpec,
+    layout: MapSurroundLayout,
+    pane: PixelRect,
+    is_cancelled: Callable[[], bool] | None = None,
+    internal_gap_px: int = 0,
+) -> np.ndarray:
+    """Draw pane-specific ticks and labels around a split inner-map pane."""
+    if canvas.ndim != 3 or canvas.shape[2] != 3:
+        raise RenderError(
+            [
+                _issue(
+                    "render.frame.canvas_invalid",
+                    "Canvas render khong dung dinh dang RGB.",
+                    "Render frame can canvas numpy co shape (height, width, 3).",
+                    composition_id=spec.composition_id,
+                    target_id=spec.target_id,
+                )
+            ]
+        )
+
+    height, width = canvas.shape[:2]
+    if width <= 1 or height <= 1:
+        raise _frame_issue(
+            spec,
+            "render.frame.canvas_too_small",
+            "Canvas render qua nho de ve coordinate frame.",
+            "Tang output_width/output_height truoc khi render.",
+        )
+
+    interval = _interval_degrees(spec)
+    label_format = _validate_label_format(spec)
+    style = _frame_style(spec.grid)
+    frame_style = spec.grid.style
+    outer = layout.outer_frame
+    inner = layout.inner_map
+    label_font_size = _styled_dimension(
+        frame_style,
+        "label_font_size",
+        _reference_label_font_size(frame_style),
+        width,
+        height,
+        min_value=8,
+    )
+
+    image = Image.fromarray(canvas, mode="RGB")
+    draw = ImageDraw.Draw(image)
+    sample_lon_label = _format_dms(spec.geo_window.min_lon, axis="lon", label_format=label_format)
+    sample_lat_label = _format_dms(spec.geo_window.min_lat, axis="lat", label_format=label_format)
+    vertical_label_band = min(inner.top - outer.top, outer.bottom - inner.bottom)
+    horizontal_label_band = min(inner.left - outer.left, outer.right - inner.right)
+    label_padding = _fit_label_padding(style, min(vertical_label_band, horizontal_label_band))
+    label_font_size = _fit_label_font_size(
+        draw,
+        requested_size=label_font_size,
+        max_label_height=min(vertical_label_band - 2, horizontal_label_band - 4)
+        - 2 * label_padding,
+        labels=(sample_lon_label, sample_lat_label),
+        style=frame_style,
+    )
+    font = _label_font(label_font_size, frame_style)
+    _lon_label_w, lon_label_h = _text_size(draw, sample_lon_label, font=font)
+    _lat_label_w, lat_label_h = _text_size(draw, sample_lat_label, font=font)
+    outer_tick_length = _surround_tick_length(frame_style)
+    internal_tick_length = max(0, internal_gap_px)
+
+    draw.rectangle(
+        (pane.left, pane.top, pane.right - 1, pane.bottom - 1),
+        outline=style.frame_color,
+        width=_surround_inner_stroke_width(frame_style),
+    )
+
+    top_label_y = max(outer.top + label_padding, (outer.top + inner.top) // 2)
+    bottom_label_y = min(
+        outer.bottom - 1 - label_padding,
+        (inner.bottom + outer.bottom - 1) // 2,
+    )
+    draw_top_lon_labels = (
+        pane.top <= inner.top and vertical_label_band >= (lon_label_h + 2 + 2 * label_padding)
+    )
+    draw_bottom_lon_labels = (
+        pane.bottom >= inner.bottom
+        and vertical_label_band >= (lon_label_h + 2 + 2 * label_padding)
+    )
+    for lon in _tick_values(spec.geo_window.min_lon, spec.geo_window.max_lon, interval, spec):
+        if is_cancelled is not None and is_cancelled():
+            raise _cancelled_render_error(spec)
+        x = _lon_to_rect_x(spec.geo_window, pane, lon)
+        if pane.top > outer.top:
+            is_internal_edge = pane.top > inner.top
+            y0 = (
+                max(outer.top, pane.top - internal_tick_length)
+                if is_internal_edge
+                else max(outer.top, pane.top - outer_tick_length)
+            )
+            y1 = pane.top
+            draw.line(
+                (x, y0, x, y1),
+                fill=style.frame_color,
+                width=_surround_tick_stroke_width(frame_style),
+            )
+        if outer.bottom > pane.bottom:
+            is_internal_edge = pane.bottom < inner.bottom
+            y0 = pane.bottom - 1
+            y1 = (
+                min(outer.bottom - 1, pane.bottom - 1 + internal_tick_length)
+                if is_internal_edge
+                else min(outer.bottom - 1, pane.bottom - 1 + outer_tick_length)
+            )
+            draw.line(
+                (
+                    x,
+                    y0,
+                    x,
+                    y1,
+                ),
+                fill=style.frame_color,
+                width=_surround_tick_stroke_width(frame_style),
+            )
+        if not draw_top_lon_labels and not draw_bottom_lon_labels:
+            continue
+        label = _format_dms(lon, axis="lon", label_format=label_format)
+        if draw_top_lon_labels:
+            top_origin = _centered_text_origin(
+                draw,
+                label,
+                (x, top_label_y),
+                font=font,
+                width=width,
+                height=height,
+            )
+            _draw_text_with_halo(
+                draw,
+                top_origin,
+                label,
+                font=font,
+                fill=style.label_color,
+                halo=style.label_halo_color,
+            )
+        if draw_bottom_lon_labels:
+            bottom_origin = _centered_text_origin(
+                draw,
+                label,
+                (x, bottom_label_y),
+                font=font,
+                width=width,
+                height=height,
+            )
+            _draw_text_with_halo(
+                draw,
+                bottom_origin,
+                label,
+                font=font,
+                fill=style.label_color,
+                halo=style.label_halo_color,
+            )
+
+    left_label_x = max(outer.left + label_padding, (outer.left + inner.left) // 2)
+    right_label_x = min(
+        outer.right - 1 - label_padding,
+        (inner.right + outer.right - 1) // 2,
+    )
+    draw_left_lat_labels = (
+        pane.left <= inner.left and horizontal_label_band >= (lat_label_h + 4 + 2 * label_padding)
+    )
+    draw_right_lat_labels = (
+        pane.right >= inner.right
+        and horizontal_label_band >= (lat_label_h + 4 + 2 * label_padding)
+    )
+    for lat in _tick_values(spec.geo_window.min_lat, spec.geo_window.max_lat, interval, spec):
+        if is_cancelled is not None and is_cancelled():
+            raise _cancelled_render_error(spec)
+        y = _lat_to_rect_y(spec.geo_window, pane, lat)
+        if pane.left > outer.left:
+            is_internal_edge = pane.left > inner.left
+            x0 = (
+                max(outer.left, pane.left - internal_tick_length)
+                if is_internal_edge
+                else max(outer.left, pane.left - outer_tick_length)
+            )
+            x1 = pane.left
+            draw.line(
+                (
+                    x0,
+                    y,
+                    x1,
+                    y,
+                ),
+                fill=style.frame_color,
+                width=_surround_tick_stroke_width(frame_style),
+            )
+        if outer.right > pane.right:
+            is_internal_edge = pane.right < inner.right
+            x0 = pane.right - 1
+            x1 = (
+                min(outer.right - 1, pane.right - 1 + internal_tick_length)
+                if is_internal_edge
+                else min(outer.right - 1, pane.right - 1 + outer_tick_length)
+            )
+            draw.line(
+                (
+                    x0,
+                    y,
+                    x1,
+                    y,
+                ),
+                fill=style.frame_color,
+                width=_surround_tick_stroke_width(frame_style),
+            )
+        if not draw_left_lat_labels and not draw_right_lat_labels:
+            continue
+        label = _format_dms(lat, axis="lat", label_format=label_format)
+        if draw_left_lat_labels:
+            _draw_rotated_text_with_halo(
+                image,
+                (left_label_x, y),
+                label,
+                font=font,
+                fill=style.label_color,
+                halo=style.label_halo_color,
+                angle=90,
+            )
+        if draw_right_lat_labels:
+            _draw_rotated_text_with_halo(
+                image,
+                (right_label_x, y),
+                label,
+                font=font,
+                fill=style.label_color,
+                halo=style.label_halo_color,
+                angle=90,
+            )
+
+    np.copyto(canvas, np.asarray(image, dtype=np.uint8))
+    return canvas
+
+
 def draw_coordinate_frame(canvas: np.ndarray, spec: RenderSpec) -> np.ndarray:
     """Draw an outer coordinate frame over ``canvas`` and return the same array."""
     if canvas.ndim != 3 or canvas.shape[2] != 3:

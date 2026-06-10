@@ -3,11 +3,14 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import date
 from pathlib import Path
 
-from PySide6.QtCore import Qt, Signal
+from PySide6.QtCore import QDate, Qt, Signal
 from PySide6.QtWidgets import (
+    QCheckBox,
     QComboBox,
+    QDateEdit,
     QFormLayout,
     QHBoxLayout,
     QLabel,
@@ -16,13 +19,18 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from thucthengay.config import read_historical_loading_settings
 from thucthengay.editor.preferences import RecentProjectEntry, SetupPreferences
 from thucthengay.editor.widgets.ingestion_progress import IngestionProgressWidget
 from thucthengay.editor.widgets.ingestion_summary import IngestionSummaryWidget
 from thucthengay.editor.widgets.path_picker import PathKind, PathPickerRow
 from thucthengay.editor.widgets.workspace_confirmation import confirm_workspace_clear
 from thucthengay.jobs import IngestionSummary, ProgressEvent
+from thucthengay.models import HistoricalImageSelectionConfig, HistoricalSelectionMode
 from thucthengay.workspace import WorkspaceService
+
+_HISTORICAL_MODE_LATEST_IMAGE = "latest_image"
+_HISTORICAL_MODE_DATE_RANGE = "date_range"
 
 
 @dataclass(frozen=True)
@@ -32,6 +40,8 @@ class SetupPaths:
     config_file: Path
     imagery_input_folder: Path
     workspace_folder: Path
+    historical_loading_enabled: bool = False
+    historical_image_selection: HistoricalImageSelectionConfig | None = None
 
 
 class SetupMode(QWidget):
@@ -61,6 +71,34 @@ class SetupMode(QWidget):
         self.ingest_button.setObjectName("setupIngestButton")
         self.open_workspace_button = QPushButton("Mở workspace")
         self.open_workspace_button.setObjectName("setupOpenWorkspaceButton")
+        self.historical_loading_checkbox = QCheckBox("Load historical images")
+        self.historical_loading_checkbox.setObjectName("setupHistoricalLoadingEnabled")
+        self.historical_loading_checkbox.setToolTip(
+            "When enabled, ingestion also loads eligible images from the configured "
+            "SQLite historical registry."
+        )
+        self.historical_mode_combo = QComboBox()
+        self.historical_mode_combo.setObjectName("setupHistoricalLoadingMode")
+        self.historical_mode_combo.addItem(
+            "Latest image",
+            _HISTORICAL_MODE_LATEST_IMAGE,
+        )
+        self.historical_mode_combo.addItem(
+            "Date range",
+            _HISTORICAL_MODE_DATE_RANGE,
+        )
+        self.historical_start_date_edit = QDateEdit()
+        self.historical_start_date_edit.setObjectName("setupHistoricalStartDate")
+        self.historical_start_date_edit.setCalendarPopup(True)
+        self.historical_start_date_edit.setDisplayFormat("yyyy-MM-dd")
+        self.historical_end_date_edit = QDateEdit()
+        self.historical_end_date_edit.setObjectName("setupHistoricalEndDate")
+        self.historical_end_date_edit.setCalendarPopup(True)
+        self.historical_end_date_edit.setDisplayFormat("yyyy-MM-dd")
+        self._set_historical_date_range(
+            QDate.currentDate().addMonths(-1),
+            QDate.currentDate(),
+        )
         self.pause_button = QPushButton("Tạm dừng")
         self.pause_button.setObjectName("setupPauseButton")
         self.stop_button = QPushButton("Dừng")
@@ -81,6 +119,8 @@ class SetupMode(QWidget):
         form.addRow(self.config_row)
         form.addRow(self.imagery_row)
         form.addRow(self.workspace_row)
+        form.addRow("Historical images", self.historical_loading_checkbox)
+        form.addRow("Historical mode", self._build_historical_mode_row())
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(16, 16, 16, 16)
@@ -101,6 +141,15 @@ class SetupMode(QWidget):
 
         for row in self.path_rows:
             row.validationChanged.connect(self._update_action_state)
+        self.config_row.validationChanged.connect(self._sync_historical_loading_from_config)
+        self.historical_loading_checkbox.toggled.connect(
+            self._update_historical_controls_state
+        )
+        self.historical_mode_combo.currentIndexChanged.connect(
+            self._update_historical_controls_state
+        )
+        self.historical_start_date_edit.dateChanged.connect(self._sync_historical_date_bounds)
+        self.historical_end_date_edit.dateChanged.connect(self._sync_historical_date_bounds)
         self.ingest_button.clicked.connect(self._emit_ingest_requested)
         self.open_workspace_button.clicked.connect(self._emit_open_workspace_requested)
         self.apply_recent_button.clicked.connect(self._apply_current_recent_project)
@@ -136,6 +185,8 @@ class SetupMode(QWidget):
             config_file=config_file,
             imagery_input_folder=imagery_folder,
             workspace_folder=workspace_folder,
+            historical_loading_enabled=self.historical_loading_checkbox.isChecked(),
+            historical_image_selection=self._selected_historical_image_selection(),
         )
 
     def selected_workspace_folder(self) -> Path | None:
@@ -181,6 +232,8 @@ class SetupMode(QWidget):
 
     def _update_action_state(self, *_args: object) -> None:
         self.ingest_button.setEnabled(self.is_ready and not self._ingestion_running)
+        self.historical_loading_checkbox.setEnabled(not self._ingestion_running)
+        self._update_historical_controls_state()
         self.open_workspace_button.setEnabled(
             self.workspace_row.validation.ok and not self._ingestion_running
         )
@@ -222,6 +275,19 @@ class SetupMode(QWidget):
         layout.addWidget(self.remove_recent_button)
         return row
 
+    def _build_historical_mode_row(self) -> QWidget:
+        row = QWidget()
+        layout = QHBoxLayout(row)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(8)
+        layout.addWidget(self.historical_mode_combo)
+        layout.addWidget(QLabel("From"))
+        layout.addWidget(self.historical_start_date_edit)
+        layout.addWidget(QLabel("To"))
+        layout.addWidget(self.historical_end_date_edit)
+        layout.addStretch(1)
+        return row
+
     def _current_recent_project(self) -> RecentProjectEntry | None:
         data = self.recent_project_combo.currentData()
         if not isinstance(data, int):
@@ -254,6 +320,71 @@ class SetupMode(QWidget):
                 return
 
         self.ingestRequested.emit(selected_paths)
+
+    def _sync_historical_loading_from_config(self, *_args: object) -> None:
+        config_file = self.config_row.selected_path
+        if config_file is None:
+            self.historical_loading_checkbox.setChecked(False)
+            self.historical_mode_combo.setCurrentIndex(0)
+            self._update_historical_controls_state()
+            return
+
+        settings = read_historical_loading_settings(config_file)
+        self.historical_loading_checkbox.setChecked(settings.enabled)
+        if settings.image_selection.mode == HistoricalSelectionMode.DATE_RANGE:
+            self.historical_mode_combo.setCurrentIndex(
+                max(0, self.historical_mode_combo.findData(_HISTORICAL_MODE_DATE_RANGE))
+            )
+            if (
+                settings.image_selection.start_date is not None
+                and settings.image_selection.end_date is not None
+            ):
+                self._set_historical_date_range(
+                    _qdate_from_date(settings.image_selection.start_date),
+                    _qdate_from_date(settings.image_selection.end_date),
+                )
+        else:
+            self.historical_mode_combo.setCurrentIndex(
+                max(0, self.historical_mode_combo.findData(_HISTORICAL_MODE_LATEST_IMAGE))
+            )
+        self._update_historical_controls_state()
+
+    def _update_historical_controls_state(self, *_args: object) -> None:
+        enabled = self.historical_loading_checkbox.isChecked() and not self._ingestion_running
+        date_range = self.historical_mode_combo.currentData() == _HISTORICAL_MODE_DATE_RANGE
+        self.historical_mode_combo.setEnabled(enabled)
+        self.historical_start_date_edit.setEnabled(enabled and date_range)
+        self.historical_end_date_edit.setEnabled(enabled and date_range)
+
+    def _sync_historical_date_bounds(self, *_args: object) -> None:
+        start = self.historical_start_date_edit.date()
+        end = self.historical_end_date_edit.date()
+        if start <= end:
+            return
+
+        changed = self.sender()
+        if changed is self.historical_start_date_edit:
+            self.historical_end_date_edit.setDate(start)
+            return
+        self.historical_start_date_edit.setDate(end)
+
+    def _set_historical_date_range(self, start: QDate, end: QDate) -> None:
+        if start > end:
+            start, end = end, start
+        self.historical_start_date_edit.setDate(start)
+        self.historical_end_date_edit.setDate(end)
+
+    def _selected_historical_image_selection(self) -> HistoricalImageSelectionConfig:
+        if self.historical_mode_combo.currentData() == _HISTORICAL_MODE_DATE_RANGE:
+            return HistoricalImageSelectionConfig(
+                mode=HistoricalSelectionMode.DATE_RANGE,
+                start_date=_date_from_qdate(self.historical_start_date_edit.date()),
+                end_date=_date_from_qdate(self.historical_end_date_edit.date()),
+            )
+        return HistoricalImageSelectionConfig(
+            mode=HistoricalSelectionMode.LATEST_IMAGES,
+            limit_per_target=1,
+        )
 
     def _emit_open_workspace_requested(self) -> None:
         workspace_folder = self.selected_workspace_folder()
@@ -346,3 +477,11 @@ def _recent_project_tooltip(project: RecentProjectEntry) -> str:
     if project.imagery_folder:
         parts.append(f"Ảnh: {project.imagery_folder}")
     return "\n".join(parts)
+
+
+def _qdate_from_date(value: date) -> QDate:
+    return QDate(value.year, value.month, value.day)
+
+
+def _date_from_qdate(value: QDate) -> date:
+    return date(value.year(), value.month(), value.day())

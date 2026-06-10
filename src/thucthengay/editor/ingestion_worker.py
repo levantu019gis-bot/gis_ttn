@@ -6,7 +6,11 @@ from pathlib import Path
 
 from PySide6.QtCore import QObject, Signal, Slot
 
-from thucthengay.config import ConfigLoadResult, load_project_config
+from thucthengay.config import (
+    ConfigLoadResult,
+    apply_historical_loading_override,
+    load_project_config,
+)
 from thucthengay.jobs import (
     IngestionJobResult,
     JobControl,
@@ -15,6 +19,7 @@ from thucthengay.jobs import (
     run_ingestion_job,
 )
 from thucthengay.models import Issue, IssueScope, IssueSeverity
+from thucthengay.models.config import HistoricalImageSelectionConfig
 from thucthengay.workspace import WorkspaceService
 
 
@@ -32,6 +37,8 @@ class IngestionWorker(QObject):
         imagery_folder: Path,
         workspace_service: WorkspaceService,
         control: JobControl,
+        historical_loading_enabled: bool,
+        historical_image_selection: HistoricalImageSelectionConfig | None = None,
         parent: QObject | None = None,
     ) -> None:
         super().__init__(parent)
@@ -40,6 +47,8 @@ class IngestionWorker(QObject):
         self.imagery_folder = imagery_folder
         self.workspace_service = workspace_service
         self.control = control
+        self.historical_loading_enabled = historical_loading_enabled
+        self.historical_image_selection = historical_image_selection
 
     @Slot()
     def run(self) -> None:
@@ -47,6 +56,11 @@ class IngestionWorker(QObject):
         config_result = ConfigLoadResult(config_path=self.config_file)
         try:
             config_result = load_project_config(self.config_file)
+            config_result = apply_historical_loading_override(
+                config_result,
+                enabled=self.historical_loading_enabled,
+                image_selection=self.historical_image_selection,
+            )
             result = run_ingestion_job(
                 job_id=self.job_id,
                 config_result=config_result,

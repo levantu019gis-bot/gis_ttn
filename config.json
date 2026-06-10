@@ -29,6 +29,8 @@
         "label_color": "#000000",
         "label_font_size": 24,
         "tick_length_px": 8,
+        "temporal_compare_pane_gap_px": 8,
+        "temporal_compare_gap_color": "#FFFFFF",
         "max_frame_ticks": ""
       }
     },
@@ -36,6 +38,18 @@
       "date_format": "dd.MM.yy",
       "time_format": "HH.mm/dd.MM.yy",
       "map_background_color": "#3a3756"
+    }
+  },
+  "historical_registry": {
+    "enabled": true,
+    "database_path": "history/target-history.sqlite"
+  },
+  "historical_loading": {
+    "enabled": true,
+    "target_scope": "targets_with_current_matches",
+    "image_selection": {
+      "mode": "latest_images",
+      "limit_per_target": 1
     }
   },
   "filename_patterns": [
@@ -60,15 +74,13 @@
       "name": "Đá Bắc",
       "alias": "Đá Bắc",
       "coordinate": [
-        111.49992614995688,
-        17.09314950434196
+        111.59944063,
+        17.04195886
       ],
-      "scale": 50000,
+      "scale": 36125,
       "grid": {
         "interval": {
-          "minutes": 1,
-          "degrees": 0,
-          "seconds": 0
+          "minutes": 2
         }
       },
       "export": {
@@ -758,9 +770,7 @@
       "scale": 50000,
       "grid": {
         "interval": {
-          "degrees": 0,
-          "minutes": 1,
-          "seconds": 0.0
+          "minutes": 1
         }
       },
       "export": {
@@ -1540,9 +1550,7 @@
       "scale": 50000,
       "grid": {
         "interval": {
-          "degrees": 0,
-          "minutes": 1,
-          "seconds": 0.0
+          "minutes": 1
         }
       },
       "export": {
@@ -1798,9 +1806,7 @@
       "scale": 50000,
       "grid": {
         "interval": {
-          "degrees": 0,
-          "minutes": 1,
-          "seconds": 0.0
+          "minutes": 1
         }
       },
       "export": {
@@ -1874,9 +1880,7 @@
       "scale": 50000,
       "grid": {
         "interval": {
-          "degrees": 0,
-          "minutes": 1,
-          "seconds": 0.0
+          "minutes": 1
         }
       },
       "export": {
@@ -1970,9 +1974,7 @@
       "scale": 50000,
       "grid": {
         "interval": {
-          "degrees": 0,
-          "minutes": 1,
-          "seconds": 0.0
+          "minutes": 1
         }
       },
       "export": {
@@ -2050,9 +2052,7 @@
       "scale": 50000,
       "grid": {
         "interval": {
-          "degrees": 0,
-          "minutes": 1,
-          "seconds": 0.0
+          "minutes": 1
         }
       },
       "export": {
@@ -2130,9 +2130,7 @@
       "scale": 50000,
       "grid": {
         "interval": {
-          "degrees": 0,
-          "minutes": 1,
-          "seconds": 0.0
+          "minutes": 1
         }
       },
       "export": {
@@ -2290,9 +2288,7 @@
       "scale": 50000,
       "grid": {
         "interval": {
-          "degrees": 0,
-          "minutes": 1,
-          "seconds": 0.0
+          "minutes": 1
         }
       },
       "export": {
@@ -2374,9 +2370,7 @@
       "scale": 50000,
       "grid": {
         "interval": {
-          "degrees": 0,
-          "minutes": 1,
-          "seconds": 0.0
+          "minutes": 1
         }
       },
       "export": {

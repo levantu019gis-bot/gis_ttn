@@ -70,6 +70,8 @@ class TemporalCompareState(BaseModel):
 
     enabled: bool = False
     orientation: TemporalCompareOrientation = TemporalCompareOrientation.VERTICAL
+    pane_a_composition_id: str | None = None
+    pane_b_composition_id: str | None = None
     pane_a_layer_id: str | None = None
     pane_b_layer_id: str | None = None
 

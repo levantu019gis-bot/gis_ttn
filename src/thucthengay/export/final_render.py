@@ -71,6 +71,7 @@ def build_export_final_render_spec(
     target: TargetConfig,
     *,
     final_dpi: int = DEFAULT_FINAL_RENDER_DPI,
+    compare_compositions: list[Composition] | None = None,
 ) -> RenderSpec:
     """Build the canonical final ``RenderSpec`` used by export preparation."""
     template = _template_metadata(target)
@@ -82,6 +83,7 @@ def build_export_final_render_spec(
         template_metadata_file=target.export.template_metadata_file,
         output_width=width,
         output_height=height,
+        compare_compositions=compare_compositions,
     )
 
 
@@ -171,14 +173,19 @@ def final_render_currentness_issue(
     if target is None:
         return None
 
-    render_composition = workspace_service.resolve_composition_layer_paths(composition)
     try:
+        render_composition = workspace_service.resolve_composition_layer_paths(composition)
+        compare_compositions = _resolved_compare_compositions_for_render(
+            workspace_service,
+            composition,
+        )
         spec = build_export_final_render_spec(
             render_composition,
             target,
             final_dpi=final_dpi,
+            compare_compositions=compare_compositions,
         )
-    except (RenderSpecError, ValueError) as error:
+    except (RenderSpecError, ValueError, WorkspaceError) as error:
         return _issue(
             "export.final_render_spec_invalid",
             "Khong tao duoc render spec de xac minh anh final.",
@@ -238,14 +245,19 @@ def _ensure_composition_final_render(
             ],
         )
 
-    render_composition = workspace_service.resolve_composition_layer_paths(composition)
     try:
+        render_composition = workspace_service.resolve_composition_layer_paths(composition)
+        compare_compositions = _resolved_compare_compositions_for_render(
+            workspace_service,
+            composition,
+        )
         spec = build_export_final_render_spec(
             render_composition,
             target,
             final_dpi=final_dpi,
+            compare_compositions=compare_compositions,
         )
-    except (RenderSpecError, ValueError) as error:
+    except (RenderSpecError, ValueError, WorkspaceError) as error:
         return _row(
             composition,
             ExportFinalRenderStatus.FAILED,
@@ -329,6 +341,24 @@ def _template_metadata(target: TargetConfig) -> TemplateMetadata:
     except (KeyError, ValidationError) as error:
         msg = "target is missing derived template_metadata"
         raise ValueError(msg) from error
+
+
+def _resolved_compare_compositions_for_render(
+    workspace_service: WorkspaceService,
+    composition: Composition,
+) -> list[Composition]:
+    if not composition.temporal_compare.enabled:
+        return []
+    state = composition.temporal_compare
+    pane_ids = [state.pane_a_composition_id, state.pane_b_composition_id]
+    if not all(pane_ids):
+        return []
+    return [
+        workspace_service.resolve_composition_layer_paths(
+            workspace_service.read_composition(str(pane_id))
+        )
+        for pane_id in pane_ids
+    ]
 
 
 def _row(

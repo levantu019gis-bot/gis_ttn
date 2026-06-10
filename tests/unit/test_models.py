@@ -418,8 +418,8 @@ def test_composition_temporal_compare_defaults_and_round_trip() -> None:
             "temporal_compare": TemporalCompareState(
                 enabled=True,
                 orientation=TemporalCompareOrientation.HORIZONTAL,
-                pane_a_layer_id="current",
-                pane_b_layer_id="history",
+                pane_a_composition_id="target_001__20260525",
+                pane_b_composition_id="target_001__20260526",
             )
         }
     )
@@ -428,7 +428,7 @@ def test_composition_temporal_compare_defaults_and_round_trip() -> None:
 
     assert dumped["temporal_compare"]["orientation"] == "horizontal"
     assert restored.temporal_compare.enabled is True
-    assert restored.temporal_compare.pane_a_layer_id == "current"
+    assert restored.temporal_compare.pane_a_composition_id == "target_001__20260525"
 
 
 def test_issue_contract_serializes_vietnamese_message_and_blocking_flag() -> None:
