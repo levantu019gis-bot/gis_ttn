@@ -27,7 +27,7 @@ from thucthengay.models import (
     TargetConfig,
 )
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 DEFAULT_BUSY_TIMEOUT_MS = 5_000
 
 
@@ -56,6 +56,15 @@ class HistoryRecordResult:
     composition_id: str
     recorded_layers: int
     include_events: int
+
+
+@dataclass(frozen=True)
+class HistorySkipResult:
+    """Outcome returned after marking a previously included composition as skipped."""
+
+    enabled: bool
+    composition_id: str
+    skipped_layers: int
 
 
 @dataclass(frozen=True)
@@ -164,6 +173,7 @@ class HistoryService:
         workspace_text = str(Path(workspace_path).expanduser().resolve())
         included_at = _utc_iso()
         with closing(self._connect()) as connection:
+            _ensure_target_image_history_review_columns(connection)
             try:
                 with connection:
                     target_history_id = _upsert_target_history(
@@ -206,6 +216,56 @@ class HistoryService:
             include_events=event_count,
         )
 
+    def record_skipped_composition(
+        self,
+        composition: Composition,
+        *,
+        target: TargetConfig,
+        workspace_path: str | Path,
+    ) -> HistorySkipResult:
+        """Mark visible layers from a previously included composition as no longer active."""
+        if not self.enabled:
+            return HistorySkipResult(
+                enabled=False,
+                composition_id=composition.composition_id,
+                skipped_layers=0,
+            )
+
+        database_path = self._required_database_path()
+        if not database_path.exists():
+            return HistorySkipResult(
+                enabled=True,
+                composition_id=composition.composition_id,
+                skipped_layers=0,
+            )
+
+        visible_layers = [layer for layer in composition.layers if layer.visible]
+        workspace_text = str(Path(workspace_path).expanduser().resolve())
+        skipped_at = _utc_iso()
+        skipped_layers = 0
+        with closing(self._connect()) as connection:
+            _ensure_target_image_history_review_columns(connection)
+            try:
+                with connection:
+                    for layer in visible_layers:
+                        skipped_layers += _mark_target_image_history_skipped(
+                            connection,
+                            target=target,
+                            composition=composition,
+                            layer=layer,
+                            workspace_path=workspace_text,
+                            skipped_at=skipped_at,
+                        )
+            except sqlite3.Error as error:
+                msg = f"could not mark skipped history for {composition.composition_id}: {error}"
+                raise HistoryRecordError(msg) from error
+
+        return HistorySkipResult(
+            enabled=True,
+            composition_id=composition.composition_id,
+            skipped_layers=skipped_layers,
+        )
+
     def load_historical_images(
         self,
         plan: HistoricalLoadingPlan,
@@ -220,6 +280,7 @@ class HistoryService:
 
         records: list[HistoricalImageRecord] = []
         with closing(self._connect()) as connection:
+            _ensure_target_image_history_review_columns(connection)
             for target_id in plan.target_ids:
                 records.extend(_query_historical_records(connection, plan, target_id))
 
@@ -423,6 +484,7 @@ def _query_latest_date_records(
         JOIN target_image_history USING (target_history_id)
         JOIN image_asset USING (image_asset_id)
         WHERE target_history.target_id = ?
+          AND target_image_history.active = 1
           AND image_asset.capture_date IS NOT NULL
           {cap_condition.sql}
         """,
@@ -537,6 +599,7 @@ _HISTORICAL_RECORDS_SELECT = """
     JOIN target_image_history USING (target_history_id)
     JOIN image_asset USING (image_asset_id)
     WHERE target_history.target_id = ?
+      AND target_image_history.active = 1
 """
 
 _HISTORICAL_RECORDS_ORDER = """
@@ -728,6 +791,9 @@ def _create_schema(connection: sqlite3.Connection) -> None:
             latest_workspace_path TEXT,
             latest_composition_id TEXT,
             latest_included_at TEXT,
+            active INTEGER NOT NULL DEFAULT 1,
+            latest_status TEXT NOT NULL DEFAULT 'included',
+            latest_skipped_at TEXT,
             created_at TEXT NOT NULL,
             updated_at TEXT NOT NULL,
             UNIQUE (target_history_id, image_asset_id),
@@ -740,6 +806,7 @@ def _create_schema(connection: sqlite3.Connection) -> None:
         )
         """
     )
+    _ensure_target_image_history_review_columns(connection)
     connection.execute(
         """
         CREATE TABLE IF NOT EXISTS include_event (
@@ -755,6 +822,24 @@ def _create_schema(connection: sqlite3.Connection) -> None:
         )
         """
     )
+
+
+def _ensure_target_image_history_review_columns(connection: sqlite3.Connection) -> None:
+    existing_columns = {
+        str(row[1])
+        for row in connection.execute("PRAGMA table_info(target_image_history)").fetchall()
+    }
+    if "active" not in existing_columns:
+        connection.execute(
+            "ALTER TABLE target_image_history ADD COLUMN active INTEGER NOT NULL DEFAULT 1"
+        )
+    if "latest_status" not in existing_columns:
+        connection.execute(
+            "ALTER TABLE target_image_history "
+            "ADD COLUMN latest_status TEXT NOT NULL DEFAULT 'included'"
+        )
+    if "latest_skipped_at" not in existing_columns:
+        connection.execute("ALTER TABLE target_image_history ADD COLUMN latest_skipped_at TEXT")
 
 
 def _set_schema_version(connection: sqlite3.Connection, version: int) -> None:
@@ -887,6 +972,9 @@ def _upsert_target_image_history(
             SET latest_workspace_path = ?,
                 latest_composition_id = ?,
                 latest_included_at = ?,
+                active = 1,
+                latest_status = 'included',
+                latest_skipped_at = NULL,
                 updated_at = ?
             WHERE target_image_history_id = ?
             """,
@@ -902,10 +990,13 @@ def _upsert_target_image_history(
             latest_workspace_path,
             latest_composition_id,
             latest_included_at,
+            active,
+            latest_status,
+            latest_skipped_at,
             created_at,
             updated_at
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, 1, 'included', NULL, ?, ?)
         """,
         (
             target_history_id,
@@ -918,6 +1009,52 @@ def _upsert_target_image_history(
         ),
     )
     return int(cursor.lastrowid)
+
+
+def _mark_target_image_history_skipped(
+    connection: sqlite3.Connection,
+    *,
+    target: TargetConfig,
+    composition: Composition,
+    layer: ImageLayer,
+    workspace_path: str,
+    skipped_at: str,
+) -> int:
+    capture_date = (layer.capture_date or composition.capture_date).isoformat()
+    capture_time = layer.capture_time.isoformat() if layer.capture_time is not None else None
+    cursor = connection.execute(
+        """
+        UPDATE target_image_history
+        SET active = 0,
+            latest_status = 'skipped',
+            latest_skipped_at = ?,
+            updated_at = ?
+        WHERE target_image_history_id IN (
+            SELECT target_image_history.target_image_history_id
+            FROM target_image_history
+            JOIN target_history USING (target_history_id)
+            JOIN image_asset USING (image_asset_id)
+            WHERE target_history.target_id = ?
+              AND image_asset.source_path = ?
+              AND image_asset.capture_date IS ?
+              AND image_asset.capture_time IS ?
+              AND target_image_history.latest_workspace_path = ?
+              AND target_image_history.latest_composition_id = ?
+              AND target_image_history.active = 1
+        )
+        """,
+        (
+            skipped_at,
+            skipped_at,
+            target.id,
+            layer.source_path,
+            capture_date,
+            capture_time,
+            workspace_path,
+            composition.composition_id,
+        ),
+    )
+    return int(cursor.rowcount or 0)
 
 
 def _append_include_event(

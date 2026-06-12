@@ -663,6 +663,7 @@ class ReviewEditMode(QWidget):
             return
 
         composition_id = self.selected_composition.composition_id
+        previous = self.selected_composition
         try:
             updated = self._workspace_service.apply_skip_transition(composition_id)
         except WorkspaceError as error:
@@ -670,9 +671,18 @@ class ReviewEditMode(QWidget):
             return
 
         self.selected_composition = updated
-        self.action_summary.setText(
-            "Đã skip composition và chuyển sang mục kế tiếp nếu có."
+        history_warning = (
+            self._record_skipped_history(previous) if previous.include else None
         )
+        if history_warning is not None:
+            self.action_summary.setText(
+                "Đã skip composition, nhưng không cập nhật được lịch sử ảnh: "
+                f"{history_warning}"
+            )
+        else:
+            self.action_summary.setText(
+                "Đã skip composition và chuyển sang mục kế tiếp nếu có."
+            )
         self._advance_after_transition(updated.composition_id)
 
     def _go_previous(self) -> None:
@@ -764,6 +774,22 @@ class ReviewEditMode(QWidget):
             return f"Không tìm thấy target `{composition.target_id}` trong config hiện tại."
         try:
             self._history_service.record_included_composition(
+                composition,
+                target=target,
+                workspace_path=self._workspace_service.paths.root,
+            )
+        except Exception as error:  # noqa: BLE001
+            return str(error)
+        return None
+
+    def _record_skipped_history(self, composition: Composition) -> str | None:
+        if self._workspace_service is None:
+            return None
+        target = self._target_for_composition(composition)
+        if target is None:
+            return f"Không tìm thấy target `{composition.target_id}` trong config hiện tại."
+        try:
+            self._history_service.record_skipped_composition(
                 composition,
                 target=target,
                 workspace_path=self._workspace_service.paths.root,

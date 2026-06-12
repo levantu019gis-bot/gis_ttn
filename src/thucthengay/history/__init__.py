@@ -15,6 +15,7 @@ from thucthengay.history.service import (
     HistoryRecordError,
     HistoryRecordResult,
     HistoryService,
+    HistorySkipResult,
 )
 
 __all__ = [
@@ -30,4 +31,5 @@ __all__ = [
     "HistoryRecordError",
     "HistoryRecordResult",
     "HistoryService",
+    "HistorySkipResult",
 ]

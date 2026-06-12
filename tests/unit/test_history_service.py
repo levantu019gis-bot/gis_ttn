@@ -69,7 +69,140 @@ def test_history_service_initializes_schema_idempotently(tmp_path: Path) -> None
         "target_image_history",
         "include_event",
     }.issubset(tables)
-    assert schema_rows == [(1, 1)]
+    with sqlite3.connect(database_path) as connection:
+        target_image_history_columns = {
+            row[1]
+            for row in connection.execute("PRAGMA table_info(target_image_history)").fetchall()
+        }
+
+    assert schema_rows == [(1, 2)]
+    assert {"active", "latest_status", "latest_skipped_at"}.issubset(
+        target_image_history_columns
+    )
+
+
+def test_history_service_migrates_existing_registry_when_loading(
+    tmp_path: Path,
+) -> None:
+    database_path = tmp_path / "registry.sqlite"
+    source_path = tmp_path / "imagery" / "alpha-visible.tif"
+    write_geotiff(source_path)
+    timestamp = "2026-06-09T00:00:00+00:00"
+    with sqlite3.connect(database_path) as connection:
+        connection.executescript(
+            """
+            CREATE TABLE schema_version (
+                id INTEGER PRIMARY KEY CHECK (id = 1),
+                version INTEGER NOT NULL CHECK (version >= 1),
+                applied_at TEXT NOT NULL
+            );
+            CREATE TABLE target_history (
+                target_history_id INTEGER PRIMARY KEY,
+                target_id TEXT NOT NULL UNIQUE,
+                target_name TEXT NOT NULL,
+                target_alias TEXT,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            );
+            CREATE TABLE image_asset (
+                image_asset_id INTEGER PRIMARY KEY,
+                source_path TEXT NOT NULL,
+                cache_path TEXT,
+                capture_date TEXT,
+                capture_time TEXT,
+                cloud_percent REAL,
+                metadata_json TEXT NOT NULL DEFAULT '{}',
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                UNIQUE (source_path, capture_date, capture_time)
+            );
+            CREATE TABLE target_image_history (
+                target_image_history_id INTEGER PRIMARY KEY,
+                target_history_id INTEGER NOT NULL,
+                image_asset_id INTEGER NOT NULL,
+                latest_workspace_path TEXT,
+                latest_composition_id TEXT,
+                latest_included_at TEXT,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                UNIQUE (target_history_id, image_asset_id)
+            );
+            CREATE TABLE include_event (
+                include_event_id INTEGER PRIMARY KEY,
+                target_image_history_id INTEGER NOT NULL,
+                workspace_path TEXT NOT NULL,
+                composition_id TEXT NOT NULL,
+                included_at TEXT NOT NULL,
+                created_at TEXT NOT NULL
+            );
+            """
+        )
+        connection.execute(
+            "INSERT INTO schema_version (id, version, applied_at) VALUES (1, 1, ?)",
+            (timestamp,),
+        )
+        connection.execute(
+            """
+            INSERT INTO target_history (
+                target_history_id,
+                target_id,
+                target_name,
+                created_at,
+                updated_at
+            )
+            VALUES (1, 'alpha', 'Alpha Target', ?, ?)
+            """,
+            (timestamp, timestamp),
+        )
+        connection.execute(
+            """
+            INSERT INTO image_asset (
+                image_asset_id,
+                source_path,
+                capture_date,
+                capture_time,
+                metadata_json,
+                created_at,
+                updated_at
+            )
+            VALUES (1, ?, '2026-05-25', '08:30:00', '{}', ?, ?)
+            """,
+            (str(source_path), timestamp, timestamp),
+        )
+        connection.execute(
+            """
+            INSERT INTO target_image_history (
+                target_image_history_id,
+                target_history_id,
+                image_asset_id,
+                latest_workspace_path,
+                latest_composition_id,
+                latest_included_at,
+                created_at,
+                updated_at
+            )
+            VALUES (1, 1, 1, ?, 'alpha__20260525', ?, ?, ?)
+            """,
+            (str((tmp_path / "workspace").resolve()), timestamp, timestamp, timestamp),
+        )
+
+    result = HistoryService(database_path).load_historical_images(
+        HistoricalLoadingPlan(
+            enabled=True,
+            database_path=database_path,
+            target_ids=("alpha",),
+            image_selection=HistoricalImageSelectionConfig(mode="latest_date"),
+        )
+    )
+
+    with sqlite3.connect(database_path) as connection:
+        columns = {
+            row[1]
+            for row in connection.execute("PRAGMA table_info(target_image_history)").fetchall()
+        }
+
+    assert [record.source_path for record in result.records] == [source_path]
+    assert {"active", "latest_status", "latest_skipped_at"}.issubset(columns)
 
 
 def test_history_service_enables_foreign_keys_for_service_connections(
@@ -180,7 +313,7 @@ def test_record_included_composition_writes_target_image_link_and_event(
         ).fetchall()
         link_rows = connection.execute(
             """
-            SELECT latest_workspace_path, latest_composition_id
+            SELECT latest_workspace_path, latest_composition_id, active, latest_status
             FROM target_image_history
             """
         ).fetchall()
@@ -200,7 +333,9 @@ def test_record_included_composition_writes_target_image_link_and_event(
             12.5,
         )
     ]
-    assert link_rows == [(str((tmp_path / "workspace").resolve()), "alpha__20260525")]
+    assert link_rows == [
+        (str((tmp_path / "workspace").resolve()), "alpha__20260525", 1, "included")
+    ]
     assert event_rows == [(str((tmp_path / "workspace").resolve()), "alpha__20260525")]
 
 
@@ -236,6 +371,76 @@ def test_record_included_composition_updates_link_and_appends_events(
     assert link_rows == [
         (str((tmp_path / "workspace-b").resolve()), "alpha__20260525_repeat")
     ]
+    assert event_count == 2
+
+
+def test_record_skipped_composition_deactivates_current_workspace_history(
+    tmp_path: Path,
+) -> None:
+    database_path = tmp_path / "registry.sqlite"
+    service = HistoryService(database_path)
+    service.initialize()
+    target = _target_config()
+    source_path = tmp_path / "imagery" / "alpha-visible.tif"
+    write_geotiff(source_path)
+    composition = _included_composition().model_copy(
+        update={
+            "layers": [
+                _included_composition().layers[0].model_copy(
+                    update={"source_path": str(source_path)}
+                )
+            ]
+        }
+    )
+    workspace_path = tmp_path / "workspace"
+    service.record_included_composition(
+        composition,
+        target=target,
+        workspace_path=workspace_path,
+    )
+
+    result = service.record_skipped_composition(
+        composition.model_copy(update={"include": False, "ready": False}),
+        target=target,
+        workspace_path=workspace_path,
+    )
+    loaded_after_skip = service.load_historical_images(
+        HistoricalLoadingPlan(
+            enabled=True,
+            database_path=database_path,
+            target_ids=("alpha",),
+            image_selection=HistoricalImageSelectionConfig(mode="latest_date"),
+        )
+    )
+    service.record_included_composition(
+        composition.model_copy(update={"composition_id": "alpha__20260525_reinclude"}),
+        target=target,
+        workspace_path=workspace_path,
+    )
+    loaded_after_reinclude = service.load_historical_images(
+        HistoricalLoadingPlan(
+            enabled=True,
+            database_path=database_path,
+            target_ids=("alpha",),
+            image_selection=HistoricalImageSelectionConfig(mode="latest_date"),
+        )
+    )
+
+    with sqlite3.connect(database_path) as connection:
+        link_row = connection.execute(
+            """
+            SELECT active, latest_status, latest_skipped_at, latest_composition_id
+            FROM target_image_history
+            """
+        ).fetchone()
+        event_count = connection.execute("SELECT COUNT(*) FROM include_event").fetchone()[0]
+
+    assert result.skipped_layers == 1
+    assert loaded_after_skip.records == []
+    assert [record.source_path.name for record in loaded_after_reinclude.records] == [
+        "alpha-visible.tif"
+    ]
+    assert link_row == (1, "included", None, "alpha__20260525_reinclude")
     assert event_count == 2
 
 

@@ -188,6 +188,7 @@ def composition(
 class RecordingHistoryService:
     def __init__(self) -> None:
         self.records: list[tuple[Composition, TargetConfig, Path]] = []
+        self.skips: list[tuple[Composition, TargetConfig, Path]] = []
 
     def record_included_composition(
         self,
@@ -199,9 +200,29 @@ class RecordingHistoryService:
         self.records.append((composition, target, Path(workspace_path)))
         return object()
 
+    def record_skipped_composition(
+        self,
+        composition: Composition,
+        *,
+        target: TargetConfig,
+        workspace_path: str | Path,
+    ) -> object:
+        self.skips.append((composition, target, Path(workspace_path)))
+        return object()
+
 
 class FailingHistoryService:
     def record_included_composition(
+        self,
+        composition: Composition,
+        *,
+        target: TargetConfig,
+        workspace_path: str | Path,
+    ) -> object:
+        msg = f"history unavailable for {composition.composition_id}"
+        raise RuntimeError(msg)
+
+    def record_skipped_composition(
         self,
         composition: Composition,
         *,
@@ -1918,6 +1939,49 @@ def test_review_edit_include_records_history_after_workspace_include(
     assert recorded_composition.composition_id == "alpha__20260525"
     assert recorded_target.id == "alpha"
     assert recorded_workspace == service.paths.root
+
+
+def test_review_edit_skip_records_history_after_previous_include(
+    tmp_path: Path,
+) -> None:
+    qapp()
+    config_path = tmp_path / "config.json"
+    write_project_config(config_path)
+    service = WorkspaceService(tmp_path / "workspace")
+    service.initialize(config_path=config_path)
+    service.write_composition(
+        composition(
+            "alpha__20260525",
+            "alpha",
+            date(2026, 5, 25),
+            reviewed=True,
+            ready=True,
+            include=True,
+            needs_revalidation=False,
+            review_order=1,
+        )
+    )
+    history = RecordingHistoryService()
+
+    mode = ReviewEditMode(history_service=history)
+    mode.load_workspace(
+        service,
+        targets=[target_config("alpha", sort_order=1, name="Alpha Target")],
+    )
+    target_index = mode.tree_model.index(0, 0)
+    mode.tree_view.setCurrentIndex(mode.tree_model.index(0, 0, target_index))
+
+    mode.skip_button.click()
+
+    skipped = service.read_composition("alpha__20260525")
+    assert skipped.include is False
+    assert skipped.ready is False
+    assert len(history.skips) == 1
+    skipped_composition, skipped_target, skipped_workspace = history.skips[0]
+    assert skipped_composition.composition_id == "alpha__20260525"
+    assert skipped_composition.include is True
+    assert skipped_target.id == "alpha"
+    assert skipped_workspace == service.paths.root
 
 
 def test_app_shell_wires_configured_history_service_after_ingestion(
