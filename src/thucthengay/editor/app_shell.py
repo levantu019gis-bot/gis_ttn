@@ -17,6 +17,7 @@ from thucthengay.editor.modes.setup_mode import SetupMode, SetupPaths
 from thucthengay.editor.preferences import PreferencesService, RecentProjectEntry
 from thucthengay.history import HistoryService
 from thucthengay.jobs import IngestionJobResult, IngestionSummary, JobControl, JobState
+from thucthengay.models import Issue, IssueScope
 from thucthengay.utils.path_safety import is_absolute_path_text
 from thucthengay.workspace import WorkspaceError, WorkspaceService
 
@@ -82,6 +83,8 @@ class AppShell(QMainWindow):
             control=control,
             historical_loading_enabled=setup_paths.historical_loading_enabled,
             historical_image_selection=setup_paths.historical_image_selection,
+            clear_existing=setup_paths.clear_existing_workspace,
+            clear_confirmed=setup_paths.clear_workspace_confirmed,
         )
         worker.moveToThread(thread)
 
@@ -152,6 +155,7 @@ class AppShell(QMainWindow):
         self.export_mode.load_workspace(
             workspace_service,
             targets=config_result.enabled_targets,
+            template_issues=_export_template_issues(config_result),
         )
         self.mode_tabs.setCurrentWidget(self.review_edit_mode)
 
@@ -183,6 +187,7 @@ class AppShell(QMainWindow):
         self.export_mode.load_workspace(
             workspace_service,
             targets=config_result.enabled_targets,
+            template_issues=_export_template_issues(config_result),
         )
         self.setup_mode.config_row.set_path(config_path)
         self.setup_mode.show_workspace_opened(workspace_service.paths.root, composition_count)
@@ -227,7 +232,10 @@ class AppShell(QMainWindow):
             return
         self.review_edit_mode.set_history_service(_history_service_from_config(config_result))
         self.review_edit_mode.refresh_config_targets(config_result.enabled_targets)
-        self.export_mode.refresh_config_targets(config_result.enabled_targets)
+        self.export_mode.refresh_config_targets(
+            config_result.enabled_targets,
+            template_issues=_export_template_issues(config_result),
+        )
         self.config_mode.downstream_label.setText(
             "Đã lưu config và reload target list cho Review/Edit, Export. "
             "Nếu geometry/enabled/defaults/patterns đổi, hãy chạy lại ingestion/"
@@ -285,6 +293,10 @@ def _history_service_from_config(config_result: ConfigLoadResult) -> HistoryServ
     ):
         return HistoryService.disabled()
     return HistoryService(config_result.historical_database_path)
+
+
+def _export_template_issues(config_result: ConfigLoadResult) -> list[Issue]:
+    return [issue for issue in config_result.issues if issue.scope == IssueScope.TEMPLATE]
 
 
 def _fallback_manifest_config_path(config_path: str, workspace_root: Path) -> Path | None:

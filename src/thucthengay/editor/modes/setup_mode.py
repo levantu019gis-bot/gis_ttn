@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import date
 from pathlib import Path
 
@@ -42,6 +42,8 @@ class SetupPaths:
     workspace_folder: Path
     historical_loading_enabled: bool = False
     historical_image_selection: HistoricalImageSelectionConfig | None = None
+    clear_existing_workspace: bool = False
+    clear_workspace_confirmed: bool = False
 
 
 class SetupMode(QWidget):
@@ -315,9 +317,13 @@ class SetupMode(QWidget):
 
         workspace_service = WorkspaceService(selected_paths.workspace_folder)
         if workspace_service.has_app_owned_data():
-            clear_confirmed = confirm_workspace_clear(self, workspace_service.clear_plan())
-            if not clear_confirmed:
+            if not confirm_workspace_clear(self, workspace_service.clear_plan()):
                 return
+            selected_paths = replace(
+                selected_paths,
+                clear_existing_workspace=True,
+                clear_workspace_confirmed=True,
+            )
 
         self.ingestRequested.emit(selected_paths)
 

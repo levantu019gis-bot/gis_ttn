@@ -25,7 +25,7 @@ from thucthengay.export import (
     preflight_allows_auto_export,
     run_full_export,
 )
-from thucthengay.models import ExportPreflightPlan, TargetConfig
+from thucthengay.models import ExportPreflightPlan, Issue, IssueSeverity, TargetConfig
 from thucthengay.workspace import WorkspaceError, WorkspaceService
 
 
@@ -47,6 +47,7 @@ class ExportMode(QWidget):
         self._preferences_service = preferences_service
         self._workspace_service: WorkspaceService | None = None
         self._targets: list[TargetConfig] = []
+        self._template_issues: list[Issue] = []
         self._last_plan: ExportPreflightPlan | None = None
         self._export_runner = export_runner
         self._export_thread: QThread | None = None
@@ -108,18 +109,26 @@ class ExportMode(QWidget):
         workspace_service: WorkspaceService,
         *,
         targets: list[TargetConfig] | None = None,
+        template_issues: list[Issue] | None = None,
     ) -> None:
         self._workspace_service = workspace_service
         self._targets = list(targets or [])
+        self._template_issues = list(template_issues or [])
         self.status_label.setText("San sang chay preflight.")
         self.export_button.setEnabled(False)
         self._last_plan = None
 
-    def refresh_config_targets(self, targets: list[TargetConfig]) -> None:
+    def refresh_config_targets(
+        self,
+        targets: list[TargetConfig],
+        *,
+        template_issues: list[Issue] | None = None,
+    ) -> None:
         """Refresh target config after the Config tab saves and require preflight again."""
         if self._workspace_service is None:
             return
         self._targets = list(targets)
+        self._template_issues = list(template_issues or [])
         self._last_plan = None
         self.plan_model.set_rows([])
         self.export_button.setEnabled(False)
@@ -132,7 +141,11 @@ class ExportMode(QWidget):
             self.export_button.setEnabled(False)
             return
         try:
-            plan = build_export_preflight_plan(self._workspace_service, self._targets)
+            plan = build_export_preflight_plan(
+                self._workspace_service,
+                self._targets,
+                template_issues=self._template_issues,
+            )
         except WorkspaceError as error:
             self.status_label.setText(f"Khong doc duoc workspace: {error}")
             self.export_button.setEnabled(False)
@@ -180,6 +193,7 @@ class ExportMode(QWidget):
             self._workspace_service,
             list(self._targets),
             output_stem=output_stem,
+            template_issues=self._template_issues,
             runner=self._export_runner,
         )
         worker.moveToThread(thread)
@@ -203,16 +217,34 @@ class ExportMode(QWidget):
         self.export_button.setEnabled(preflight_allows_auto_export(result.preflight_plan))
         if result.ok and result.log_result is not None:
             summary = result.log_result.summary
-            self.status_label.setText(
-                "Export xong: "
-                f"{summary.slide_count} slide, {summary.txt_line_count} dong TXT. "
-                f"Log: {summary.log_path}."
-            )
+            if summary.skipped_count or summary.error_count:
+                self.status_label.setText(
+                    "Export xong mot phan: "
+                    f"{summary.slide_count} slide, {summary.txt_line_count} dong TXT, "
+                    f"bo qua {summary.skipped_count} composition. "
+                    f"{_issue_details(result.log_result.issues)} "
+                    f"Log: {summary.log_path}."
+                )
+            else:
+                self.status_label.setText(
+                    "Export xong: "
+                    f"{summary.slide_count} slide, {summary.txt_line_count} dong TXT. "
+                    f"Log: {summary.log_path}."
+                )
             self.export_button.setToolTip("Co the export lai neu workspace thay doi.")
             return
 
-        issue_count = len(result.issues)
-        self.status_label.setText(f"Export chua hoan tat: {issue_count} issue.")
+        log_path = (
+            result.log_result.summary.log_path
+            if result.log_result is not None and result.log_result.summary.log_path
+            else None
+        )
+        issues = result.log_result.issues if result.log_result is not None else result.issues
+        issue_count = len(issues)
+        log_text = f" Log: {log_path}." if log_path else ""
+        self.status_label.setText(
+            f"Export loi: {issue_count} issue. {_issue_details(issues)}{log_text}"
+        )
         self.export_button.setToolTip("Kiem tra issue trong bang Preflight roi thu lai.")
 
     def _clear_export_worker(self) -> None:
@@ -253,3 +285,38 @@ class ExportMode(QWidget):
         layout.addWidget(QLabel(title))
         layout.addWidget(content, 1)
         return frame
+
+
+def _issue_details(issues: list[Issue], *, limit: int = 3) -> str:
+    selected: list[Issue] = []
+    for issue in sorted(issues, key=_issue_detail_priority):
+        if issue.severity == IssueSeverity.ERROR and issue not in selected:
+            selected.append(issue)
+        if len(selected) >= limit:
+            break
+    if not selected:
+        for issue in issues:
+            if issue not in selected:
+                selected.append(issue)
+            if len(selected) >= limit:
+                break
+    if not selected:
+        return "Khong co chi tiet issue."
+    details: list[str] = []
+    for issue in selected:
+        subject = issue.composition_id or issue.target_id or issue.scope.value
+        text = f"{subject}: Nguyen nhan: {issue.message}"
+        if issue.remediation:
+            text = f"{text} Cach xu ly: {issue.remediation}"
+        details.append(text)
+    remaining = len(issues) - len(selected)
+    suffix = f" (+{remaining} issue khac)" if remaining > 0 else ""
+    return "Chi tiet loi: " + " | ".join(details) + suffix
+
+
+def _issue_detail_priority(issue: Issue) -> tuple[int, str]:
+    if issue.scope.value == "render" and issue.issue_id != "export.final_render_missing":
+        return (0, issue.issue_id)
+    if issue.issue_id not in {"export.final_render_missing", "export.output_row_missing"}:
+        return (1, issue.issue_id)
+    return (2, issue.issue_id)

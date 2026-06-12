@@ -5,6 +5,10 @@ from __future__ import annotations
 from collections import defaultdict
 from collections.abc import Iterable
 from datetime import date
+from pathlib import Path
+
+from pptx import Presentation
+from pydantic import ValidationError
 
 from thucthengay.export.final_render import final_render_currentness_issue
 from thucthengay.export.txt_values import resolve_txt_line, time_label
@@ -49,6 +53,7 @@ def build_export_preflight_plan(
         context_issues.extend(validate_export_preflight(contexts, template_issues).issues)
     else:
         context_issues.extend(template_issues)
+    context_issues.extend(_pptx_template_dimension_issues(included, target_map))
 
     row_issue_map: dict[str, list[Issue]] = defaultdict(list)
     target_issue_map: dict[str, list[Issue]] = defaultdict(list)
@@ -178,6 +183,76 @@ def _target_export_issues(
             remediation="Bo sung `export.placeholders` voi `kind: map_image` va element_id dung.",
         )
     ]
+
+
+def _pptx_template_dimension_issues(
+    compositions: list[Composition],
+    target_map: dict[str, TargetConfig],
+) -> list[Issue]:
+    target_ids = _included_target_ids(compositions)
+    templates: dict[str, TemplateMetadata] = {}
+    for target_id in target_ids:
+        target = target_map.get(target_id)
+        if target is None:
+            continue
+        try:
+            templates[target_id] = TemplateMetadata.model_validate(
+                target.metadata["template_metadata"]
+            )
+        except (KeyError, ValidationError):
+            continue
+    if len({template.template_pptx for template in templates.values()}) <= 1:
+        return []
+
+    dimensions: dict[str, tuple[int, int]] = {}
+    paths: dict[str, str] = {}
+    for target_id, template in templates.items():
+        paths[target_id] = template.template_pptx
+        if not Path(template.template_pptx).is_file():
+            continue
+        try:
+            presentation = Presentation(template.template_pptx)
+        except Exception:  # noqa: BLE001
+            continue
+        dimensions[target_id] = (int(presentation.slide_width), int(presentation.slide_height))
+
+    if len(dimensions) <= 1:
+        return []
+
+    issues: list[Issue] = []
+    base_target_id = next(iter(dimensions))
+    base_dimension = dimensions[base_target_id]
+    for target_id, dimension in dimensions.items():
+        if target_id == base_target_id or dimension == base_dimension:
+            continue
+        issues.append(
+            Issue(
+                issue_id="export.pptx_template_slide_size_mismatch",
+                severity=IssueSeverity.ERROR,
+                scope=IssueScope.TEMPLATE,
+                target_id=target_id,
+                message=(
+                    "PPTX template cua cac target include khac kich thuoc slide: "
+                    f"`{base_target_id}` {base_dimension[0]}x{base_dimension[1]} EMU, "
+                    f"`{target_id}` {dimension[0]}x{dimension[1]} EMU."
+                ),
+                remediation=(
+                    "Dung cac PPTX template co cung slide size/aspect cho mot lan export tong hop, "
+                    "hoac tach thanh cac lan export rieng. "
+                    f"Template tham chieu: {paths.get(base_target_id, '')}; "
+                    f"template lech: {paths.get(target_id, '')}."
+                ),
+            )
+        )
+    return issues
+
+
+def _included_target_ids(compositions: list[Composition]) -> list[str]:
+    target_ids: list[str] = []
+    for composition in compositions:
+        if composition.target_id not in target_ids:
+            target_ids.append(composition.target_id)
+    return target_ids
 
 
 def _txt_template_issues(

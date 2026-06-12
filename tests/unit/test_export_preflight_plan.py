@@ -4,6 +4,9 @@ from datetime import date, time
 from pathlib import Path
 
 import numpy as np
+from pptx import Presentation
+from pptx.enum.shapes import MSO_SHAPE
+from pptx.util import Inches
 
 from thucthengay.export import build_export_preflight_plan, ensure_final_renders_for_export
 from thucthengay.models import (
@@ -195,3 +198,49 @@ def test_export_preflight_plan_surfaces_template_and_txt_issues(tmp_path: Path) 
         issue.issue_id for issue in plan.rows[0].issues
     }
     assert plan.summary.warning_count == 1
+
+
+def test_export_preflight_blocks_mixed_template_slide_sizes(tmp_path: Path) -> None:
+    alpha_template = tmp_path / "templates" / "alpha.pptx"
+    beta_template = tmp_path / "templates" / "beta.pptx"
+    _write_pptx_template(alpha_template, width=10, height=5.625)
+    _write_pptx_template(beta_template, width=11, height=6.5)
+    alpha = target_config("alpha")
+    beta = target_config("beta")
+    _set_template_path(alpha, alpha_template)
+    _set_template_path(beta, beta_template)
+    service = prepare_workspace(
+        tmp_path,
+        composition("alpha__20260525", "alpha", review_order=1),
+        composition(
+            "beta__20260525",
+            "beta",
+            review_order=2,
+            final_render_path="renders/final/beta.png",
+        ),
+    )
+    ensure_final_renders_for_export(service, [alpha, beta], render=success_render)
+
+    plan = build_export_preflight_plan(service, [alpha, beta])
+
+    assert "export.pptx_template_slide_size_mismatch" in issue_ids(plan)
+    assert plan.summary.state.value == "blocked"
+    assert plan.summary.error_count == 1
+    beta_row = next(row for row in plan.rows if row.target_id == "beta")
+    assert beta_row.blocking is True
+    assert beta_row.template_status == "ERROR"
+
+
+def _write_pptx_template(path: Path, *, width: float, height: float) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    presentation = Presentation()
+    presentation.slide_width = Inches(width)
+    presentation.slide_height = Inches(height)
+    slide = presentation.slides.add_slide(presentation.slide_layouts[6])
+    slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, Inches(0.5), Inches(0.75), Inches(4), Inches(3))
+    presentation.save(path)
+
+
+def _set_template_path(target: TargetConfig, template_path: Path) -> None:
+    target.export.template_pptx_file = str(template_path)
+    target.metadata["template_metadata"]["template_pptx"] = str(template_path)

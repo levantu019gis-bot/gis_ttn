@@ -738,6 +738,39 @@ def test_gis_canvas_states_fixed_frame_and_stale_render_guard() -> None:
     assert "raster" in canvas.state_text()
 
 
+def test_gis_canvas_pan_uses_template_map_frame_size_for_ground_distance() -> None:
+    qapp()
+    small_frame_canvas = GisCanvasWidget()
+    small_frame_canvas.resize(800, 450)
+    small_frame_canvas.set_map_frame_size(320, 180)
+    small_frame_canvas.set_composition(
+        composition(
+            "alpha__20260525",
+            "alpha",
+            date(2026, 5, 25),
+            needs_revalidation=False,
+        )
+    )
+    small_frame_canvas.pan_by_pixels(80, 0, emit=False)
+
+    large_frame_canvas = GisCanvasWidget()
+    large_frame_canvas.resize(800, 450)
+    large_frame_canvas.set_map_frame_size(640, 360)
+    large_frame_canvas.set_composition(
+        composition(
+            "alpha__20260525",
+            "alpha",
+            date(2026, 5, 25),
+            needs_revalidation=False,
+        )
+    )
+    large_frame_canvas.pan_by_pixels(80, 0, emit=False)
+
+    small_delta = abs(small_frame_canvas.center[0] - 106.7)
+    large_delta = abs(large_frame_canvas.center[0] - 106.7)
+    assert large_delta > small_delta * 1.9
+
+
 def test_gis_canvas_exports_current_displayed_image(tmp_path: Path) -> None:
     qapp()
     canvas = GisCanvasWidget()

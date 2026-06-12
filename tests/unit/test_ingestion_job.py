@@ -326,6 +326,7 @@ def test_ingestion_job_passes_enabled_historical_loading_plan_before_cache(
     assert plan.target_ids == ("target_001",)
     assert plan.image_selection.mode == "latest_images"
     assert plan.image_selection.limit_per_target == 2
+    assert plan.current_session_latest_capture_date == date(2026, 5, 25)
     event_stages = [event.stage for event in events]
     assert event_stages.index("history") < event_stages.index("cache")
     assert "Tải ảnh lịch sử" in events[event_stages.index("history")].message

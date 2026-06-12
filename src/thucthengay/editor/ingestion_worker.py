@@ -39,6 +39,8 @@ class IngestionWorker(QObject):
         control: JobControl,
         historical_loading_enabled: bool,
         historical_image_selection: HistoricalImageSelectionConfig | None = None,
+        clear_existing: bool = False,
+        clear_confirmed: bool = False,
         parent: QObject | None = None,
     ) -> None:
         super().__init__(parent)
@@ -49,6 +51,8 @@ class IngestionWorker(QObject):
         self.control = control
         self.historical_loading_enabled = historical_loading_enabled
         self.historical_image_selection = historical_image_selection
+        self.clear_existing = clear_existing
+        self.clear_confirmed = clear_confirmed
 
     @Slot()
     def run(self) -> None:
@@ -68,6 +72,8 @@ class IngestionWorker(QObject):
                 workspace_service=self.workspace_service,
                 control=self.control,
                 publish=self.progress.emit,
+                clear_existing=self.clear_existing,
+                clear_confirmed=self.clear_confirmed,
             )
         except Exception as error:  # pragma: no cover - defensive UI boundary
             issue = Issue(

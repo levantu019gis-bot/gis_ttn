@@ -383,20 +383,26 @@ def _query_historical_records(
     target_id: str,
 ) -> list[HistoricalImageRecord]:
     selection = plan.image_selection
+    capture_date_cap = plan.current_session_latest_capture_date
     if selection.mode == HistoricalSelectionMode.LATEST_DATE:
-        return _query_latest_date_records(connection, target_id)
+        return _query_latest_date_records(
+            connection,
+            target_id,
+            capture_date_cap=capture_date_cap,
+        )
     if selection.mode == HistoricalSelectionMode.LATEST_IMAGES:
         return _query_latest_image_records(
             connection,
             target_id,
             limit=selection.limit_per_target or 0,
+            capture_date_cap=capture_date_cap,
         )
     if selection.mode == HistoricalSelectionMode.DATE_RANGE:
         return _query_date_range_records(
             connection,
             target_id,
             start_date=selection.start_date,
-            end_date=selection.end_date,
+            end_date=_cap_end_date(selection.end_date, capture_date_cap),
         )
     if selection.mode == HistoricalSelectionMode.LOOKBACK_DAYS:
         return _query_lookback_records(connection, plan, target_id)
@@ -406,17 +412,21 @@ def _query_historical_records(
 def _query_latest_date_records(
     connection: sqlite3.Connection,
     target_id: str,
+    *,
+    capture_date_cap: date | None,
 ) -> list[HistoricalImageRecord]:
+    cap_condition = _capture_date_cap_condition(capture_date_cap)
     latest_date_row = connection.execute(
-        """
+        f"""
         SELECT MAX(image_asset.capture_date)
         FROM target_history
         JOIN target_image_history USING (target_history_id)
         JOIN image_asset USING (image_asset_id)
         WHERE target_history.target_id = ?
           AND image_asset.capture_date IS NOT NULL
+          {cap_condition.sql}
         """,
-        (target_id,),
+        (target_id, *cap_condition.parameters),
     ).fetchone()
     latest_date = latest_date_row[0] if latest_date_row else None
     if latest_date is None:
@@ -434,12 +444,15 @@ def _query_latest_image_records(
     target_id: str,
     *,
     limit: int,
+    capture_date_cap: date | None,
 ) -> list[HistoricalImageRecord]:
     if limit <= 0:
         return []
+    cap_condition = _capture_date_cap_condition(capture_date_cap)
     rows = connection.execute(
-        f"{_HISTORICAL_RECORDS_SELECT} {_HISTORICAL_RECORDS_ORDER} LIMIT ?",
-        (target_id, limit),
+        f"{_HISTORICAL_RECORDS_SELECT} {cap_condition.sql} "
+        f"{_HISTORICAL_RECORDS_ORDER} LIMIT ?",
+        (target_id, *cap_condition.parameters, limit),
     ).fetchall()
     return _records_from_rows(rows)
 
@@ -452,6 +465,8 @@ def _query_date_range_records(
     end_date: date | None,
 ) -> list[HistoricalImageRecord]:
     if start_date is None or end_date is None:
+        return []
+    if start_date > end_date:
         return []
     rows = connection.execute(
         f"{_HISTORICAL_RECORDS_SELECT} "
@@ -474,6 +489,7 @@ def _query_lookback_records(
         end_date = date.today()
     else:
         end_date = plan.current_session_latest_capture_date
+    end_date = _cap_end_date(end_date, plan.current_session_latest_capture_date)
     if end_date is None:
         return []
     start_date = end_date - timedelta(days=selection.lookback_days - 1)
@@ -483,6 +499,29 @@ def _query_lookback_records(
         start_date=start_date,
         end_date=end_date,
     )
+
+
+@dataclass(frozen=True)
+class _SqlCondition:
+    sql: str
+    parameters: tuple[str, ...] = ()
+
+
+def _capture_date_cap_condition(capture_date_cap: date | None) -> _SqlCondition:
+    if capture_date_cap is None:
+        return _SqlCondition(sql="")
+    return _SqlCondition(
+        sql="AND image_asset.capture_date <= ?",
+        parameters=(capture_date_cap.isoformat(),),
+    )
+
+
+def _cap_end_date(end_date: date | None, capture_date_cap: date | None) -> date | None:
+    if end_date is None:
+        return capture_date_cap
+    if capture_date_cap is None:
+        return end_date
+    return min(end_date, capture_date_cap)
 
 
 _HISTORICAL_RECORDS_SELECT = """

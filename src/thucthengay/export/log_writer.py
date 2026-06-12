@@ -49,6 +49,7 @@ def write_export_summary_and_trace_log(
             path_result,
         ],
         )
+        summary = summary.model_copy(update={"state": ExportCompletionState.FAILURE})
         return ExportLogWriteResult(ok=False, summary=summary, issues=[path_result])
 
     entries, trace_issues = _trace_entries(preflight_plan, pptx_result, txt_result)
@@ -180,13 +181,14 @@ def _summary(
     warning_count = sum(1 for issue in issues if issue.severity == IssueSeverity.WARNING)
     error_count = sum(1 for issue in issues if issue.severity == IssueSeverity.ERROR)
     skipped_count = sum(1 for entry in entries if entry.status != ExportTraceStatus.EXPORTED)
+    trace_error_count = sum(1 for entry in entries if entry.status == ExportTraceStatus.FAILED)
     target_ids = {row.target_id for row in preflight_plan.rows}
     target_ids.update(row.target_id for row in pptx_result.exported)
     target_ids.update(row.target_id for row in txt_result.exported)
     state = ExportCompletionState.SUCCESS
-    if error_count or not pptx_result.ok or not txt_result.ok:
+    if trace_error_count or not pptx_result.ok or not txt_result.ok:
         state = ExportCompletionState.FAILURE
-    elif warning_count or skipped_count:
+    elif warning_count or error_count or skipped_count:
         state = ExportCompletionState.SUCCESS_WITH_WARNINGS
     return ExportCompletionSummary(
         state=state,

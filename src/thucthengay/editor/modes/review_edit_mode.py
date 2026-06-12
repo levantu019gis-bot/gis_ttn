@@ -1411,9 +1411,9 @@ class ReviewEditMode(QWidget):
         self.layer_warning_label.setVisible(self.layer_model.has_no_visible_layers())
         self._update_metadata_edit_button()
         target_preview_needs_render = self.target_preview.set_composition(composition)
-        frame_aspect = self._frame_aspect_for_composition(composition)
-        if frame_aspect is not None:
-            self.gis_canvas.set_frame_aspect(frame_aspect)
+        map_frame_size = self._map_frame_size_for_composition(composition)
+        if map_frame_size is not None:
+            self.gis_canvas.set_map_frame_size(*map_frame_size)
         self.gis_canvas.set_composition(composition)
         self._load_temporal_compare_controls(composition)
         self._load_grid_controls(composition)
@@ -1428,22 +1428,25 @@ class ReviewEditMode(QWidget):
         if not composition.needs_revalidation:
             self._request_canvas_render(composition)
 
-    def _frame_aspect_for_composition(self, composition: Composition) -> float | None:
+    def _map_frame_size_for_composition(
+        self,
+        composition: Composition,
+    ) -> tuple[float, float] | None:
         for target in self._targets or []:
             if target.id != composition.target_id:
                 continue
-            explicit_aspect = target.metadata.get("map_frame_aspect")
-            if _is_positive_number(explicit_aspect):
-                return float(explicit_aspect)
             template_metadata = target.metadata.get("template_metadata")
             if isinstance(template_metadata, dict):
-                aspect = _map_frame_aspect(template_metadata.get("map_frame"))
-                if aspect is not None:
-                    return aspect
+                size = _map_frame_size(template_metadata.get("map_frame"))
+                if size is not None:
+                    return size
             map_frame = target.metadata.get("map_frame")
-            aspect = _map_frame_aspect(map_frame)
-            if aspect is not None:
-                return aspect
+            size = _map_frame_size(map_frame)
+            if size is not None:
+                return size
+            explicit_aspect = target.metadata.get("map_frame_aspect")
+            if _is_positive_number(explicit_aspect):
+                return float(explicit_aspect), 1.0
         return None
 
     def _load_temporal_compare_controls(self, composition: Composition) -> None:
@@ -1626,13 +1629,13 @@ def _is_positive_number(value: object) -> bool:
     return isinstance(value, (int, float)) and not isinstance(value, bool) and value > 0
 
 
-def _map_frame_aspect(map_frame: object) -> float | None:
+def _map_frame_size(map_frame: object) -> tuple[float, float] | None:
     if not isinstance(map_frame, dict):
         return None
     width = map_frame.get("width")
     height = map_frame.get("height")
     if _is_positive_number(width) and _is_positive_number(height):
-        return float(width) / float(height)
+        return float(width), float(height)
     return None
 
 

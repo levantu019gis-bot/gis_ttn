@@ -12,6 +12,7 @@ from PySide6.QtCore import QPoint, QPointF, QRectF, Qt, Signal
 from PySide6.QtGui import QColor, QImage, QPainter, QPen, QPixmap
 from PySide6.QtWidgets import QGraphicsScene, QGraphicsView
 
+from thucthengay.gis import pan_center_by_viewport_pixels
 from thucthengay.models import Composition, ImageLayer
 
 
@@ -45,6 +46,8 @@ class GisCanvasWidget(QGraphicsView):
     EXPORT_JPEG_QUALITY = 90
     DISPLAY_IMAGE_MAX_WIDTH = 960
     MAP_FRAME_FILL_RATIO = 0.90
+    DEFAULT_MAP_FRAME_WIDTH_POINTS = 640.0
+    DEFAULT_MAP_FRAME_HEIGHT_POINTS = 360.0
     MIN_SCALE = 1000
     MAX_SCALE = 20_000_000
 
@@ -65,6 +68,8 @@ class GisCanvasWidget(QGraphicsView):
         self._scale = 50_000
         self._visible_layers: list[ImageLayer] = []
         self._frame_aspect = self.DEFAULT_FRAME_ASPECT
+        self._map_frame_width_points = self.DEFAULT_MAP_FRAME_WIDTH_POINTS
+        self._map_frame_height_points = self.DEFAULT_MAP_FRAME_HEIGHT_POINTS
         self._state = GisCanvasState.EMPTY
         self._state_message = "Chưa chọn composition."
         self._generation = 0
@@ -138,6 +143,17 @@ class GisCanvasWidget(QGraphicsView):
         if not isfinite(aspect) or aspect <= 0:
             return
         self._frame_aspect = aspect
+        self._redraw()
+
+    def set_map_frame_size(self, width_points: float, height_points: float) -> None:
+        """Set the PPT map-frame size used to convert drag pixels into ground distance."""
+        if not isfinite(width_points) or not isfinite(height_points):
+            return
+        if width_points <= 0 or height_points <= 0:
+            return
+        self._map_frame_width_points = float(width_points)
+        self._map_frame_height_points = float(height_points)
+        self._frame_aspect = self._map_frame_width_points / self._map_frame_height_points
         self._redraw()
 
     def set_composition(self, composition: Composition | None) -> None:
@@ -222,12 +238,17 @@ class GisCanvasWidget(QGraphicsView):
         if self._composition_id is None:
             return
         frame = self._frame_rect()
-        lon_span = min(360.0, max(0.0001, self._scale / 1_000_000))
-        lat_span = min(180.0, lon_span / self._frame_aspect)
-        lon_per_pixel = lon_span / max(frame.width(), 1.0)
-        lat_per_pixel = lat_span / max(frame.height(), 1.0)
-        lon = _clamp(self._center[0] - dx * lon_per_pixel, -180.0, 180.0)
-        lat = _clamp(self._center[1] + dy * lat_per_pixel, -90.0, 90.0)
+        lon, lat = pan_center_by_viewport_pixels(
+            center_lon=self._center[0],
+            center_lat=self._center[1],
+            scale_denom=self._scale,
+            map_frame_width_points=self._map_frame_width_points,
+            map_frame_height_points=self._map_frame_height_points,
+            viewport_width_px=max(frame.width(), 1.0),
+            viewport_height_px=max(frame.height(), 1.0),
+            dx_px=dx,
+            dy_px=dy,
+        )
         self._center = [round(lon, 8), round(lat, 8)]
         self._mark_interaction_stale()
         if emit:

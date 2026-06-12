@@ -331,6 +331,76 @@ def test_load_historical_images_selection_modes_filter_per_target(
     assert [record.source_path.name for record in lookback.records] == ["jun-05.tif"]
 
 
+def test_load_historical_images_caps_latest_selection_to_current_session_date(
+    tmp_path: Path,
+) -> None:
+    service = HistoryService(tmp_path / "registry.sqlite")
+    service.initialize()
+    _record_history_image(service, "jun-09.tif", date(2026, 6, 9), time(7, 0))
+    _record_history_image(service, "jun-10-a.tif", date(2026, 6, 10), time(8, 0))
+    _record_history_image(service, "jun-10-b.tif", date(2026, 6, 10), time(9, 0))
+    _record_history_image(service, "jun-11.tif", date(2026, 6, 11), time(10, 0))
+
+    latest_images = service.load_historical_images(
+        HistoricalLoadingPlan(
+            enabled=True,
+            database_path=tmp_path / "registry.sqlite",
+            target_ids=("alpha",),
+            image_selection=HistoricalImageSelectionConfig(
+                mode="latest_images",
+                limit_per_target=2,
+            ),
+            current_session_latest_capture_date=date(2026, 6, 10),
+        )
+    )
+    latest_date = service.load_historical_images(
+        HistoricalLoadingPlan(
+            enabled=True,
+            database_path=tmp_path / "registry.sqlite",
+            target_ids=("alpha",),
+            image_selection=HistoricalImageSelectionConfig(mode="latest_date"),
+            current_session_latest_capture_date=date(2026, 6, 10),
+        )
+    )
+
+    assert [record.source_path.name for record in latest_images.records] == [
+        "jun-10-b.tif",
+        "jun-10-a.tif",
+    ]
+    assert [record.source_path.name for record in latest_date.records] == [
+        "jun-10-b.tif",
+        "jun-10-a.tif",
+    ]
+
+
+def test_load_historical_images_caps_date_windows_to_current_session_date(
+    tmp_path: Path,
+) -> None:
+    service = HistoryService(tmp_path / "registry.sqlite")
+    service.initialize()
+    _record_history_image(service, "jun-05.tif", date(2026, 6, 5), time(7, 0))
+    _record_history_image(service, "jun-10.tif", date(2026, 6, 10), time(8, 0))
+    _record_history_image(service, "jun-11.tif", date(2026, 6, 11), time(9, 0))
+
+    date_range = service.load_historical_images(
+        HistoricalLoadingPlan(
+            enabled=True,
+            database_path=tmp_path / "registry.sqlite",
+            target_ids=("alpha",),
+            image_selection=HistoricalImageSelectionConfig(
+                mode="date_range",
+                start_date=date(2026, 6, 1),
+                end_date=date(2026, 6, 30),
+            ),
+            current_session_latest_capture_date=date(2026, 6, 10),
+        )
+    )
+    assert [record.source_path.name for record in date_range.records] == [
+        "jun-10.tif",
+        "jun-05.tif",
+    ]
+
+
 def test_load_historical_images_warns_and_skips_missing_paths(
     tmp_path: Path,
 ) -> None:

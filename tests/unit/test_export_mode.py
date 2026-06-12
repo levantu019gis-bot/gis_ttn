@@ -20,13 +20,22 @@ from thucthengay.editor.app_shell import AppShell
 from thucthengay.editor.models.export_plan_model import ExportPlanRole
 from thucthengay.editor.modes.export_mode import ExportMode
 from thucthengay.editor.preferences import PreferencesService
-from thucthengay.export import ensure_final_renders_for_export, run_full_export
+from thucthengay.export import FullExportResult, ensure_final_renders_for_export, run_full_export
 from thucthengay.models import (
     Composition,
     CompositionArtifacts,
+    ExportCompletionState,
+    ExportCompletionSummary,
+    ExportFinalRenderResult,
+    ExportLogWriteResult,
+    ExportPptxResult,
+    ExportTxtResult,
     GridConfig,
     GridInterval,
     ImageLayer,
+    Issue,
+    IssueScope,
+    IssueSeverity,
     MapFrame,
     MetadataStatus,
     PlaceholderType,
@@ -147,6 +156,31 @@ def test_export_mode_runs_preflight_and_enables_export_when_ready(tmp_path: Path
     assert mode.plan_model.index(0, 4).data(Qt.ItemDataRole.DisplayRole) == "0 issues"
 
 
+def test_export_mode_preflight_includes_template_issues_from_config(tmp_path: Path) -> None:
+    qapp()
+    mode = ExportMode()
+    service = workspace(tmp_path, final_render_path=None)
+    target = target_config()
+    ensure_final_renders_for_export(service, [target], render=success_render)
+    warning = Issue(
+        issue_id="target.template_compatibility_unknown",
+        severity=IssueSeverity.WARNING,
+        scope=IssueScope.TEMPLATE,
+        message="Nhieu PPTX template co base/theme/master khac nhau.",
+        remediation="Kiem tra base/theme/master truoc khi export.",
+    )
+    mode.load_workspace(service, targets=[target], template_issues=[warning])
+
+    mode.preflight_button.click()
+
+    assert mode.summary.state_label.text() == "Preflight: warning"
+    assert mode.export_button.isEnabled() is True
+    assert mode.plan_model.index(0, 4).data(Qt.ItemDataRole.DisplayRole) == "1 issue"
+    assert "target.template_compatibility_unknown" in {
+        issue.issue_id for issue in mode._last_plan.issues
+    }
+
+
 def test_export_mode_blocks_export_and_exposes_jump_signal(tmp_path: Path) -> None:
     qapp()
     mode = ExportMode(
@@ -198,6 +232,60 @@ def test_export_mode_runs_full_export_pipeline(tmp_path: Path) -> None:
     assert (service.paths.exports / "report.pptx").is_file()
     assert (service.paths.exports / "report.txt").read_text("utf-8").strip() == "1|alpha|08:30:00"
     assert (service.paths.exports / "report.export-log.json").is_file()
+
+
+def test_export_mode_shows_export_error_details(tmp_path: Path) -> None:
+    app = qapp()
+    service = workspace(tmp_path, final_render_path=None)
+    target = target_config()
+    issue = Issue(
+        issue_id="render.raster.no_overlap",
+        severity=IssueSeverity.ERROR,
+        scope=IssueScope.RENDER,
+        target_id="alpha",
+        composition_id="alpha__20260525",
+        message="Khong co layer visible nao phu vung ban do can render.",
+        remediation="Kiem tra lai tam ban do, scale hoac du lieu raster.",
+    )
+
+    def failed_runner(workspace_service, targets, **kwargs):  # noqa: ANN001
+        del workspace_service, targets, kwargs
+        return FullExportResult(
+            initial_preflight_plan=mode._last_plan,
+            final_render_result=ExportFinalRenderResult(issues=[issue]),
+            preflight_plan=mode._last_plan.model_copy(
+                update={
+                    "rows": [
+                        mode._last_plan.rows[0].model_copy(update={"issues": [issue]})
+                    ],
+                    "issues": [issue],
+                }
+            ),
+            pptx_result=ExportPptxResult(),
+            txt_result=ExportTxtResult(),
+            log_result=ExportLogWriteResult(
+                ok=False,
+                summary=ExportCompletionSummary(
+                    state=ExportCompletionState.FAILURE,
+                    error_count=1,
+                    log_path="exports/report.export-log.json",
+                ),
+                issues=[issue],
+            ),
+        )
+
+    mode = ExportMode(export_runner=failed_runner)
+    mode.load_workspace(service, targets=[target])
+    mode.preflight_button.click()
+    mode.export_button.click()
+    _wait_until(
+        app,
+        lambda: "Export loi" in mode.status_label.text() and mode._export_thread is None,
+    )
+
+    assert "Nguyen nhan" in mode.status_label.text()
+    assert "Cach xu ly" in mode.status_label.text()
+    assert "Khong co layer visible" in mode.status_label.text()
 
 
 def test_export_mode_uses_persisted_output_stem(tmp_path: Path) -> None:

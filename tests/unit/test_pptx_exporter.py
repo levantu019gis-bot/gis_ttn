@@ -29,7 +29,12 @@ from thucthengay.render import RasterRenderResult, RenderSpec
 from thucthengay.workspace import WorkspaceService
 
 
-def _write_template(path: Path, *, title: str = "Template") -> tuple[int, int]:
+def _write_template(
+    path: Path,
+    *,
+    title: str = "Template",
+    static_marker: str | None = None,
+) -> tuple[int, int]:
     path.parent.mkdir(parents=True, exist_ok=True)
     logo_path = path.with_suffix(".logo.png")
     Image.new("RGB", (16, 16), (200, 40, 40)).save(logo_path)
@@ -55,6 +60,14 @@ def _write_template(path: Path, *, title: str = "Template") -> tuple[int, int]:
     text_run.font.bold = True
     text_run.font.size = Pt(24)
     text_run.font.color.rgb = RGBColor(20, 90, 160)
+    if static_marker is not None:
+        marker_shape = slide.shapes.add_textbox(
+            Inches(5),
+            Inches(1.5),
+            Inches(4),
+            Inches(0.5),
+        )
+        marker_shape.text = static_marker
     slide.shapes.add_picture(str(logo_path), Inches(9), Inches(0.25), width=Inches(0.4))
     presentation.save(path)
     return int(map_shape.shape_id), int(text_shape.shape_id)
@@ -371,6 +384,51 @@ def test_export_combined_pptx_orders_slides_by_review_order(tmp_path: Path) -> N
         "alpha__20260526",
     ]
     assert [row.slide_number for row in result.exported] == [1, 2]
+
+
+def test_export_combined_pptx_uses_each_targets_template_when_slide_size_matches(
+    tmp_path: Path,
+) -> None:
+    alpha_map_id, alpha_text_id = _write_template(
+        tmp_path / "templates" / "alpha.pptx",
+        static_marker="ALPHA STATIC",
+    )
+    beta_map_id, beta_text_id = _write_template(
+        tmp_path / "templates" / "beta.pptx",
+        static_marker="BETA STATIC",
+    )
+    alpha = _target(
+        tmp_path / "templates" / "alpha.pptx",
+        alpha_map_id,
+        alpha_text_id,
+        target_id="alpha",
+    )
+    beta = _target(
+        tmp_path / "templates" / "beta.pptx",
+        beta_map_id,
+        beta_text_id,
+        target_id="beta",
+    )
+    service = _workspace(
+        tmp_path,
+        _composition("alpha__20260525", target_id="alpha", review_order=1),
+        _composition("beta__20260525", target_id="beta", review_order=2),
+    )
+    ensure_final_renders_for_export(service, [alpha, beta], render=_success_render)
+    output_path = service.paths.exports / "mixed-compatible.pptx"
+
+    result = export_combined_pptx(service, [alpha, beta], output_path=output_path)
+
+    assert result.ok is True
+    assert [row.target_id for row in result.exported] == ["alpha", "beta"]
+    presentation = Presentation(str(output_path))
+    assert len(presentation.slides) == 2
+    slide_texts = [
+        "\n".join(shape.text for shape in slide.shapes if hasattr(shape, "text"))
+        for slide in presentation.slides
+    ]
+    assert "ALPHA STATIC" in slide_texts[0]
+    assert "BETA STATIC" in slide_texts[1]
 
 
 def test_export_combined_pptx_blocks_unresolved_required_text_placeholder(

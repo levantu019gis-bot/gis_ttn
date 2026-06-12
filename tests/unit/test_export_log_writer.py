@@ -76,6 +76,18 @@ def _warning(composition_id: str) -> Issue:
     )
 
 
+def _error(composition_id: str) -> Issue:
+    return Issue(
+        issue_id="render.raster.no_overlap",
+        severity=IssueSeverity.ERROR,
+        scope=IssueScope.RENDER,
+        target_id="alpha",
+        composition_id=composition_id,
+        message="Khong co layer visible nao phu vung ban do can render.",
+        remediation="Kiem tra lai tam ban do, scale hoac du lieu raster.",
+    )
+
+
 def _pptx_result(*composition_ids: str) -> ExportPptxResult:
     exported = [
         ExportedComposition(
@@ -181,6 +193,33 @@ def test_write_export_summary_and_trace_log_marks_missing_output_row_failed(
     assert failed.composition_id == "alpha__20260526"
     assert failed.status == "failed"
     assert "PPTX/TXT" in (failed.skipped_reason or "")
+
+
+def test_write_export_summary_and_trace_log_skips_blocked_rows_without_cascade(
+    tmp_path: Path,
+) -> None:
+    service = _workspace(tmp_path)
+    skipped_issue = _error("alpha__20260526")
+
+    result = write_export_summary_and_trace_log(
+        service,
+        preflight_plan=_plan(
+            _row("alpha__20260525"),
+            _row("alpha__20260526", slide_number=2, issues=[skipped_issue]),
+            issues=[skipped_issue],
+        ),
+        pptx_result=_pptx_result("alpha__20260525"),
+        txt_result=_txt_result("alpha__20260525"),
+        output_path=service.paths.exports / "partial.export-log.json",
+    )
+
+    assert result.ok is True
+    assert result.summary.state == ExportCompletionState.SUCCESS_WITH_WARNINGS
+    assert result.summary.skipped_count == 1
+    assert result.summary.error_count == 1
+    assert result.log.entries[1].status == "skipped"
+    assert "Khong co layer visible" in (result.log.entries[1].skipped_reason or "")
+    assert "export.output_row_missing" not in {issue.issue_id for issue in result.log.issues}
 
 
 def test_write_export_summary_and_trace_log_rejects_out_of_workspace_path(

@@ -299,6 +299,46 @@ def test_setup_mode_requires_confirmation_before_ingest_with_existing_workspace_
     assert emitted == []
 
 
+def test_setup_mode_emits_clear_flags_after_workspace_clear_confirmation(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    qapp()
+    config_file = tmp_path / "project.json"
+    config_file.write_text("{}", encoding="utf-8")
+    imagery_folder = tmp_path / "imagery"
+    imagery_folder.mkdir()
+    workspace_folder = tmp_path / "workspace"
+    (workspace_folder / "cache").mkdir(parents=True)
+    (workspace_folder / "cache" / "old.tif").write_text("old", encoding="utf-8")
+
+    confirmed_plans = []
+
+    def confirm_clear(_parent, plan):
+        confirmed_plans.append(plan)
+        return True
+
+    monkeypatch.setattr(
+        "thucthengay.editor.modes.setup_mode.confirm_workspace_clear",
+        confirm_clear,
+    )
+
+    setup = SetupMode()
+    emitted = []
+    setup.ingestRequested.connect(emitted.append)
+    setup.config_row.set_path(config_file)
+    setup.imagery_row.set_path(imagery_folder)
+    setup.workspace_row.set_path(workspace_folder)
+
+    setup.ingest_button.click()
+
+    assert confirmed_plans
+    assert len(emitted) == 1
+    selected_paths = emitted[0]
+    assert selected_paths.clear_existing_workspace is True
+    assert selected_paths.clear_workspace_confirmed is True
+
+
 def test_setup_mode_shows_live_ingestion_progress_and_locks_action(tmp_path: Path) -> None:
     qapp()
     config_file = tmp_path / "project.json"
@@ -405,7 +445,8 @@ def test_app_shell_runs_ingestion_when_setup_requests_it(
     imagery_folder = tmp_path / "imagery"
     imagery_folder.mkdir()
     workspace_folder = tmp_path / "workspace"
-    workspace_folder.mkdir()
+    (workspace_folder / "cache").mkdir(parents=True)
+    (workspace_folder / "cache" / "old.tif").write_text("old", encoding="utf-8")
     target = TargetConfig(
         id="alpha",
         name="Alpha",
@@ -475,6 +516,16 @@ def test_app_shell_runs_ingestion_when_setup_requests_it(
         "thucthengay.editor.ingestion_worker.run_ingestion_job",
         fake_run_ingestion_job,
     )
+    confirmed_plans = []
+
+    def confirm_clear(_parent, plan):
+        confirmed_plans.append(plan)
+        return True
+
+    monkeypatch.setattr(
+        "thucthengay.editor.modes.setup_mode.confirm_workspace_clear",
+        confirm_clear,
+    )
 
     shell = AppShell(preferences_service=preferences_service(tmp_path))
     loaded_modes: list[tuple[str, WorkspaceService, list[TargetConfig] | None]] = []
@@ -510,6 +561,7 @@ def test_app_shell_runs_ingestion_when_setup_requests_it(
         time.sleep(0.01)
 
     assert calls["config_path"] == config_file.resolve()
+    assert confirmed_plans
     job_kwargs = calls["job_kwargs"]
     assert job_kwargs["config_result"] is config_result
     assert job_kwargs["config_result"].config.historical_loading.enabled is True
@@ -519,6 +571,8 @@ def test_app_shell_runs_ingestion_when_setup_requests_it(
     assert selection.end_date == date(2026, 5, 31)
     assert job_kwargs["imagery_folder"] == imagery_folder.resolve()
     assert job_kwargs["workspace_service"].paths.root == workspace_folder.resolve()
+    assert job_kwargs["clear_existing"] is True
+    assert job_kwargs["clear_confirmed"] is True
     assert callable(job_kwargs["publish"])
     assert shell.setup_mode.progress_widget.image_count_label.text() == (
         "Ảnh đã scan: 1/2 (hợp lệ: 1)"

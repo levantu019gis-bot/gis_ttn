@@ -74,8 +74,8 @@
       "name": "Đá Bắc",
       "alias": "Đá Bắc",
       "coordinate": [
-        111.59944063,
-        17.04195886
+        111.50678145,
+        17.08697955
       ],
       "scale": 36125,
       "grid": {
@@ -84,7 +84,7 @@
         }
       },
       "export": {
-        "template_pptx_file": "data/templates/target_001.template.pptx",
+        "template_pptx_file": "data/templates/target_002.template.pptx",
         "template_txt_value": "Tại đá Bắc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "placeholders": [
           {
@@ -142,15 +142,15 @@
       }
     },
     {
-      "id": "DaLon",
+      "id": "DaLoi",
       "enabled": true,
       "group": {
         "key": 1.1,
         "title": "Không người Hoàng Sa"
       },
       "sort_order": 2,
-      "name": "Đá Lớn",
-      "alias": "Đá Lớn",
+      "name": "Đá Lồi",
+      "alias": "Đá Lồi",
       "coordinate": [
         111.6783030992196,
         16.229411609731184
@@ -162,8 +162,8 @@
         }
       },
       "export": {
-        "template_pptx_file": "examples/templates/target_001.template.pptx",
-        "template_txt_value": "Tại đá Lớn (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
+        "template_pptx_file": "data/templates/target_001.template.pptx",
+        "template_txt_value": "Tại đá Lồi (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "placeholders": [
           {
             "field": "map_image",
@@ -172,7 +172,7 @@
           {
             "field": "title",
             "element_id": "66",
-            "value": "Hiện trạng đá Lớn, quần đảo Hoàng Sa ngày {capture_date}"
+            "value": "Hiện trạng đá Lồi, quần đảo Hoàng Sa ngày {capture_date}"
           },
           {
             "field": "time",
@@ -416,7 +416,7 @@
         }
       },
       "export": {
-        "template_pptx_file": "examples/templates/target_001.template.pptx",
+        "template_pptx_file": "data/templates/target_001.template.pptx",
         "template_txt_value": "Tại đá Bông Bay (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "placeholders": [
           {
@@ -492,17 +492,17 @@
       "name": "Bãi cạn Scarborough",
       "alias": "Bãi cạn Scarborough",
       "coordinate": [
-        117.76128370263064,
-        15.17478745751835
+        117.78180299,
+        15.15209015
       ],
-      "scale": 50000,
+      "scale": 54942,
       "grid": {
         "interval": {
           "minutes": 1
         }
       },
       "export": {
-        "template_pptx_file": "examples/templates/target_001.template.pptx",
+        "template_pptx_file": "data/templates/target_001.template.pptx",
         "template_txt_value": "Tại bãi cạn Scarborough (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "placeholders": [
           {
@@ -584,7 +584,7 @@
         }
       },
       "export": {
-        "template_pptx_file": "examples/templates/target_001.template.pptx",
+        "template_pptx_file": "data/templates/target_001.template.pptx",
         "template_txt_value": "Tại đá Bắc/Cụm Song Tử (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "placeholders": [
           {
@@ -662,13 +662,11 @@
       "scale": 50000,
       "grid": {
         "interval": {
-          "degrees": 0,
-          "minutes": 1,
-          "seconds": 0.0
+          "minutes": 1
         }
       },
       "export": {
-        "template_pptx_file": "examples/templates/target_001.template.pptx",
+        "template_pptx_file": "data/templates/target_001.template.pptx",
         "template_txt_value": "Tại bãi cạn Đinh Ba, Núi Cầu/Cụm Song Tử (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "placeholders": [
           {
@@ -774,7 +772,7 @@
         }
       },
       "export": {
-        "template_pptx_file": "examples/templates/target_001.template.pptx",
+        "template_pptx_file": "data/templates/target_001.template.pptx",
         "template_txt_value": "Tại đá Hoài Ân, Tri Lễ, Cái Vung, Vĩnh Hảo, Trâm Đức/Cụm Thị Tứ (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "placeholders": [
           {
@@ -854,19 +852,17 @@
       "name": ".../Cụm Loại Ta",
       "alias": ".../Cụm Loại Ta",
       "coordinate": [
-        114.56725369963456,
-        10.874664925828368
+        114.53643022,
+        10.79324504
       ],
       "scale": 50000,
       "grid": {
         "interval": {
-          "degrees": 0,
-          "minutes": 1,
-          "seconds": 0.0
+          "minutes": 1
         }
       },
       "export": {
-        "template_pptx_file": "examples/templates/target_001.template.pptx",
+        "template_pptx_file": "data/templates/target_001.template.pptx",
         "template_txt_value": "Tại đá .../Cụm Loại Ta (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "placeholders": [
           {
@@ -1004,13 +1000,11 @@
       "scale": 50000,
       "grid": {
         "interval": {
-          "degrees": 0,
-          "minutes": 1,
-          "seconds": 0.0
+          "minutes": 1
         }
       },
       "export": {
-        "template_pptx_file": "examples/templates/target_001.template.pptx",
+        "template_pptx_file": "data/templates/target_001.template.pptx",
         "template_txt_value": "Tại đá Cá Nhám/Cụm Loại Ta (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "placeholders": [
           {
@@ -1092,13 +1086,11 @@
       "scale": 50000,
       "grid": {
         "interval": {
-          "degrees": 0,
-          "minutes": 1,
-          "seconds": 0.0
+          "minutes": 1
         }
       },
       "export": {
-        "template_pptx_file": "examples/templates/target_001.template.pptx",
+        "template_pptx_file": "data/templates/target_001.template.pptx",
         "template_txt_value": "Tại đá Én Đất (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "placeholders": [
           {
@@ -1180,13 +1172,11 @@
       "scale": 50000,
       "grid": {
         "interval": {
-          "degrees": 0,
-          "minutes": 1,
-          "seconds": 0.0
+          "minutes": 1
         }
       },
       "export": {
-        "template_pptx_file": "examples/templates/target_001.template.pptx",
+        "template_pptx_file": "data/templates/target_001.template.pptx",
         "template_txt_value": "Tại đá Bàn Than (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "placeholders": [
           {
@@ -1264,7 +1254,7 @@
         }
       },
       "export": {
-        "template_pptx_file": "examples/templates/target_001.template.pptx",
+        "template_pptx_file": "data/templates/target_001.template.pptx",
         "template_txt_value": "Tại đá Lạc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "placeholders": [
           {
@@ -1346,7 +1336,7 @@
         }
       },
       "export": {
-        "template_pptx_file": "examples/templates/target_001.template.pptx",
+        "template_pptx_file": "data/templates/target_001.template.pptx",
         "template_txt_value": "Tại đá Nhỏ/Cụm Nam Yết (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "placeholders": [
           {
@@ -1424,7 +1414,7 @@
         }
       },
       "export": {
-        "template_pptx_file": "examples/templates/target_001.template.pptx",
+        "template_pptx_file": "data/templates/target_001.template.pptx",
         "template_txt_value": "Tại đá .../Cụm Sinh Tồn (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "placeholders": [
           {
@@ -1434,7 +1424,7 @@
           {
             "field": "title",
             "element_id": "66",
-            "value": "Hiện trạng đá .../Cụm Sinh Tồn, quần đảo Trường Sa ngày {capture_date}"
+            "value": "Hiện trạng một số thực thể thuộc Cụm Sinh Tồn, quần đảo Trường Sa ngày {capture_date}"
           },
           {
             "field": "time",
@@ -1554,7 +1544,7 @@
         }
       },
       "export": {
-        "template_pptx_file": "examples/templates/target_001.template.pptx",
+        "template_pptx_file": "data/templates/target_001.template.pptx",
         "template_txt_value": "Tại đá Lục Giang, Long Hải (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "placeholders": [
           {
@@ -1640,13 +1630,11 @@
       "scale": 50000,
       "grid": {
         "interval": {
-          "degrees": 0,
-          "minutes": 1,
-          "seconds": 0.0
+          "minutes": 1
         }
       },
       "export": {
-        "template_pptx_file": "examples/templates/target_001.template.pptx",
+        "template_pptx_file": "data/templates/target_001.template.pptx",
         "template_txt_value": "Tại đá .../Cụm Hải Sâm (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "placeholders": [
           {
@@ -1728,7 +1716,7 @@
         }
       },
       "export": {
-        "template_pptx_file": "examples/templates/target_001.template.pptx",
+        "template_pptx_file": "data/templates/target_001.template.pptx",
         "template_txt_value": "Tại đá Khúc Giác (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "placeholders": [
           {
@@ -1810,7 +1798,7 @@
         }
       },
       "export": {
-        "template_pptx_file": "examples/templates/target_001.template.pptx",
+        "template_pptx_file": "data/templates/target_001.template.pptx",
         "template_txt_value": "Tại đá Phật Tự (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "placeholders": [
           {
@@ -1884,7 +1872,7 @@
         }
       },
       "export": {
-        "template_pptx_file": "examples/templates/target_001.template.pptx",
+        "template_pptx_file": "data/templates/target_001.template.pptx",
         "template_txt_value": "Tại bãi Sa Bin (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "placeholders": [
           {
@@ -1978,7 +1966,7 @@
         }
       },
       "export": {
-        "template_pptx_file": "examples/templates/target_001.template.pptx",
+        "template_pptx_file": "data/templates/target_001.template.pptx",
         "template_txt_value": "Tại đá Long Điền (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "placeholders": [
           {
@@ -2046,17 +2034,17 @@
       "name": "Đá Suối Ngà",
       "alias": "Đá Suối Ngà",
       "coordinate": [
-        115.92944323265294,
-        9.333981884193607
+        115.92772154,
+        9.31398677
       ],
-      "scale": 50000,
+      "scale": 26100,
       "grid": {
         "interval": {
           "minutes": 1
         }
       },
       "export": {
-        "template_pptx_file": "examples/templates/target_001.template.pptx",
+        "template_pptx_file": "data/templates/target_001.template.pptx",
         "template_txt_value": "Tại đá Suối Ngà (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "placeholders": [
           {
@@ -2124,17 +2112,17 @@
       "name": "Đá Phú Mỹ",
       "alias": "Đá Phú Mỹ",
       "coordinate": [
-        116.45833769828992,
-        9.180551810480745
+        116.46289034,
+        9.17287741
       ],
-      "scale": 50000,
+      "scale": 16028,
       "grid": {
         "interval": {
           "minutes": 1
         }
       },
       "export": {
-        "template_pptx_file": "examples/templates/target_001.template.pptx",
+        "template_pptx_file": "data/templates/target_001.template.pptx",
         "template_txt_value": "Tại đá Phú Mỹ (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "placeholders": [
           {
@@ -2208,13 +2196,11 @@
       "scale": 50000,
       "grid": {
         "interval": {
-          "degrees": 0,
-          "minutes": 1,
-          "seconds": 0.0
+          "minutes": 1
         }
       },
       "export": {
-        "template_pptx_file": "examples/templates/target_001.template.pptx",
+        "template_pptx_file": "data/templates/target_001.template.pptx",
         "template_txt_value": "Tại đá Cái Mép (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "placeholders": [
           {
@@ -2292,7 +2278,7 @@
         }
       },
       "export": {
-        "template_pptx_file": "examples/templates/target_001.template.pptx",
+        "template_pptx_file": "data/templates/target_001.template.pptx",
         "template_txt_value": "Tại đá Đồi Mồi (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "placeholders": [
           {
@@ -2374,7 +2360,7 @@
         }
       },
       "export": {
-        "template_pptx_file": "examples/templates/target_001.template.pptx",
+        "template_pptx_file": "data/templates/target_001.template.pptx",
         "template_txt_value": "Tại đá Trăng Khuyết (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "placeholders": [
           {
@@ -2456,13 +2442,11 @@
       "scale": 50000,
       "grid": {
         "interval": {
-          "degrees": 0,
-          "minutes": 1,
-          "seconds": 0.0
+          "minutes": 1
         }
       },
       "export": {
-        "template_pptx_file": "examples/templates/target_001.template.pptx",
+        "template_pptx_file": "data/templates/target_001.template.pptx",
         "template_txt_value": "Tại đá Suối Ngọc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "placeholders": [
           {
@@ -2544,13 +2528,11 @@
       "scale": 50000,
       "grid": {
         "interval": {
-          "degrees": 0,
-          "minutes": 1,
-          "seconds": 0.0
+          "minutes": 1
         }
       },
       "export": {
-        "template_pptx_file": "examples/templates/target_001.template.pptx",
+        "template_pptx_file": "data/templates/target_001.template.pptx",
         "template_txt_value": "Tại đá .../Cụm Thám Hiểm (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "placeholders": [
           {
@@ -2630,17 +2612,17 @@
       "name": "Đá Cồn Cát Tây",
       "alias": "Đá Cồn Cát Tây",
       "coordinate": [
-        112.21212800040549,
-        16.978114995022064
+        112.21193826,
+        16.97339159
       ],
-      "scale": 50000,
+      "scale": 5138,
       "grid": {
         "interval": {
-          "minutes": 1
+          "seconds": 20
         }
       },
       "export": {
-        "template_pptx_file": "examples/templates/target_001.template.pptx",
+        "template_pptx_file": "data/templates/target_001.template.pptx",
         "template_txt_value": "Tại đá Cồn Cát Tây (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "placeholders": [
           {
@@ -2714,7 +2696,7 @@
         }
       },
       "export": {
-        "template_pptx_file": "examples/templates/target_001.template.pptx",
+        "template_pptx_file": "data/templates/target_001.template.pptx",
         "template_txt_value": "Tại đá Cây (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "placeholders": [
           {
@@ -2788,7 +2770,7 @@
         }
       },
       "export": {
-        "template_pptx_file": "examples/templates/target_001.template.pptx",
+        "template_pptx_file": "data/templates/target_001.template.pptx",
         "template_txt_value": "Tại đá Bắc, Trung, Nam, Cồn Cát Bắc, Cồn Cát Trung, Cồn Cát Nam/Cụm An Vĩnh (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "placeholders": [
           {
@@ -2878,7 +2860,7 @@
         }
       },
       "export": {
-        "template_pptx_file": "examples/templates/target_001.template.pptx",
+        "template_pptx_file": "data/templates/target_001.template.pptx",
         "template_txt_value": "Tại đá Phú Lâm (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "placeholders": [
           {
@@ -2952,7 +2934,7 @@
         }
       },
       "export": {
-        "template_pptx_file": "examples/templates/target_001.template.pptx",
+        "template_pptx_file": "data/templates/target_001.template.pptx",
         "template_txt_value": "Tại đá Linh Côn (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "placeholders": [
           {
@@ -3034,7 +3016,7 @@
         }
       },
       "export": {
-        "template_pptx_file": "examples/templates/target_001.template.pptx",
+        "template_pptx_file": "data/templates/target_001.template.pptx",
         "template_txt_value": "Tại đá Quang Ảnh (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "placeholders": [
           {
@@ -3112,7 +3094,7 @@
         }
       },
       "export": {
-        "template_pptx_file": "examples/templates/target_001.template.pptx",
+        "template_pptx_file": "data/templates/target_001.template.pptx",
         "template_txt_value": "Tại đá Hải Sâm (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "placeholders": [
           {
@@ -3201,7 +3183,7 @@
         }
       },
       "export": {
-        "template_pptx_file": "examples/templates/target_001.template.pptx",
+        "template_pptx_file": "data/templates/target_001.template.pptx",
         "template_txt_value": "Tại đá Hữu Nhật (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "placeholders": [
           {
@@ -3275,7 +3257,7 @@
         }
       },
       "export": {
-        "template_pptx_file": "examples/templates/target_001.template.pptx",
+        "template_pptx_file": "data/templates/target_001.template.pptx",
         "template_txt_value": "Tại đá Hoàng Sa (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "placeholders": [
           {
@@ -3349,7 +3331,7 @@
         }
       },
       "export": {
-        "template_pptx_file": "examples/templates/target_001.template.pptx",
+        "template_pptx_file": "data/templates/target_001.template.pptx",
         "template_txt_value": "Tại đá Ốc Hoa (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "placeholders": [
           {
@@ -3425,7 +3407,7 @@
         }
       },
       "export": {
-        "template_pptx_file": "examples/templates/target_001.template.pptx",
+        "template_pptx_file": "data/templates/target_001.template.pptx",
         "template_txt_value": "Tại đá Ba Ba (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "placeholders": [
           {
@@ -3496,7 +3478,7 @@
         }
       },
       "export": {
-        "template_pptx_file": "examples/templates/target_001.template.pptx",
+        "template_pptx_file": "data/templates/target_001.template.pptx",
         "template_txt_value": "Tại đá Xà Cừ (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "placeholders": [
           {
@@ -3576,7 +3558,7 @@
         }
       },
       "export": {
-        "template_pptx_file": "examples/templates/target_001.template.pptx",
+        "template_pptx_file": "data/templates/target_001.template.pptx",
         "template_txt_value": "Tại đá Quang Hòa (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "placeholders": [
           {
@@ -3645,7 +3627,7 @@
         }
       },
       "export": {
-        "template_pptx_file": "examples/templates/target_001.template.pptx",
+        "template_pptx_file": "data/templates/target_001.template.pptx",
         "template_txt_value": "Tại đá Duy Mộng (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "placeholders": [
           {
@@ -3721,7 +3703,7 @@
         }
       },
       "export": {
-        "template_pptx_file": "examples/templates/target_001.template.pptx",
+        "template_pptx_file": "data/templates/target_001.template.pptx",
         "template_txt_value": "Tại đá Tri Tôn (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "placeholders": [
           {
@@ -3809,7 +3791,7 @@
         }
       },
       "export": {
-        "template_pptx_file": "examples/templates/target_001.template.pptx",
+        "template_pptx_file": "data/templates/target_001.template.pptx",
         "template_txt_value": "Tại đá Xu Bi (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "placeholders": [
           {
@@ -3896,7 +3878,7 @@
         }
       },
       "export": {
-        "template_pptx_file": "examples/templates/target_001.template.pptx",
+        "template_pptx_file": "data/templates/target_001.template.pptx",
         "template_txt_value": "Tại đá Ga Ven (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "placeholders": [
           {
@@ -3980,7 +3962,7 @@
         }
       },
       "export": {
-        "template_pptx_file": "examples/templates/target_001.template.pptx",
+        "template_pptx_file": "data/templates/target_001.template.pptx",
         "template_txt_value": "Tại đá Đền Cây Cỏ (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "placeholders": [
           {
@@ -4068,7 +4050,7 @@
         }
       },
       "export": {
-        "template_pptx_file": "examples/templates/target_001.template.pptx",
+        "template_pptx_file": "data/templates/target_001.template.pptx",
         "template_txt_value": "Tại đá Vành Khăn (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "placeholders": [
           {
@@ -4151,7 +4133,7 @@
         }
       },
       "export": {
-        "template_pptx_file": "examples/templates/target_001.template.pptx",
+        "template_pptx_file": "data/templates/target_001.template.pptx",
         "template_txt_value": "Tại đá Châu Viên (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "placeholders": [
           {
@@ -4231,7 +4213,7 @@
         }
       },
       "export": {
-        "template_pptx_file": "examples/templates/target_001.template.pptx",
+        "template_pptx_file": "data/templates/target_001.template.pptx",
         "template_txt_value": "Tại đá Huy Gơ (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "placeholders": [
           {
@@ -4307,7 +4289,7 @@
         }
       },
       "export": {
-        "template_pptx_file": "examples/templates/target_001.template.pptx",
+        "template_pptx_file": "data/templates/target_001.template.pptx",
         "template_txt_value": "Tại đá Gạc Ma (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "placeholders": [
           {
@@ -4381,7 +4363,7 @@
         }
       },
       "export": {
-        "template_pptx_file": "examples/templates/target_001.template.pptx",
+        "template_pptx_file": "data/templates/target_001.template.pptx",
         "template_txt_value": "Tại đá Song Tử Đông (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "placeholders": [
           {
@@ -4477,7 +4459,7 @@
         }
       },
       "export": {
-        "template_pptx_file": "examples/templates/target_001.template.pptx",
+        "template_pptx_file": "data/templates/target_001.template.pptx",
         "template_txt_value": "Tại đá Bến Lạc (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "placeholders": [
           {
@@ -4557,7 +4539,7 @@
         }
       },
       "export": {
-        "template_pptx_file": "examples/templates/target_001.template.pptx",
+        "template_pptx_file": "data/templates/target_001.template.pptx",
         "template_txt_value": "Tại đá Bình Nguyên (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "placeholders": [
           {
@@ -4637,7 +4619,7 @@
         }
       },
       "export": {
-        "template_pptx_file": "examples/templates/target_001.template.pptx",
+        "template_pptx_file": "data/templates/target_001.template.pptx",
         "template_txt_value": "Tại đá Vĩnh Viễn (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "placeholders": [
           {
@@ -4712,7 +4694,7 @@
         }
       },
       "export": {
-        "template_pptx_file": "examples/templates/target_001.template.pptx",
+        "template_pptx_file": "data/templates/target_001.template.pptx",
         "template_txt_value": "Tại bãi Cỏ Mây (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "placeholders": [
           {
@@ -4792,7 +4774,7 @@
         }
       },
       "export": {
-        "template_pptx_file": "examples/templates/target_001.template.pptx",
+        "template_pptx_file": "data/templates/target_001.template.pptx",
         "template_txt_value": "Tại đá Công Đo (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "placeholders": [
           {
@@ -4868,7 +4850,7 @@
         }
       },
       "export": {
-        "template_pptx_file": "examples/templates/target_001.template.pptx",
+        "template_pptx_file": "data/templates/target_001.template.pptx",
         "template_txt_value": "Tại đá Loại Ta Tây (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "placeholders": [
           {
@@ -4944,7 +4926,7 @@
         }
       },
       "export": {
-        "template_pptx_file": "examples/templates/target_001.template.pptx",
+        "template_pptx_file": "data/templates/target_001.template.pptx",
         "template_txt_value": "Tại đá Loại Ta (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "placeholders": [
           {
@@ -5020,7 +5002,7 @@
         }
       },
       "export": {
-        "template_pptx_file": "examples/templates/target_001.template.pptx",
+        "template_pptx_file": "data/templates/target_001.template.pptx",
         "template_txt_value": "Tại đá Thị Tứ (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "placeholders": [
           {
@@ -5096,7 +5078,7 @@
         }
       },
       "export": {
-        "template_pptx_file": "examples/templates/target_001.template.pptx",
+        "template_pptx_file": "data/templates/target_001.template.pptx",
         "template_txt_value": "Tại đá Thám Hiểm (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "placeholders": [
           {
@@ -5172,7 +5154,7 @@
         }
       },
       "export": {
-        "template_pptx_file": "examples/templates/target_001.template.pptx",
+        "template_pptx_file": "data/templates/target_001.template.pptx",
         "template_txt_value": "Tại đá Én Ca (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "placeholders": [
           {
@@ -5248,7 +5230,7 @@
         }
       },
       "export": {
-        "template_pptx_file": "examples/templates/target_001.template.pptx",
+        "template_pptx_file": "data/templates/target_001.template.pptx",
         "template_txt_value": "Tại đá Kỳ Vân (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "placeholders": [
           {
@@ -5328,7 +5310,7 @@
         }
       },
       "export": {
-        "template_pptx_file": "examples/templates/target_001.template.pptx",
+        "template_pptx_file": "data/templates/target_001.template.pptx",
         "template_txt_value": "Tại đá Kiêu Ngựa (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "placeholders": [
           {
@@ -5404,7 +5386,7 @@
         }
       },
       "export": {
-        "template_pptx_file": "examples/templates/target_001.template.pptx",
+        "template_pptx_file": "data/templates/target_001.template.pptx",
         "template_txt_value": "Tại đá Suối Cát (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "placeholders": [
           {
@@ -5484,7 +5466,7 @@
         }
       },
       "export": {
-        "template_pptx_file": "examples/templates/target_001.template.pptx",
+        "template_pptx_file": "data/templates/target_001.template.pptx",
         "template_txt_value": "Tại đá Hoa Lau (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "placeholders": [
           {
@@ -5564,7 +5546,7 @@
         }
       },
       "export": {
-        "template_pptx_file": "examples/templates/target_001.template.pptx",
+        "template_pptx_file": "data/templates/target_001.template.pptx",
         "template_txt_value": "Tại đá Sác Lốt (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "placeholders": [
           {
@@ -5640,7 +5622,7 @@
         }
       },
       "export": {
-        "template_pptx_file": "examples/templates/target_001.template.pptx",
+        "template_pptx_file": "data/templates/target_001.template.pptx",
         "template_txt_value": "Tại đá Lu-xi-a (lúc {time_label}, độ phân giải 3 m): Không ghi nhận hoạt động tôn tạo, xây dựng công trình.",
         "placeholders": [
           {

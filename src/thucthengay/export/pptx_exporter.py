@@ -41,20 +41,30 @@ def export_combined_pptx(
     targets: Iterable[TargetConfig],
     *,
     output_path: str | Path,
+    template_issues: Iterable[Issue] = (),
+    composition_ids: Iterable[str] | None = None,
 ) -> ExportPptxResult:
     """Write one combined PPTX for included compositions sorted by review order."""
     target_map = {target.id: target for target in targets}
-    plan = build_export_preflight_plan(workspace_service, target_map.values())
-    issues = list(plan.issues)
-    if any(issue.blocking for issue in issues):
-        return _blocked(issues)
-
+    selected_ids = set(composition_ids) if composition_ids is not None else None
     included = [
         composition
         for composition in workspace_service.list_compositions()
         if composition.include
+        and (selected_ids is None or composition.composition_id in selected_ids)
     ]
     included.sort(key=_export_sort_key)
+    selected_target_ids = {composition.target_id for composition in included}
+    plan = build_export_preflight_plan(
+        workspace_service,
+        target_map.values(),
+        template_issues=template_issues,
+    )
+    issues = _issues_for_selected(plan.issues, selected_ids, selected_target_ids)
+    if any(issue.blocking for issue in issues):
+        return _blocked(issues)
+    if not included:
+        return _blocked([_no_exportable_compositions_issue()])
     placeholder_issues = _placeholder_issues(included, target_map)
     if placeholder_issues:
         return _blocked(issues + placeholder_issues)
@@ -125,6 +135,24 @@ def export_combined_pptx(
         issues=issues,
         summary=summary,
     )
+
+
+def _issues_for_selected(
+    issues: Iterable[Issue],
+    selected_ids: set[str] | None,
+    selected_target_ids: set[str],
+) -> list[Issue]:
+    if selected_ids is None:
+        return list(issues)
+    selected_issues: list[Issue] = []
+    for issue in issues:
+        if issue.composition_id is not None and issue.composition_id not in selected_ids:
+            continue
+        if issue.composition_id is None and issue.target_id is not None:
+            if issue.target_id not in selected_target_ids:
+                continue
+        selected_issues.append(issue)
+    return selected_issues
 
 
 def _placeholder_issues(
@@ -368,6 +396,16 @@ def _write_issue(message: str) -> Issue:
             "Chon duong dan PPTX trong workspace, dong file dang khoa, "
             "kiem tra quyen ghi, roi chay export lai."
         ),
+    )
+
+
+def _no_exportable_compositions_issue() -> Issue:
+    return Issue(
+        issue_id="export.no_exportable_compositions",
+        severity=IssueSeverity.ERROR,
+        scope=IssueScope.EXPORT,
+        message="Khong co composition nao du dieu kien de xuat PPTX.",
+        remediation="Sua cac loi blocking trong Preflight hoac bo include cac composition loi.",
     )
 
 

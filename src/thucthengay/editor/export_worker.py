@@ -7,7 +7,7 @@ from collections.abc import Callable
 from PySide6.QtCore import QObject, Signal, Slot
 
 from thucthengay.export.pipeline import FullExportResult, run_full_export
-from thucthengay.models import TargetConfig
+from thucthengay.models import Issue, TargetConfig
 from thucthengay.workspace import WorkspaceService
 
 ExportRunner = Callable[..., FullExportResult]
@@ -24,6 +24,7 @@ class ExportWorker(QObject):
         targets: list[TargetConfig],
         *,
         output_stem: str,
+        template_issues: list[Issue] | None = None,
         runner: ExportRunner = run_full_export,
         parent: QObject | None = None,
     ) -> None:
@@ -31,6 +32,7 @@ class ExportWorker(QObject):
         self._workspace_service = workspace_service
         self._targets = targets
         self._output_stem = output_stem
+        self._template_issues = list(template_issues or [])
         self._runner = runner
         self._cancelled = False
 
@@ -49,5 +51,6 @@ class ExportWorker(QObject):
             self._targets,
             output_stem=self._output_stem,
             is_cancelled=self.is_cancelled,
+            template_issues=self._template_issues,
         )
         self.finished.emit(result)
