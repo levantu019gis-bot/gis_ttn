@@ -523,9 +523,6 @@ class WorkspaceService:
             if not pane_a_composition_id or not pane_b_composition_id:
                 msg = "Comparison panes must reference two compositions."
                 raise WorkspaceError(msg)
-            if pane_a_composition_id == pane_b_composition_id:
-                msg = "Comparison panes must use two different compositions."
-                raise WorkspaceError(msg)
             pane_a = self.read_composition(pane_a_composition_id)
             pane_b = self.read_composition(pane_b_composition_id)
             if (
@@ -558,9 +555,55 @@ class WorkspaceService:
             pane_b_composition_id=pane_b_composition_id if enabled and use_compositions else None,
             pane_a_layer_id=pane_a_layer_id if enabled and not use_compositions else None,
             pane_b_layer_id=pane_b_layer_id if enabled and not use_compositions else None,
+            pane_a_center=(
+                _preserved_or_composition_center(
+                    composition.temporal_compare,
+                    "A",
+                    pane_a_composition_id,
+                    pane_a,
+                )
+                if enabled and use_compositions
+                else None
+            ),
+            pane_b_center=(
+                _preserved_or_composition_center(
+                    composition.temporal_compare,
+                    "B",
+                    pane_b_composition_id,
+                    pane_b,
+                )
+                if enabled and use_compositions
+                else None
+            ),
         )
         updated = _mark_composition_edit_stale(
             _validated_composition_update(composition, {"temporal_compare": state})
+        )
+        self.write_composition(updated)
+        return updated
+
+    def update_temporal_compare_pane_view(
+        self,
+        composition_id: str,
+        *,
+        pane: str,
+        center: list[float],
+    ) -> Composition:
+        """Persist a per-pane comparison center and mark render/export stale."""
+        composition = self.read_composition(composition_id)
+        state = composition.temporal_compare
+        pane_key = pane.upper()
+        if not state.enabled or not state.pane_a_composition_id or not state.pane_b_composition_id:
+            msg = "Comparison pane view can only be updated for enabled composition compare."
+            raise WorkspaceError(msg)
+        if pane_key not in {"A", "B"}:
+            msg = f"Comparison pane must be 'A' or 'B', got {pane!r}."
+            raise WorkspaceError(msg)
+        state_data = state.model_dump(mode="python")
+        state_data["pane_a_center" if pane_key == "A" else "pane_b_center"] = list(center)
+        next_state = TemporalCompareState.model_validate(state_data)
+        updated = _mark_composition_edit_stale(
+            _validated_composition_update(composition, {"temporal_compare": next_state})
         )
         self.write_composition(updated)
         return updated
@@ -750,6 +793,21 @@ def _mark_composition_edit_stale(composition: Composition) -> Composition:
 
 def _has_visible_layer(composition: Composition) -> bool:
     return any(layer.visible for layer in composition.layers)
+
+
+def _preserved_or_composition_center(
+    state: TemporalCompareState,
+    pane: str,
+    composition_id: str | None,
+    composition: Composition,
+) -> list[float]:
+    if pane == "A":
+        if state.pane_a_composition_id == composition_id and state.pane_a_center is not None:
+            return list(state.pane_a_center)
+        return list(composition.view.center)
+    if state.pane_b_composition_id == composition_id and state.pane_b_center is not None:
+        return list(state.pane_b_center)
+    return list(composition.view.center)
 
 
 def _validate_render_artifact_path(value: str) -> str:

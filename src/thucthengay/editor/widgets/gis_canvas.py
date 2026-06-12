@@ -13,7 +13,7 @@ from PySide6.QtGui import QColor, QImage, QPainter, QPen, QPixmap
 from PySide6.QtWidgets import QGraphicsScene, QGraphicsView
 
 from thucthengay.gis import pan_center_by_viewport_pixels
-from thucthengay.models import Composition, ImageLayer
+from thucthengay.models import Composition, ImageLayer, TemporalCompareOrientation
 
 
 class GisCanvasState(StrEnum):
@@ -36,10 +36,29 @@ class RenderRequestToken:
     scale: int
 
 
+@dataclass
+class _InteractiveViewState:
+    composition_id: str
+    center: list[float]
+    scale: int
+
+
+@dataclass(frozen=True)
+class _InteractionTarget:
+    composition_id: str
+    center: list[float]
+    scale: int
+    viewport_rect: QRectF
+    compare_pane: bool
+    pane_key: str | None = None
+
+
 class GisCanvasWidget(QGraphicsView):
     """Minimal map canvas that edits persisted view center/scale."""
 
     viewEditCompleted = Signal(object, int)
+    compositionViewEditCompleted = Signal(str, object, int)
+    comparePaneViewEditCompleted = Signal(str, object)
 
     DEFAULT_FRAME_ASPECT = 16 / 9
     EXPORT_DPI = 200
@@ -74,11 +93,14 @@ class GisCanvasWidget(QGraphicsView):
         self._state_message = "Chưa chọn composition."
         self._generation = 0
         self._drag_last_pos: QPoint | None = None
+        self._drag_target: _InteractionTarget | None = None
         self._drag_changed = False
         self._last_frame_rect = QRectF()
         self._last_applied_render_label: str | None = None
         self._rendered_pixmap: QPixmap | None = None
         self._rendered_export_image: QImage | None = None
+        self._compare_orientation = TemporalCompareOrientation.VERTICAL
+        self._compare_panes: dict[str, _InteractiveViewState] = {}
         self._redraw()
 
     @property
@@ -161,6 +183,7 @@ class GisCanvasWidget(QGraphicsView):
         self._last_applied_render_label = None
         self._rendered_pixmap = None
         self._rendered_export_image = None
+        self._clear_compare_context()
         if composition is None:
             self._composition_id = None
             self._visible_layers = []
@@ -188,6 +211,38 @@ class GisCanvasWidget(QGraphicsView):
             self._state_message = "Canvas đã tải layer hiển thị."
         self._bump_generation()
         self._redraw()
+
+    def set_compare_context(
+        self,
+        composition: Composition,
+        *,
+        pane_a: Composition | None,
+        pane_b: Composition | None,
+    ) -> None:
+        """Set editable pane view state for temporal comparison interactions."""
+        state = composition.temporal_compare
+        if (
+            not state.enabled
+            or pane_a is None
+            or pane_b is None
+            or not state.pane_a_composition_id
+            or not state.pane_b_composition_id
+        ):
+            self._clear_compare_context()
+            return
+        self._compare_orientation = state.orientation
+        self._compare_panes = {
+            "A": _InteractiveViewState(
+                composition_id=pane_a.composition_id,
+                center=list(state.pane_a_center or pane_a.view.center),
+                scale=self._scale,
+            ),
+            "B": _InteractiveViewState(
+                composition_id=pane_b.composition_id,
+                center=list(state.pane_b_center or pane_b.view.center),
+                scale=self._scale,
+            ),
+        }
 
     def set_loading(self, message: str = "Đang render canvas...") -> RenderRequestToken:
         """Mark the canvas loading and return the current render token."""
@@ -238,18 +293,13 @@ class GisCanvasWidget(QGraphicsView):
         if self._composition_id is None:
             return
         frame = self._frame_rect()
-        lon, lat = pan_center_by_viewport_pixels(
-            center_lon=self._center[0],
-            center_lat=self._center[1],
-            scale_denom=self._scale,
-            map_frame_width_points=self._map_frame_width_points,
-            map_frame_height_points=self._map_frame_height_points,
-            viewport_width_px=max(frame.width(), 1.0),
-            viewport_height_px=max(frame.height(), 1.0),
-            dx_px=dx,
-            dy_px=dy,
+        self._center = self._panned_center(
+            center=self._center,
+            scale=self._scale,
+            viewport_rect=frame,
+            dx=dx,
+            dy=dy,
         )
-        self._center = [round(lon, 8), round(lat, 8)]
         self._mark_interaction_stale()
         if emit:
             self._emit_view_edit()
@@ -272,8 +322,7 @@ class GisCanvasWidget(QGraphicsView):
 
     def mousePressEvent(self, event) -> None:  # noqa: ANN001, N802
         if event.button() == Qt.MouseButton.LeftButton and self._composition_id is not None:
-            self._drag_last_pos = event.pos()
-            self._drag_changed = False
+            self._begin_drag_at(event.pos())
             self.setCursor(Qt.CursorShape.ClosedHandCursor)
             event.accept()
             return
@@ -281,22 +330,15 @@ class GisCanvasWidget(QGraphicsView):
 
     def mouseMoveEvent(self, event) -> None:  # noqa: ANN001, N802
         if self._drag_last_pos is not None:
-            delta = event.pos() - self._drag_last_pos
-            if delta.x() or delta.y():
-                self.pan_by_pixels(delta.x(), delta.y(), emit=False)
-                self._drag_last_pos = event.pos()
-                self._drag_changed = True
+            self._move_drag_to(event.pos())
             event.accept()
             return
         super().mouseMoveEvent(event)
 
     def mouseReleaseEvent(self, event) -> None:  # noqa: ANN001, N802
         if event.button() == Qt.MouseButton.LeftButton and self._drag_last_pos is not None:
-            self._drag_last_pos = None
+            self._end_drag()
             self.unsetCursor()
-            if self._drag_changed:
-                self._emit_view_edit()
-            self._drag_changed = False
             event.accept()
             return
         super().mouseReleaseEvent(event)
@@ -306,11 +348,163 @@ class GisCanvasWidget(QGraphicsView):
             super().wheelEvent(event)
             return
         factor = 0.85 if event.angleDelta().y() > 0 else 1.15
-        self.zoom_by_factor(factor)
+        if self._compare_panes:
+            self.zoom_by_factor(factor)
+        else:
+            self._zoom_interaction_target(self._interaction_target_at(event.pos()), factor)
         event.accept()
 
     def _emit_view_edit(self) -> None:
         self.viewEditCompleted.emit(list(self._center), self._scale)
+
+    def _clear_compare_context(self) -> None:
+        self._compare_panes = {}
+
+    def _begin_drag_at(self, pos: QPoint) -> None:
+        self._drag_last_pos = pos
+        self._drag_target = self._interaction_target_at(pos)
+        self._drag_changed = False
+
+    def _move_drag_to(self, pos: QPoint) -> None:
+        if self._drag_last_pos is None or self._drag_target is None:
+            return
+        delta = pos - self._drag_last_pos
+        if not delta.x() and not delta.y():
+            return
+        target = self._drag_target
+        center = self._panned_center(
+            center=target.center,
+            scale=target.scale,
+            viewport_rect=target.viewport_rect,
+            dx=delta.x(),
+            dy=delta.y(),
+        )
+        self._drag_target = _InteractionTarget(
+            composition_id=target.composition_id,
+            center=center,
+            scale=target.scale,
+            viewport_rect=target.viewport_rect,
+            compare_pane=target.compare_pane,
+            pane_key=target.pane_key,
+        )
+        self._apply_interaction_view_state(self._drag_target)
+        self._drag_last_pos = pos
+        self._drag_changed = True
+        self._mark_interaction_stale()
+        self._redraw()
+
+    def _end_drag(self) -> None:
+        target = self._drag_target
+        changed = self._drag_changed
+        self._drag_last_pos = None
+        self._drag_target = None
+        self._drag_changed = False
+        if target is not None and changed:
+            self._emit_interaction_view_edit(target)
+
+    def _zoom_interaction_target(self, target: _InteractionTarget, factor: float) -> None:
+        if not isfinite(factor) or factor <= 0:
+            return
+        scale = int(round(target.scale * factor))
+        updated = _InteractionTarget(
+            composition_id=target.composition_id,
+            center=list(target.center),
+            scale=int(_clamp(scale, self.MIN_SCALE, self.MAX_SCALE)),
+            viewport_rect=target.viewport_rect,
+            compare_pane=target.compare_pane,
+            pane_key=target.pane_key,
+        )
+        self._apply_interaction_view_state(updated)
+        self._mark_interaction_stale()
+        self._emit_interaction_view_edit(updated)
+        self._redraw()
+
+    def _interaction_target_at(self, pos: QPoint | QPointF) -> _InteractionTarget:
+        pane_key, pane_rect = self._compare_pane_at(pos)
+        if pane_key is not None and pane_rect is not None:
+            pane = self._compare_panes[pane_key]
+            return _InteractionTarget(
+                composition_id=pane.composition_id,
+                center=list(pane.center),
+                scale=self._scale,
+                viewport_rect=pane_rect,
+                compare_pane=True,
+                pane_key=pane_key,
+            )
+        return _InteractionTarget(
+            composition_id=self._composition_id or "",
+            center=list(self._center),
+            scale=self._scale,
+            viewport_rect=self._frame_rect(),
+            compare_pane=False,
+            pane_key=None,
+        )
+
+    def _compare_pane_at(self, pos: QPoint | QPointF) -> tuple[str | None, QRectF | None]:
+        if set(self._compare_panes) != {"A", "B"}:
+            return None, None
+        frame = self._frame_rect()
+        point = QPointF(pos)
+        if not frame.contains(point):
+            return None, None
+        pane_a, pane_b = self._compare_pane_rects(frame)
+        if pane_a.contains(point):
+            return "A", pane_a
+        if pane_b.contains(point):
+            return "B", pane_b
+        return None, None
+
+    def _compare_pane_rects(self, frame: QRectF) -> tuple[QRectF, QRectF]:
+        if self._compare_orientation == TemporalCompareOrientation.HORIZONTAL:
+            half_height = frame.height() / 2
+            return (
+                QRectF(frame.left(), frame.top(), frame.width(), half_height),
+                QRectF(frame.left(), frame.top() + half_height, frame.width(), half_height),
+            )
+        half_width = frame.width() / 2
+        return (
+            QRectF(frame.left(), frame.top(), half_width, frame.height()),
+            QRectF(frame.left() + half_width, frame.top(), half_width, frame.height()),
+        )
+
+    def _panned_center(
+        self,
+        *,
+        center: list[float],
+        scale: int,
+        viewport_rect: QRectF,
+        dx: float,
+        dy: float,
+    ) -> list[float]:
+        lon, lat = pan_center_by_viewport_pixels(
+            center_lon=center[0],
+            center_lat=center[1],
+            scale_denom=scale,
+            map_frame_width_points=self._map_frame_width_points,
+            map_frame_height_points=self._map_frame_height_points,
+            viewport_width_px=max(viewport_rect.width(), 1.0),
+            viewport_height_px=max(viewport_rect.height(), 1.0),
+            dx_px=dx,
+            dy_px=dy,
+        )
+        return [round(lon, 8), round(lat, 8)]
+
+    def _apply_interaction_view_state(self, target: _InteractionTarget) -> None:
+        if target.compare_pane:
+            if target.pane_key is not None and target.pane_key in self._compare_panes:
+                pane = self._compare_panes[target.pane_key]
+                pane.center = list(target.center)
+                pane.scale = target.scale
+        elif target.composition_id == self._composition_id:
+            self._center = list(target.center)
+            self._scale = target.scale
+
+    def _emit_interaction_view_edit(self, target: _InteractionTarget) -> None:
+        if target.compare_pane:
+            if target.pane_key is not None:
+                self.comparePaneViewEditCompleted.emit(target.pane_key, list(target.center))
+            return
+        self.viewEditCompleted.emit(list(target.center), target.scale)
 
     def _mark_interaction_stale(self) -> None:
         if self._visible_layers:

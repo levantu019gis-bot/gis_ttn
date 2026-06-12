@@ -420,6 +420,8 @@ def test_composition_temporal_compare_defaults_and_round_trip() -> None:
                 orientation=TemporalCompareOrientation.HORIZONTAL,
                 pane_a_composition_id="target_001__20260525",
                 pane_b_composition_id="target_001__20260526",
+                pane_a_center=[106.7, 10.8],
+                pane_b_center=[106.9, 10.9],
             )
         }
     )
@@ -429,6 +431,7 @@ def test_composition_temporal_compare_defaults_and_round_trip() -> None:
     assert dumped["temporal_compare"]["orientation"] == "horizontal"
     assert restored.temporal_compare.enabled is True
     assert restored.temporal_compare.pane_a_composition_id == "target_001__20260525"
+    assert restored.temporal_compare.pane_b_center == [106.9, 10.9]
 
 
 def test_issue_contract_serializes_vietnamese_message_and_blocking_flag() -> None:

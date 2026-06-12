@@ -302,13 +302,49 @@ class TestLayerOrdering:
         assert spec.temporal_compare.pane_a.view_center == [106.7, 10.8]
         assert spec.temporal_compare.pane_b.view_center == [106.9, 10.9]
         assert spec.temporal_compare.pane_a.view_scale == 50000
-        assert spec.temporal_compare.pane_b.view_scale == 25000
+        assert spec.temporal_compare.pane_b.view_scale == 50000
         assert spec.temporal_compare.pane_a.geo_window is not None
         assert spec.temporal_compare.pane_b.geo_window is not None
         assert spec.temporal_compare.pane_a.geo_window != spec.temporal_compare.pane_b.geo_window
         assert [ref.layer_id for ref in spec.temporal_compare.pane_a.layers] == ["A1", "A2"]
         assert [ref.layer_id for ref in spec.temporal_compare.pane_b.layers] == ["B1"]
         assert [ref.layer_id for ref in spec.visible_layers] == ["A1", "A2", "B1"]
+
+    def test_enabled_temporal_compare_allows_same_composition_with_pane_centers(
+        self,
+    ) -> None:
+        pane = _composition(layers=[_layer("A1", order=0)])
+        comp = pane.model_copy(
+            update={
+                "temporal_compare": TemporalCompareState(
+                    enabled=True,
+                    orientation=TemporalCompareOrientation.VERTICAL,
+                    pane_a_composition_id="tgt__20260525",
+                    pane_b_composition_id="tgt__20260525",
+                    pane_a_center=[106.7, 10.8],
+                    pane_b_center=[106.9, 10.9],
+                )
+            }
+        )
+
+        spec = build_render_spec(
+            composition=comp,
+            target=_target(),
+            template=_template(),
+            template_metadata_file="t.json",
+            output_width=1280,
+            output_height=720,
+            compare_compositions=[pane],
+        )
+
+        assert spec.temporal_compare.enabled is True
+        assert spec.temporal_compare.pane_a.composition_id == "tgt__20260525"
+        assert spec.temporal_compare.pane_b.composition_id == "tgt__20260525"
+        assert spec.temporal_compare.pane_a.view_center == [106.7, 10.8]
+        assert spec.temporal_compare.pane_b.view_center == [106.9, 10.9]
+        assert spec.temporal_compare.pane_a.view_scale == 50000
+        assert spec.temporal_compare.pane_b.view_scale == 50000
+        assert spec.temporal_compare.pane_a.geo_window != spec.temporal_compare.pane_b.geo_window
 
 
 class TestGridOverride:

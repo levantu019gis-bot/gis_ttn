@@ -99,7 +99,7 @@ class ReviewEditMode(QWidget):
         self._render_workers: dict[str, RenderWorker] = {}
         self._render_tokens: dict[str, object] = {}
         self._canvas_render_cache = MapRenderCache()
-        self._pending_canvas_view: tuple[list[float], int] | None = None
+        self._pending_canvas_view: tuple[str, str, list[float], int | None] | None = None
         self._target_render_thread: QThread | None = None
         self._target_render_worker: RenderWorker | None = None
         self._target_render_token: TargetPreviewRequestToken | None = None
@@ -209,6 +209,9 @@ class ReviewEditMode(QWidget):
 
         self.gis_canvas = GisCanvasWidget()
         self.gis_canvas.viewEditCompleted.connect(self._persist_canvas_view)
+        self.gis_canvas.comparePaneViewEditCompleted.connect(
+            self._persist_compare_pane_view
+        )
         self._canvas_view_persist_timer = QTimer(self)
         self._canvas_view_persist_timer.setSingleShot(True)
         self._canvas_view_persist_timer.timeout.connect(self._flush_pending_canvas_view)
@@ -1253,7 +1256,20 @@ class ReviewEditMode(QWidget):
             self.layer_table.setCurrentIndex(new_index)
 
     def _persist_canvas_view(self, center: list[float], scale: int) -> None:
-        self._pending_canvas_view = (list(center), scale)
+        if self.selected_composition is None:
+            return
+        self._pending_canvas_view = (
+            "composition",
+            self.selected_composition.composition_id,
+            list(center),
+            scale,
+        )
+        self._canvas_view_persist_timer.start(self.CANVAS_VIEW_PERSIST_DEBOUNCE_MS)
+
+    def _persist_compare_pane_view(self, pane: str, center: list[float]) -> None:
+        if self.selected_composition is None:
+            return
+        self._pending_canvas_view = ("compare_pane", pane, list(center), None)
         self._canvas_view_persist_timer.start(self.CANVAS_VIEW_PERSIST_DEBOUNCE_MS)
 
     def _flush_pending_canvas_view(self) -> None:
@@ -1265,8 +1281,30 @@ class ReviewEditMode(QWidget):
         if self._workspace_service is None or self.selected_composition is None:
             return
 
-        center, scale = pending
-        composition_id = self.selected_composition.composition_id
+        kind, identifier, center, scale = pending
+        selected_id = self.selected_composition.composition_id
+        if kind == "compare_pane":
+            try:
+                updated = self._workspace_service.update_temporal_compare_pane_view(
+                    selected_id,
+                    pane=identifier,
+                    center=center,
+                )
+            except (WorkspaceError, ValidationError) as error:
+                self.action_summary.setText(f"KhÃ´ng lÆ°u Ä‘Æ°á»£c compare pane: {error}")
+                self.gis_canvas.set_composition(self.selected_composition)
+                self._load_canvas_compare_context(self.selected_composition)
+                return
+
+            self.selected_composition = updated
+            self._update_detail_panels(updated)
+            self._replace_workspace_projection_composition(updated)
+            self._request_canvas_render(updated)
+            return
+
+        composition_id = identifier
+        if scale is None:
+            return
         try:
             updated = self._workspace_service.update_view_state(
                 composition_id,
@@ -1278,10 +1316,36 @@ class ReviewEditMode(QWidget):
             self.gis_canvas.set_composition(self.selected_composition)
             return
 
-        self.selected_composition = updated
-        self._update_detail_panels(updated)
-        self._replace_workspace_projection_composition(updated)
-        self._request_canvas_render(updated)
+        if composition_id == selected_id:
+            self.selected_composition = updated
+            self._update_detail_panels(updated)
+            self._replace_workspace_projection_composition(updated)
+            self._request_canvas_render(updated)
+            return
+
+        self._replace_workspace_projection_row(updated)
+        try:
+            selected = self._workspace_service.mark_needs_revalidation(selected_id)
+        except WorkspaceError as error:
+            self.action_summary.setText(f"KhÃ´ng Ä‘Ã¡nh dáº¥u stale cho compare: {error}")
+            return
+
+        self.selected_composition = selected
+        self._update_detail_panels(selected)
+        self._replace_workspace_projection_composition(selected)
+        self._request_canvas_render(selected)
+
+    def _replace_workspace_projection_row(self, composition: Composition) -> None:
+        if not self.tree_model.replace_composition(composition):
+            self._refresh_workspace_projection(
+                self.selected_composition.composition_id
+                if self.selected_composition is not None
+                else composition.composition_id,
+                validate_selection=False,
+            )
+            return
+        self.tree_view.expandAll()
+        self._refresh_filter_controls()
 
     def _replace_workspace_projection_composition(self, composition: Composition) -> None:
         if not self.tree_model.replace_composition(composition):
@@ -1441,6 +1505,7 @@ class ReviewEditMode(QWidget):
         if map_frame_size is not None:
             self.gis_canvas.set_map_frame_size(*map_frame_size)
         self.gis_canvas.set_composition(composition)
+        self._load_canvas_compare_context(composition)
         self._load_temporal_compare_controls(composition)
         self._load_grid_controls(composition)
         self.warnings_panel.set_issues(
@@ -1453,6 +1518,22 @@ class ReviewEditMode(QWidget):
             self._request_target_preview(composition)
         if not composition.needs_revalidation:
             self._request_canvas_render(composition)
+
+    def _load_canvas_compare_context(self, composition: Composition) -> None:
+        if self._workspace_service is None or not composition.temporal_compare.enabled:
+            self.gis_canvas.set_compare_context(composition, pane_a=None, pane_b=None)
+            return
+        state = composition.temporal_compare
+        if not state.pane_a_composition_id or not state.pane_b_composition_id:
+            self.gis_canvas.set_compare_context(composition, pane_a=None, pane_b=None)
+            return
+        try:
+            pane_a = self._workspace_service.read_composition(state.pane_a_composition_id)
+            pane_b = self._workspace_service.read_composition(state.pane_b_composition_id)
+        except WorkspaceError:
+            self.gis_canvas.set_compare_context(composition, pane_a=None, pane_b=None)
+            return
+        self.gis_canvas.set_compare_context(composition, pane_a=pane_a, pane_b=pane_b)
 
     def _map_frame_size_for_composition(
         self,

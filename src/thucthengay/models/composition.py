@@ -74,6 +74,25 @@ class TemporalCompareState(BaseModel):
     pane_b_composition_id: str | None = None
     pane_a_layer_id: str | None = None
     pane_b_layer_id: str | None = None
+    pane_a_center: list[float] | None = None
+    pane_b_center: list[float] | None = None
+
+    @field_validator("pane_a_center", "pane_b_center")
+    @classmethod
+    def pane_center_must_be_lon_lat(cls, value: list[float] | None) -> list[float] | None:
+        if value is None:
+            return value
+        if len(value) != 2:
+            msg = "pane center must contain exactly [lon, lat]"
+            raise ValueError(msg)
+        lon, lat = value
+        if not -180 <= lon <= 180:
+            msg = "pane center longitude must be between -180 and 180"
+            raise ValueError(msg)
+        if not -90 <= lat <= 90:
+            msg = "pane center latitude must be between -90 and 90"
+            raise ValueError(msg)
+        return value
 
 
 class CompositionArtifacts(BaseModel):

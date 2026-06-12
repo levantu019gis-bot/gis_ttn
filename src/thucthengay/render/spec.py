@@ -437,15 +437,15 @@ def _build_composition_temporal_compare_spec(
     compare_by_id = {item.composition_id: item for item in compare_compositions}
     pane_a = compare_by_id.get(state.pane_a_composition_id or "")
     pane_b = compare_by_id.get(state.pane_b_composition_id or "")
-    if pane_a is None or pane_b is None or pane_a.composition_id == pane_b.composition_id:
+    if pane_a is None or pane_b is None:
         raise RenderSpecError(
             [
                 _issue(
                     "render.spec.temporal_compare_invalid",
                     "Temporal comparison pane selections are not valid.",
                     (
-                        "Select two different compositions/time points for Pane A and "
-                        "Pane B before render/export."
+                        "Select compositions/time points for Pane A and Pane B before "
+                        "render/export."
                     ),
                     target_id=target.id,
                     composition_id=composition.composition_id,
@@ -485,23 +485,27 @@ def _build_composition_temporal_compare_spec(
         orientation=state.orientation,
         pane_a=RenderComparisonPane(
             composition_id=pane_a.composition_id,
-            view_center=list(pane_a.view.center),
-            view_scale=pane_a.view.scale,
+            view_center=list(state.pane_a_center or pane_a.view.center),
+            view_scale=composition.view.scale,
             geo_window=_comparison_pane_geo_window(
                 pane_a,
                 target=target,
                 template=template,
+                scale_denom=composition.view.scale,
+                center=state.pane_a_center,
             ),
             layers=pane_a_layers,
         ),
         pane_b=RenderComparisonPane(
             composition_id=pane_b.composition_id,
-            view_center=list(pane_b.view.center),
-            view_scale=pane_b.view.scale,
+            view_center=list(state.pane_b_center or pane_b.view.center),
+            view_scale=composition.view.scale,
             geo_window=_comparison_pane_geo_window(
                 pane_b,
                 target=target,
                 template=template,
+                scale_denom=composition.view.scale,
+                center=state.pane_b_center,
             ),
             layers=pane_b_layers,
         ),
@@ -513,13 +517,15 @@ def _comparison_pane_geo_window(
     *,
     target: TargetConfig,
     template: TemplateMetadata,
+    scale_denom: int | None = None,
+    center: list[float] | None = None,
 ) -> GeoWindow:
-    center_lon, center_lat = composition.view.center
+    center_lon, center_lat = center or composition.view.center
     try:
         return _compute_geo_window(
             center_lon=center_lon,
             center_lat=center_lat,
-            scale_denom=composition.view.scale,
+            scale_denom=scale_denom or composition.view.scale,
             map_frame=template.map_frame,
         )
     except (ValueError, ValidationError) as exc:

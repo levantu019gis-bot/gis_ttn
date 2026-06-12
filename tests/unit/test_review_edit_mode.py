@@ -11,7 +11,7 @@ from PIL import Image
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import QPoint, Qt
 from PySide6.QtGui import QBrush, QFont, QImage, QKeyEvent
 from PySide6.QtWidgets import (
     QApplication,
@@ -790,6 +790,98 @@ def test_gis_canvas_pan_uses_template_map_frame_size_for_ground_distance() -> No
     small_delta = abs(small_frame_canvas.center[0] - 106.7)
     large_delta = abs(large_frame_canvas.center[0] - 106.7)
     assert large_delta > small_delta * 1.9
+
+
+def test_gis_canvas_compare_drag_targets_pane_b_composition() -> None:
+    qapp()
+    canvas = GisCanvasWidget()
+    canvas.resize(800, 450)
+    selected = composition(
+        "alpha__20260525",
+        "alpha",
+        date(2026, 5, 25),
+        needs_revalidation=False,
+    ).model_copy(
+        update={
+            "temporal_compare": TemporalCompareState(
+                enabled=True,
+                orientation=TemporalCompareOrientation.VERTICAL,
+                pane_a_composition_id="alpha__20260525",
+                pane_b_composition_id="alpha__20260526",
+            )
+        }
+    )
+    pane_b = composition(
+        "alpha__20260526",
+        "alpha",
+        date(2026, 5, 26),
+        needs_revalidation=False,
+    ).model_copy(update={"view": ViewState(center=[107.0, 11.0], scale=25000)})
+    canvas.set_composition(selected)
+    canvas.set_compare_context(selected, pane_a=selected, pane_b=pane_b)
+
+    emissions: list[tuple[str, list[float]]] = []
+    canvas.comparePaneViewEditCompleted.connect(
+        lambda pane, center: emissions.append((pane, list(center)))
+    )
+
+    frame = canvas._frame_rect()  # noqa: SLF001
+    start = QPoint(
+        int(frame.left() + frame.width() * 0.75),
+        int(frame.center().y()),
+    )
+    canvas._begin_drag_at(start)  # noqa: SLF001
+    canvas._move_drag_to(QPoint(start.x() + 40, start.y()))  # noqa: SLF001
+    canvas._end_drag()  # noqa: SLF001
+
+    assert emissions
+    assert emissions[0][0] == "B"
+    assert emissions[0][1] != pane_b.view.center
+    assert canvas.center == selected.view.center
+
+
+def test_gis_canvas_compare_drag_distinguishes_panes_with_same_composition() -> None:
+    qapp()
+    canvas = GisCanvasWidget()
+    canvas.resize(800, 450)
+    selected = composition(
+        "alpha__20260525",
+        "alpha",
+        date(2026, 5, 25),
+        needs_revalidation=False,
+    ).model_copy(
+        update={
+            "temporal_compare": TemporalCompareState(
+                enabled=True,
+                orientation=TemporalCompareOrientation.VERTICAL,
+                pane_a_composition_id="alpha__20260525",
+                pane_b_composition_id="alpha__20260525",
+                pane_a_center=[106.7, 10.8],
+                pane_b_center=[107.0, 11.0],
+            )
+        }
+    )
+    canvas.set_composition(selected)
+    canvas.set_compare_context(selected, pane_a=selected, pane_b=selected)
+
+    emissions: list[tuple[str, list[float]]] = []
+    canvas.comparePaneViewEditCompleted.connect(
+        lambda pane, center: emissions.append((pane, list(center)))
+    )
+
+    frame = canvas._frame_rect()  # noqa: SLF001
+    start = QPoint(
+        int(frame.left() + frame.width() * 0.75),
+        int(frame.center().y()),
+    )
+    canvas._begin_drag_at(start)  # noqa: SLF001
+    canvas._move_drag_to(QPoint(start.x() + 40, start.y()))  # noqa: SLF001
+    canvas._end_drag()  # noqa: SLF001
+
+    assert emissions
+    assert emissions[0][0] == "B"
+    assert emissions[0][1] != selected.temporal_compare.pane_b_center
+    assert canvas.center == selected.view.center
 
 
 def test_gis_canvas_exports_current_displayed_image(tmp_path: Path) -> None:
@@ -2205,9 +2297,40 @@ def test_workspace_updates_temporal_compare_state_and_marks_stale(tmp_path: Path
     assert updated.temporal_compare.enabled is True
     assert updated.temporal_compare.orientation == TemporalCompareOrientation.VERTICAL
     assert updated.temporal_compare.pane_b_composition_id == "alpha__20260526"
+    assert updated.temporal_compare.pane_a_center == comp.view.center
+    assert updated.temporal_compare.pane_b_center == other.view.center
     assert updated.needs_revalidation is True
     assert updated.ready is False
     assert updated.include is False
+
+
+def test_workspace_allows_same_composition_for_compare_panes_and_updates_pane_center(
+    tmp_path: Path,
+) -> None:
+    service = WorkspaceService(tmp_path / "workspace")
+    service.initialize(config_path="config.json")
+    comp = composition("alpha__20260525", "alpha", date(2026, 5, 25), needs_revalidation=False)
+    service.write_composition(comp)
+
+    updated = service.update_temporal_compare_state(
+        "alpha__20260525",
+        enabled=True,
+        orientation=TemporalCompareOrientation.VERTICAL,
+        pane_a_composition_id="alpha__20260525",
+        pane_b_composition_id="alpha__20260525",
+    )
+    panned = service.update_temporal_compare_pane_view(
+        "alpha__20260525",
+        pane="B",
+        center=[107.2, 10.7],
+    )
+
+    assert updated.temporal_compare.pane_a_composition_id == "alpha__20260525"
+    assert updated.temporal_compare.pane_b_composition_id == "alpha__20260525"
+    assert panned.temporal_compare.pane_a_center == comp.view.center
+    assert panned.temporal_compare.pane_b_center == [107.2, 10.7]
+    assert panned.view.center == comp.view.center
+    assert panned.needs_revalidation is True
 
 
 def test_review_edit_temporal_compare_controls_persist_selection(tmp_path: Path) -> None:
@@ -2251,6 +2374,66 @@ def test_review_edit_temporal_compare_controls_persist_selection(tmp_path: Path)
     assert reloaded.temporal_compare.orientation == TemporalCompareOrientation.HORIZONTAL
     assert reloaded.temporal_compare.pane_a_composition_id == "alpha__20260525"
     assert reloaded.temporal_compare.pane_b_composition_id == "alpha__20260526"
+
+
+def test_review_edit_compare_pane_view_persists_to_selected_compare_state(
+    tmp_path: Path,
+) -> None:
+    qapp()
+    service = WorkspaceService(tmp_path / "workspace")
+    service.initialize(config_path="config.json")
+    selected = composition(
+        "alpha__20260525",
+        "alpha",
+        date(2026, 5, 25),
+        ready=True,
+        include=True,
+        needs_revalidation=False,
+        review_order=1,
+    ).model_copy(
+        update={
+            "temporal_compare": TemporalCompareState(
+                enabled=True,
+                orientation=TemporalCompareOrientation.VERTICAL,
+                pane_a_composition_id="alpha__20260525",
+                pane_b_composition_id="alpha__20260526",
+            )
+        }
+    )
+    pane_b = composition(
+        "alpha__20260526",
+        "alpha",
+        date(2026, 5, 26),
+        ready=True,
+        needs_revalidation=False,
+    )
+    service.write_composition(selected)
+    service.write_composition(pane_b)
+
+    rendered: list[str] = []
+    mode = ReviewEditMode()
+    mode._request_canvas_render = lambda item: rendered.append(item.composition_id)  # noqa: SLF001
+    mode.load_workspace(service, targets=[target_config("alpha", sort_order=1, name="Alpha")])
+    selected_index = mode.tree_model.index_for_composition_id("alpha__20260525")
+    mode.tree_view.setCurrentIndex(selected_index)
+
+    new_center = [107.1, 10.9]
+    mode.gis_canvas.comparePaneViewEditCompleted.emit("B", new_center)
+    assert service.read_composition("alpha__20260526").view.center != new_center
+
+    mode._flush_pending_canvas_view()  # noqa: SLF001
+
+    updated_pane_b = service.read_composition("alpha__20260526")
+    updated_selected = service.read_composition("alpha__20260525")
+    assert updated_pane_b.view.center != new_center
+    assert updated_pane_b.needs_revalidation is False
+    assert updated_selected.temporal_compare.pane_b_center == new_center
+    assert updated_selected.needs_revalidation is True
+    assert updated_selected.include is False
+    assert updated_selected.review_order is None
+    assert mode.selected_composition is not None
+    assert mode.selected_composition.composition_id == "alpha__20260525"
+    assert rendered[-1] == "alpha__20260525"
 
 
 def test_review_edit_temporal_compare_requires_two_usable_layers(tmp_path: Path) -> None:
