@@ -6,6 +6,11 @@ from thucthengay.export.final_render import (
     final_render_currentness_issue,
     final_render_output_size,
 )
+from thucthengay.export.history_sync import (
+    ExportHistorySyncResult,
+    ExportHistorySyncRow,
+    sync_export_history,
+)
 from thucthengay.export.log_writer import write_export_summary_and_trace_log
 from thucthengay.export.pipeline import (
     FullExportResult,
@@ -25,6 +30,8 @@ from thucthengay.models import ExportFinalRenderStatus
 
 __all__ = [
     "ExportFinalRenderStatus",
+    "ExportHistorySyncResult",
+    "ExportHistorySyncRow",
     "FullExportResult",
     "LoadedTemplate",
     "TemplateLoadError",
@@ -38,6 +45,7 @@ __all__ = [
     "load_target_template",
     "preflight_allows_auto_export",
     "run_full_export",
+    "sync_export_history",
     "template_compatibility_issues",
     "write_export_summary_and_trace_log",
 ]

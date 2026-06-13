@@ -42,6 +42,7 @@ def populate_workspace_cache(
     additional_images: Sequence[CacheImageInput] = (),
     clear_existing: bool = False,
     clear_confirmed: bool = False,
+    overwrite_existing: bool = False,
     checkpoint: CheckpointCallback | None = None,
 ) -> CachePopulationResult:
     """Copy matched imagery into deterministic target/date cache folders."""
@@ -72,6 +73,7 @@ def populate_workspace_cache(
                 layers_by_target_date=layers_by_target_date,
                 issues=issues,
                 seen_identities=seen_identities,
+                overwrite_existing=overwrite_existing,
             )
 
     for image in additional_images:
@@ -83,6 +85,7 @@ def populate_workspace_cache(
             layers_by_target_date=layers_by_target_date,
             issues=issues,
             seen_identities=seen_identities,
+            overwrite_existing=overwrite_existing,
         )
         if checkpoint is not None:
             checkpoint()
@@ -101,6 +104,7 @@ def _add_cache_input(
     layers_by_target_date: dict[tuple[str, str], list[ImageLayer]],
     issues: list[Issue],
     seen_identities: set[tuple[str, str, str]],
+    overwrite_existing: bool,
 ) -> None:
     source_path = image.source_path.expanduser().resolve()
     date_key = _date_key(image.layer)
@@ -119,7 +123,7 @@ def _add_cache_input(
         source_path,
     )
     try:
-        _copy_source_to_cache(source_path, cache_path)
+        _copy_source_to_cache(source_path, cache_path, overwrite_existing=overwrite_existing)
     except OSError as error:
         issues.append(_copy_failed_issue(source_path, error))
         return
@@ -153,9 +157,14 @@ def _cache_path_for_source(
     return workspace_service.paths.cache / target_dir / date_key / filename
 
 
-def _copy_source_to_cache(source_path: Path, cache_path: Path) -> None:
+def _copy_source_to_cache(
+    source_path: Path,
+    cache_path: Path,
+    *,
+    overwrite_existing: bool = False,
+) -> None:
     cache_path.parent.mkdir(parents=True, exist_ok=True)
-    if cache_path.exists():
+    if cache_path.exists() and not overwrite_existing:
         return
     shutil.copy2(source_path, cache_path)
 

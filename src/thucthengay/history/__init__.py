@@ -11,6 +11,7 @@ from thucthengay.history.service import (
     HistoricalPathPrefixReplacementRow,
     HistoricalPathRepairResult,
     HistoryConfigurationError,
+    HistoryExportRecordResult,
     HistoryInitializationResult,
     HistoryRecordError,
     HistoryRecordResult,
@@ -20,6 +21,7 @@ from thucthengay.history.service import (
 
 __all__ = [
     "HistoryConfigurationError",
+    "HistoryExportRecordResult",
     "HistoryInitializationResult",
     "HistoricalPathPrefixReplacementPreview",
     "HistoricalPathPrefixReplacementResult",

@@ -84,8 +84,7 @@ class HistoricalLoadingSettings:
     enabled: bool = False
     image_selection: HistoricalImageSelectionConfig = field(
         default_factory=lambda: HistoricalImageSelectionConfig(
-            mode=HistoricalSelectionMode.LATEST_IMAGES,
-            limit_per_target=1,
+            mode=HistoricalSelectionMode.LATEST_DATE,
         )
     )
 
@@ -205,7 +204,7 @@ def apply_historical_loading_override(
 
 def _historical_selection_for_setup(raw_selection: object) -> HistoricalImageSelectionConfig:
     if not isinstance(raw_selection, dict):
-        return _latest_historical_image_selection()
+        return _latest_historical_date_selection()
 
     if raw_selection.get("mode") == HistoricalSelectionMode.DATE_RANGE.value:
         start_date = _date_from_raw(raw_selection.get("start_date"))
@@ -217,13 +216,12 @@ def _historical_selection_for_setup(raw_selection: object) -> HistoricalImageSel
                 end_date=end_date,
             )
 
-    return _latest_historical_image_selection()
+    return _latest_historical_date_selection()
 
 
-def _latest_historical_image_selection() -> HistoricalImageSelectionConfig:
+def _latest_historical_date_selection() -> HistoricalImageSelectionConfig:
     return HistoricalImageSelectionConfig(
-        mode=HistoricalSelectionMode.LATEST_IMAGES,
-        limit_per_target=1,
+        mode=HistoricalSelectionMode.LATEST_DATE,
     )
 
 

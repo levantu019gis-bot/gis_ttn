@@ -59,6 +59,17 @@ class HistoryRecordResult:
 
 
 @dataclass(frozen=True)
+class HistoryExportRecordResult:
+    """Outcome returned after recording one export-visible composition."""
+
+    enabled: bool
+    composition_id: str
+    recorded_layers: int
+    include_events: int
+    existing_layers: int
+
+
+@dataclass(frozen=True)
 class HistorySkipResult:
     """Outcome returned after marking a previously included composition as skipped."""
 
@@ -214,6 +225,92 @@ class HistoryService:
             composition_id=composition.composition_id,
             recorded_layers=len(visible_layers),
             include_events=event_count,
+        )
+
+    def record_exported_composition(
+        self,
+        composition: Composition,
+        *,
+        target: TargetConfig,
+        workspace_path: str | Path,
+    ) -> HistoryExportRecordResult:
+        """Record visible layers for a composition that was actually used by export.
+
+        Unlike the Review/Edit include path, export sync must be idempotent. Re-running
+        the same export should not append duplicate events when the target-image row is
+        already active for the same workspace and composition.
+        """
+        if not self.enabled:
+            return HistoryExportRecordResult(
+                enabled=False,
+                composition_id=composition.composition_id,
+                recorded_layers=0,
+                include_events=0,
+                existing_layers=0,
+            )
+
+        database_path = self._required_database_path()
+        if not database_path.exists():
+            self.initialize()
+
+        visible_layers = [layer for layer in composition.layers if layer.visible]
+        workspace_text = str(Path(workspace_path).expanduser().resolve())
+        exported_at = _utc_iso()
+        recorded_layers = 0
+        event_count = 0
+        existing_layers = 0
+        with closing(self._connect()) as connection:
+            _ensure_target_image_history_review_columns(connection)
+            try:
+                with connection:
+                    target_history_id = _upsert_target_history(
+                        connection,
+                        target=target,
+                        timestamp=exported_at,
+                    )
+                    for layer in visible_layers:
+                        image_asset_id = _upsert_image_asset(
+                            connection,
+                            composition=composition,
+                            layer=layer,
+                            timestamp=exported_at,
+                        )
+                        if _target_image_history_is_current(
+                            connection,
+                            target_history_id=target_history_id,
+                            image_asset_id=image_asset_id,
+                            workspace_path=workspace_text,
+                            composition_id=composition.composition_id,
+                        ):
+                            existing_layers += 1
+                            continue
+                        target_image_history_id = _upsert_target_image_history(
+                            connection,
+                            target_history_id=target_history_id,
+                            image_asset_id=image_asset_id,
+                            workspace_path=workspace_text,
+                            composition_id=composition.composition_id,
+                            included_at=exported_at,
+                        )
+                        _append_include_event(
+                            connection,
+                            target_image_history_id=target_image_history_id,
+                            workspace_path=workspace_text,
+                            composition_id=composition.composition_id,
+                            included_at=exported_at,
+                        )
+                        recorded_layers += 1
+                        event_count += 1
+            except sqlite3.Error as error:
+                msg = f"could not record export history for {composition.composition_id}: {error}"
+                raise HistoryRecordError(msg) from error
+
+        return HistoryExportRecordResult(
+            enabled=True,
+            composition_id=composition.composition_id,
+            recorded_layers=recorded_layers,
+            include_events=event_count,
+            existing_layers=existing_layers,
         )
 
     def record_skipped_composition(
@@ -1009,6 +1106,33 @@ def _upsert_target_image_history(
         ),
     )
     return int(cursor.lastrowid)
+
+
+def _target_image_history_is_current(
+    connection: sqlite3.Connection,
+    *,
+    target_history_id: int,
+    image_asset_id: int,
+    workspace_path: str,
+    composition_id: str,
+) -> bool:
+    row = connection.execute(
+        """
+        SELECT active, latest_workspace_path, latest_composition_id
+        FROM target_image_history
+        WHERE target_history_id = ?
+          AND image_asset_id = ?
+        """,
+        (target_history_id, image_asset_id),
+    ).fetchone()
+    if row is None:
+        return False
+    active, latest_workspace_path, latest_composition_id = row
+    return (
+        int(active) == 1
+        and latest_workspace_path == workspace_path
+        and latest_composition_id == composition_id
+    )
 
 
 def _mark_target_image_history_skipped(

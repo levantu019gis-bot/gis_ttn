@@ -21,6 +21,7 @@ from thucthengay.editor.widgets.path_picker import (
     PathStatus,
     validate_selected_path,
 )
+from thucthengay.editor.widgets.workspace_confirmation import ExistingWorkspaceAction
 from thucthengay.jobs import IngestionJobResult, JobState, ProgressEvent
 from thucthengay.models import (
     GridConfig,
@@ -131,8 +132,9 @@ def test_setup_mode_exposes_historical_loading_choice_from_config(tmp_path: Path
     assert setup.historical_loading_checkbox.isChecked()
     assert selected_paths.historical_loading_enabled is True
     assert selected_paths.historical_image_selection is not None
-    assert selected_paths.historical_image_selection.mode == HistoricalSelectionMode.LATEST_IMAGES
-    assert selected_paths.historical_image_selection.limit_per_target == 1
+    assert setup.historical_mode_combo.currentData() == "latest_date"
+    assert selected_paths.historical_image_selection.mode == HistoricalSelectionMode.LATEST_DATE
+    assert selected_paths.historical_image_selection.limit_per_target is None
 
 
 def test_setup_mode_exposes_historical_date_range_from_config(tmp_path: Path) -> None:
@@ -280,11 +282,14 @@ def test_setup_mode_requires_confirmation_before_ingest_with_existing_workspace_
 
     confirmed_plans = []
 
-    def deny_clear(_parent, plan):
+    def cancel_existing_workspace(_parent, plan):
         confirmed_plans.append(plan)
-        return False
+        return ExistingWorkspaceAction.CANCEL
 
-    monkeypatch.setattr("thucthengay.editor.modes.setup_mode.confirm_workspace_clear", deny_clear)
+    monkeypatch.setattr(
+        "thucthengay.editor.modes.setup_mode.choose_existing_workspace_action",
+        cancel_existing_workspace,
+    )
 
     setup = SetupMode()
     emitted = []
@@ -314,13 +319,13 @@ def test_setup_mode_emits_clear_flags_after_workspace_clear_confirmation(
 
     confirmed_plans = []
 
-    def confirm_clear(_parent, plan):
+    def choose_clear(_parent, plan):
         confirmed_plans.append(plan)
-        return True
+        return ExistingWorkspaceAction.CLEAR
 
     monkeypatch.setattr(
-        "thucthengay.editor.modes.setup_mode.confirm_workspace_clear",
-        confirm_clear,
+        "thucthengay.editor.modes.setup_mode.choose_existing_workspace_action",
+        choose_clear,
     )
 
     setup = SetupMode()
@@ -337,6 +342,48 @@ def test_setup_mode_emits_clear_flags_after_workspace_clear_confirmation(
     selected_paths = emitted[0]
     assert selected_paths.clear_existing_workspace is True
     assert selected_paths.clear_workspace_confirmed is True
+    assert selected_paths.override_existing_workspace is False
+
+
+def test_setup_mode_emits_override_flag_for_existing_workspace_override(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    qapp()
+    config_file = tmp_path / "project.json"
+    config_file.write_text("{}", encoding="utf-8")
+    imagery_folder = tmp_path / "imagery"
+    imagery_folder.mkdir()
+    workspace_folder = tmp_path / "workspace"
+    (workspace_folder / "cache").mkdir(parents=True)
+    (workspace_folder / "cache" / "old.tif").write_text("old", encoding="utf-8")
+
+    selected_actions = []
+
+    def choose_override(_parent, plan):
+        selected_actions.append(plan)
+        return ExistingWorkspaceAction.OVERRIDE
+
+    monkeypatch.setattr(
+        "thucthengay.editor.modes.setup_mode.choose_existing_workspace_action",
+        choose_override,
+    )
+
+    setup = SetupMode()
+    emitted = []
+    setup.ingestRequested.connect(emitted.append)
+    setup.config_row.set_path(config_file)
+    setup.imagery_row.set_path(imagery_folder)
+    setup.workspace_row.set_path(workspace_folder)
+
+    setup.ingest_button.click()
+
+    assert selected_actions
+    assert len(emitted) == 1
+    selected_paths = emitted[0]
+    assert selected_paths.clear_existing_workspace is False
+    assert selected_paths.clear_workspace_confirmed is False
+    assert selected_paths.override_existing_workspace is True
 
 
 def test_setup_mode_shows_live_ingestion_progress_and_locks_action(tmp_path: Path) -> None:
@@ -518,13 +565,13 @@ def test_app_shell_runs_ingestion_when_setup_requests_it(
     )
     confirmed_plans = []
 
-    def confirm_clear(_parent, plan):
+    def choose_override(_parent, plan):
         confirmed_plans.append(plan)
-        return True
+        return ExistingWorkspaceAction.OVERRIDE
 
     monkeypatch.setattr(
-        "thucthengay.editor.modes.setup_mode.confirm_workspace_clear",
-        confirm_clear,
+        "thucthengay.editor.modes.setup_mode.choose_existing_workspace_action",
+        choose_override,
     )
 
     shell = AppShell(preferences_service=preferences_service(tmp_path))
@@ -533,7 +580,15 @@ def test_app_shell_runs_ingestion_when_setup_requests_it(
     def capture_review_load(self, service, *, targets=None) -> None:
         loaded_modes.append(("review", service, targets))
 
-    def capture_export_load(self, service, *, targets=None) -> None:
+    def capture_export_load(
+        self,
+        service,
+        *,
+        targets=None,
+        template_issues=None,
+        history_service=None,
+    ) -> None:
+        del template_issues, history_service
         loaded_modes.append(("export", service, targets))
 
     shell.review_edit_mode.load_workspace = MethodType(
@@ -571,8 +626,9 @@ def test_app_shell_runs_ingestion_when_setup_requests_it(
     assert selection.end_date == date(2026, 5, 31)
     assert job_kwargs["imagery_folder"] == imagery_folder.resolve()
     assert job_kwargs["workspace_service"].paths.root == workspace_folder.resolve()
-    assert job_kwargs["clear_existing"] is True
-    assert job_kwargs["clear_confirmed"] is True
+    assert job_kwargs["clear_existing"] is False
+    assert job_kwargs["clear_confirmed"] is False
+    assert job_kwargs["merge_existing"] is True
     assert callable(job_kwargs["publish"])
     assert shell.setup_mode.progress_widget.image_count_label.text() == (
         "Ảnh đã scan: 1/2 (hợp lệ: 1)"
@@ -629,7 +685,15 @@ def test_app_shell_opens_existing_workspace_from_manifest(
     def capture_review_load(self, loaded_service, *, targets=None) -> None:
         loaded_modes.append(("review", loaded_service, targets))
 
-    def capture_export_load(self, loaded_service, *, targets=None) -> None:
+    def capture_export_load(
+        self,
+        loaded_service,
+        *,
+        targets=None,
+        template_issues=None,
+        history_service=None,
+    ) -> None:
+        del template_issues, history_service
         loaded_modes.append(("export", loaded_service, targets))
 
     shell.review_edit_mode.load_workspace = MethodType(

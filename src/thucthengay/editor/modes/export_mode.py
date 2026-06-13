@@ -25,6 +25,7 @@ from thucthengay.export import (
     preflight_allows_auto_export,
     run_full_export,
 )
+from thucthengay.history import HistoryService
 from thucthengay.models import ExportPreflightPlan, Issue, IssueSeverity, TargetConfig
 from thucthengay.workspace import WorkspaceError, WorkspaceService
 
@@ -48,6 +49,7 @@ class ExportMode(QWidget):
         self._workspace_service: WorkspaceService | None = None
         self._targets: list[TargetConfig] = []
         self._template_issues: list[Issue] = []
+        self._history_service: HistoryService | None = None
         self._last_plan: ExportPreflightPlan | None = None
         self._export_runner = export_runner
         self._export_thread: QThread | None = None
@@ -110,13 +112,19 @@ class ExportMode(QWidget):
         *,
         targets: list[TargetConfig] | None = None,
         template_issues: list[Issue] | None = None,
+        history_service: HistoryService | None = None,
     ) -> None:
         self._workspace_service = workspace_service
         self._targets = list(targets or [])
         self._template_issues = list(template_issues or [])
+        self._history_service = history_service
         self.status_label.setText("San sang chay preflight.")
         self.export_button.setEnabled(False)
         self._last_plan = None
+
+    def set_history_service(self, history_service: HistoryService | None) -> None:
+        """Refresh the configured historical registry used by export."""
+        self._history_service = history_service
 
     def refresh_config_targets(
         self,
@@ -194,6 +202,7 @@ class ExportMode(QWidget):
             list(self._targets),
             output_stem=output_stem,
             template_issues=self._template_issues,
+            history_service=self._history_service,
             runner=self._export_runner,
         )
         worker.moveToThread(thread)

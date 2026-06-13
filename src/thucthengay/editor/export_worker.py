@@ -7,6 +7,7 @@ from collections.abc import Callable
 from PySide6.QtCore import QObject, Signal, Slot
 
 from thucthengay.export.pipeline import FullExportResult, run_full_export
+from thucthengay.history import HistoryService
 from thucthengay.models import Issue, TargetConfig
 from thucthengay.workspace import WorkspaceService
 
@@ -25,6 +26,7 @@ class ExportWorker(QObject):
         *,
         output_stem: str,
         template_issues: list[Issue] | None = None,
+        history_service: HistoryService | None = None,
         runner: ExportRunner = run_full_export,
         parent: QObject | None = None,
     ) -> None:
@@ -33,6 +35,7 @@ class ExportWorker(QObject):
         self._targets = targets
         self._output_stem = output_stem
         self._template_issues = list(template_issues or [])
+        self._history_service = history_service
         self._runner = runner
         self._cancelled = False
 
@@ -52,5 +55,6 @@ class ExportWorker(QObject):
             output_stem=self._output_stem,
             is_cancelled=self.is_cancelled,
             template_issues=self._template_issues,
+            history_service=self._history_service,
         )
         self.finished.emit(result)

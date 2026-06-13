@@ -9,6 +9,7 @@ from datetime import date, time
 from thucthengay.ingestion.cache_builder import UNKNOWN_DATE_KEY, CachePopulationResult
 from thucthengay.models import (
     Composition,
+    CompositionArtifacts,
     ImageLayer,
     Issue,
     IssueScope,
@@ -17,7 +18,7 @@ from thucthengay.models import (
     TargetConfig,
     ViewState,
 )
-from thucthengay.workspace import WorkspaceService
+from thucthengay.workspace import WorkspaceError, WorkspaceService
 
 CheckpointCallback = Callable[[], None]
 
@@ -35,6 +36,7 @@ def create_target_date_compositions(
     targets_by_id: dict[str, TargetConfig],
     workspace_service: WorkspaceService,
     *,
+    merge_existing: bool = False,
     checkpoint: CheckpointCallback | None = None,
 ) -> CompositionCreationResult:
     """Create one workspace composition per target/date group."""
@@ -60,14 +62,25 @@ def create_target_date_compositions(
         if capture_date is None:
             continue
 
-        composition = Composition(
-            composition_id=_composition_id(target_id, date_key),
-            target_id=target_id,
-            capture_date=capture_date,
-            layers=_initial_layers(layers),
-            view=ViewState(center=target.coordinate, scale=target.scale),
-            grid_override=None,
-        )
+        composition_id = _composition_id(target_id, date_key)
+        initial_layers = _initial_layers(layers)
+        if merge_existing and workspace_service.paths.composition_file(composition_id).exists():
+            composition = _merge_existing_composition(
+                workspace_service,
+                composition_id=composition_id,
+                target_id=target_id,
+                capture_date=capture_date,
+                incoming_layers=initial_layers,
+            )
+        else:
+            composition = Composition(
+                composition_id=composition_id,
+                target_id=target_id,
+                capture_date=capture_date,
+                layers=initial_layers,
+                view=ViewState(center=target.coordinate, scale=target.scale),
+                grid_override=None,
+            )
         workspace_service.write_composition(composition)
         composition_ids.append(composition.composition_id)
         if checkpoint is not None:
@@ -97,6 +110,83 @@ def _layer_with_initial_order(layer: ImageLayer, order: int) -> ImageLayer:
     if layer.capture_time is None:
         metadata_status = MetadataStatus.NEEDS_MANUAL_CORRECTION
     return layer.model_copy(update={"order": order, "metadata_status": metadata_status})
+
+
+def _merge_existing_composition(
+    workspace_service: WorkspaceService,
+    *,
+    composition_id: str,
+    target_id: str,
+    capture_date: date,
+    incoming_layers: list[ImageLayer],
+) -> Composition:
+    existing = workspace_service.read_composition(composition_id)
+    if existing.target_id != target_id or existing.capture_date != capture_date:
+        msg = (
+            f"Composition co san {composition_id} khong khop target/ngay voi du lieu ingest moi."
+        )
+        raise WorkspaceError(msg)
+
+    merged_layers = _merge_layers(existing.layers, incoming_layers)
+    if _layers_json(merged_layers) == _layers_json(existing.layers):
+        return existing
+
+    updated = Composition.model_validate(
+        {
+            **existing.model_dump(mode="python"),
+            "layers": merged_layers,
+            "artifacts": _stale_artifacts(existing.artifacts),
+            "needs_revalidation": True,
+            "ready": False,
+            "include": False,
+            "review_order": None,
+        }
+    )
+    return updated
+
+
+def _merge_layers(
+    existing_layers: list[ImageLayer],
+    incoming_layers: list[ImageLayer],
+) -> list[ImageLayer]:
+    incoming_by_id = {layer.layer_id: layer for layer in incoming_layers}
+    merged: list[ImageLayer] = []
+    for existing_layer in sorted(existing_layers, key=lambda layer: layer.order):
+        incoming = incoming_by_id.pop(existing_layer.layer_id, None)
+        if incoming is None:
+            merged.append(existing_layer)
+            continue
+        merged.append(
+            incoming.model_copy(
+                update={
+                    "visible": existing_layer.visible,
+                    "order": existing_layer.order,
+                }
+            )
+        )
+
+    existing_ids = {layer.layer_id for layer in existing_layers}
+    for incoming in incoming_layers:
+        if incoming.layer_id not in existing_ids:
+            merged.append(incoming)
+
+    return [
+        layer.model_copy(update={"order": order})
+        for order, layer in enumerate(merged)
+    ]
+
+
+def _stale_artifacts(artifacts: CompositionArtifacts) -> CompositionArtifacts:
+    return artifacts.model_copy(
+        update={
+            "final_render_path": None,
+            "render_log_path": None,
+        }
+    )
+
+
+def _layers_json(layers: list[ImageLayer]) -> list[dict[str, object]]:
+    return [layer.model_dump(mode="json") for layer in layers]
 
 
 def _capture_date_from_key(

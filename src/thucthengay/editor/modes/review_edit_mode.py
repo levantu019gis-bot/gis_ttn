@@ -80,6 +80,7 @@ class ReviewEditMode(QWidget):
 
     compositionSelected = Signal(object)
     CANVAS_VIEW_PERSIST_DEBOUNCE_MS = 250
+    GRID_INPUT_MIN_HEIGHT = 28
 
     def __init__(
         self,
@@ -199,6 +200,13 @@ class ReviewEditMode(QWidget):
         self.grid_scale_input.setObjectName("reviewGridScale")
         self.grid_scale_input.setFixedWidth(96)
         self.grid_scale_input.setToolTip("Mẫu số tỷ lệ bản đồ")
+        for grid_input in (
+            self.grid_degrees_input,
+            self.grid_minutes_input,
+            self.grid_seconds_input,
+            self.grid_scale_input,
+        ):
+            grid_input.setMinimumHeight(self.GRID_INPUT_MIN_HEIGHT)
         self.grid_status_label = QLabel("Chưa chọn composition.")
         self.grid_status_label.setObjectName("reviewGridStatus")
         self.grid_status_label.setWordWrap(True)
@@ -406,12 +414,12 @@ class ReviewEditMode(QWidget):
 
     def _build_right_panel(self) -> QWidget:
         panel = QWidget()
+        panel.setObjectName("reviewRightPanel")
         panel.setMinimumWidth(580)
         layout = QVBoxLayout(panel)
         layout.setContentsMargins(8, 0, 0, 0)
         layout.setSpacing(8)
-        layout.addWidget(self.composition_title)
-        layout.addWidget(self._build_gis_editor_panel(), 4)
+        layout.addWidget(self._build_gis_editor_panel(), 8)
         layout.addLayout(self._review_action_layout())
         layout.addWidget(self._build_review_bottom_panel(), 1)
         return panel
@@ -463,22 +471,35 @@ class ReviewEditMode(QWidget):
     def _build_review_bottom_panel(self) -> QWidget:
         panel = QWidget()
         panel.setObjectName("reviewBottomPanel")
+        panel.setMaximumHeight(128)
         layout = QHBoxLayout(panel)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(8)
         layout.addWidget(
-            self._panel_frame("Warnings", self.warnings_panel, object_name="reviewWarningsFrame"),
+            self._panel_frame(
+                "Warnings",
+                self.warnings_panel,
+                object_name="reviewWarningsFrame",
+                minimum_height=96,
+            ),
             1,
         )
         layout.addWidget(self._build_grid_panel(), 1)
         return panel
 
-    def _panel_frame(self, title: str, content: QWidget, *, object_name: str = "") -> QFrame:
+    def _panel_frame(
+        self,
+        title: str,
+        content: QWidget,
+        *,
+        object_name: str = "",
+        minimum_height: int = 104,
+    ) -> QFrame:
         frame = QFrame()
         if object_name:
             frame.setObjectName(object_name)
         frame.setFrameShape(QFrame.Shape.StyledPanel)
-        frame.setMinimumHeight(104)
+        frame.setMinimumHeight(minimum_height)
         layout = QVBoxLayout(frame)
         layout.setContentsMargins(10, 8, 10, 8)
         layout.setSpacing(4)
@@ -510,7 +531,7 @@ class ReviewEditMode(QWidget):
         frame = QFrame()
         frame.setObjectName("reviewGridPanel")
         frame.setFrameShape(QFrame.Shape.StyledPanel)
-        frame.setMinimumHeight(152)
+        frame.setMinimumHeight(96)
         layout = QVBoxLayout(frame)
         layout.setContentsMargins(10, 8, 10, 8)
         layout.setSpacing(6)
@@ -520,17 +541,17 @@ class ReviewEditMode(QWidget):
         header.addStretch(1)
         header.addWidget(self.save_grid_button)
 
-        fields = QGridLayout()
-        fields.setHorizontalSpacing(6)
-        fields.setVerticalSpacing(4)
-        fields.addWidget(QLabel("Độ"), 0, 0)
-        fields.addWidget(self.grid_degrees_input, 0, 1)
-        fields.addWidget(QLabel("Phút"), 0, 2)
-        fields.addWidget(self.grid_minutes_input, 0, 3)
-        fields.addWidget(QLabel("Giây"), 0, 4)
-        fields.addWidget(self.grid_seconds_input, 0, 5)
-        fields.addWidget(QLabel("Scale 1:"), 1, 0)
-        fields.addWidget(self.grid_scale_input, 1, 1, 1, 5)
+        fields = QHBoxLayout()
+        fields.setSpacing(6)
+        fields.addWidget(QLabel("Độ"))
+        fields.addWidget(self.grid_degrees_input)
+        fields.addWidget(QLabel("Phút"))
+        fields.addWidget(self.grid_minutes_input)
+        fields.addWidget(QLabel("Giây"))
+        fields.addWidget(self.grid_seconds_input)
+        fields.addWidget(QLabel("Scale 1:"))
+        fields.addWidget(self.grid_scale_input)
+        fields.addStretch(1)
 
         layout.addLayout(header)
         layout.addLayout(fields)
@@ -668,39 +689,27 @@ class ReviewEditMode(QWidget):
             return
 
         self.selected_composition = updated
-        history_warning = self._record_included_history(updated)
         try:
             self._persist_included_target_alignment(updated)
         except (ConfigUpdateError, WorkspaceError) as error:
             self._update_detail_panels(updated)
             self._refresh_workspace_projection(updated.composition_id, validate_selection=False)
-            history_note = (
-                f" Lịch sử ảnh cũng không cập nhật được: {history_warning}"
-                if history_warning is not None
-                else ""
-            )
             self.action_summary.setText(
-                f"Đã include composition, nhưng không cập nhật được config target: {error}"
-                f"{history_note}"
+                "Đã include composition vào workspace. Database history sẽ được cập nhật khi "
+                f"Export PPTX/TXT. Nhưng không cập nhật được config target: {error}"
             )
             return
         self._advance_after_transition(updated.composition_id)
-        if history_warning is not None:
-            self.action_summary.setText(
-                "Đã include composition, nhưng không cập nhật được lịch sử ảnh: "
-                f"{history_warning}"
-            )
-        else:
-            self.action_summary.setText(
-                "Đã include composition và chuyển sang mục kế tiếp nếu có."
-            )
+        self.action_summary.setText(
+            "Đã include composition và chuyển sang mục kế tiếp nếu có. Database history sẽ được "
+            "cập nhật khi Export PPTX/TXT."
+        )
 
     def _skip_selected(self) -> None:
         if self._workspace_service is None or self.selected_composition is None:
             return
 
         composition_id = self.selected_composition.composition_id
-        previous = self.selected_composition
         try:
             updated = self._workspace_service.apply_skip_transition(composition_id)
         except WorkspaceError as error:
@@ -708,19 +717,11 @@ class ReviewEditMode(QWidget):
             return
 
         self.selected_composition = updated
-        history_warning = (
-            self._record_skipped_history(previous) if previous.include else None
-        )
-        if history_warning is not None:
-            self.action_summary.setText(
-                "Đã skip composition, nhưng không cập nhật được lịch sử ảnh: "
-                f"{history_warning}"
-            )
-        else:
-            self.action_summary.setText(
-                "Đã skip composition và chuyển sang mục kế tiếp nếu có."
-            )
         self._advance_after_transition(updated.composition_id)
+        self.action_summary.setText(
+            "Đã skip composition và chuyển sang mục kế tiếp nếu có. Database history chưa thay "
+            "đổi; danh sách export sẽ quyết định nội dung được ghi khi Export PPTX/TXT."
+        )
 
     def _go_previous(self) -> None:
         if self._workspace_service is None or self.selected_composition is None:
@@ -735,7 +736,10 @@ class ReviewEditMode(QWidget):
             return
 
         self._refresh_workspace_projection(previous_id)
-        self.action_summary.setText("Đã quay lại composition trước đó.")
+        self.action_summary.setText(
+            "Đã quay lại composition trước đó. Database history không thay đổi vì đây "
+            "chỉ là thao tác điều hướng."
+        )
 
     def _revalidate_selected(self) -> None:
         if self._workspace_service is None or self.selected_composition is None:
@@ -801,38 +805,6 @@ class ReviewEditMode(QWidget):
         for target in self._targets or []:
             if target.id == composition.target_id:
                 return target
-        return None
-
-    def _record_included_history(self, composition: Composition) -> str | None:
-        if self._workspace_service is None:
-            return None
-        target = self._target_for_composition(composition)
-        if target is None:
-            return f"Không tìm thấy target `{composition.target_id}` trong config hiện tại."
-        try:
-            self._history_service.record_included_composition(
-                composition,
-                target=target,
-                workspace_path=self._workspace_service.paths.root,
-            )
-        except Exception as error:  # noqa: BLE001
-            return str(error)
-        return None
-
-    def _record_skipped_history(self, composition: Composition) -> str | None:
-        if self._workspace_service is None:
-            return None
-        target = self._target_for_composition(composition)
-        if target is None:
-            return f"Không tìm thấy target `{composition.target_id}` trong config hiện tại."
-        try:
-            self._history_service.record_skipped_composition(
-                composition,
-                target=target,
-                workspace_path=self._workspace_service.paths.root,
-            )
-        except Exception as error:  # noqa: BLE001
-            return str(error)
         return None
 
     def _request_canvas_render(self, composition: Composition) -> None:
@@ -1693,21 +1665,23 @@ class ReviewEditMode(QWidget):
                 1,
             )
             enough_options = len(options) >= 2
-            self.compare_enabled_checkbox.setEnabled(True)
-            self.compare_orientation_combo.setEnabled(self._compare_enabled_global)
-            self.compare_pane_a_combo.setEnabled(enough_options and self._compare_enabled_global)
-            self.compare_pane_b_combo.setEnabled(enough_options and self._compare_enabled_global)
-            if not self._compare_enabled_global:
+            effective_checked = self._compare_enabled_global and enough_options
+            self.compare_enabled_checkbox.setChecked(effective_checked)
+            self.compare_enabled_checkbox.setEnabled(enough_options)
+            self.compare_orientation_combo.setEnabled(effective_checked)
+            self.compare_pane_a_combo.setEnabled(effective_checked)
+            self.compare_pane_b_combo.setEnabled(effective_checked)
+            if not enough_options:
+                self.compare_status_label.setText(
+                    "Comparison disabled: this target requires at least two compositions."
+                )
+            elif not self._compare_enabled_global:
                 self.compare_status_label.setText(
                     "Comparison off: single-map workflow is unchanged."
                 )
-            elif enough_options:
-                self.compare_status_label.setText(
-                    "Comparison panes render the selected compositions/time points."
-                )
             else:
                 self.compare_status_label.setText(
-                    "Comparison is on globally, but this target requires two usable time points."
+                    "Comparison panes render the selected compositions/time points."
                 )
         finally:
             self._loading_compare_controls = False

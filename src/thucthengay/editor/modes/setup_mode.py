@@ -24,12 +24,15 @@ from thucthengay.editor.preferences import RecentProjectEntry, SetupPreferences
 from thucthengay.editor.widgets.ingestion_progress import IngestionProgressWidget
 from thucthengay.editor.widgets.ingestion_summary import IngestionSummaryWidget
 from thucthengay.editor.widgets.path_picker import PathKind, PathPickerRow
-from thucthengay.editor.widgets.workspace_confirmation import confirm_workspace_clear
+from thucthengay.editor.widgets.workspace_confirmation import (
+    ExistingWorkspaceAction,
+    choose_existing_workspace_action,
+)
 from thucthengay.jobs import IngestionSummary, ProgressEvent
 from thucthengay.models import HistoricalImageSelectionConfig, HistoricalSelectionMode
 from thucthengay.workspace import WorkspaceService
 
-_HISTORICAL_MODE_LATEST_IMAGE = "latest_image"
+_HISTORICAL_MODE_LATEST_DATE = "latest_date"
 _HISTORICAL_MODE_DATE_RANGE = "date_range"
 
 
@@ -44,6 +47,7 @@ class SetupPaths:
     historical_image_selection: HistoricalImageSelectionConfig | None = None
     clear_existing_workspace: bool = False
     clear_workspace_confirmed: bool = False
+    override_existing_workspace: bool = False
 
 
 class SetupMode(QWidget):
@@ -82,8 +86,8 @@ class SetupMode(QWidget):
         self.historical_mode_combo = QComboBox()
         self.historical_mode_combo.setObjectName("setupHistoricalLoadingMode")
         self.historical_mode_combo.addItem(
-            "Latest image",
-            _HISTORICAL_MODE_LATEST_IMAGE,
+            "Latest date",
+            _HISTORICAL_MODE_LATEST_DATE,
         )
         self.historical_mode_combo.addItem(
             "Date range",
@@ -317,13 +321,17 @@ class SetupMode(QWidget):
 
         workspace_service = WorkspaceService(selected_paths.workspace_folder)
         if workspace_service.has_app_owned_data():
-            if not confirm_workspace_clear(self, workspace_service.clear_plan()):
+            action = choose_existing_workspace_action(self, workspace_service.clear_plan())
+            if action is ExistingWorkspaceAction.CANCEL:
                 return
-            selected_paths = replace(
-                selected_paths,
-                clear_existing_workspace=True,
-                clear_workspace_confirmed=True,
-            )
+            if action is ExistingWorkspaceAction.CLEAR:
+                selected_paths = replace(
+                    selected_paths,
+                    clear_existing_workspace=True,
+                    clear_workspace_confirmed=True,
+                )
+            elif action is ExistingWorkspaceAction.OVERRIDE:
+                selected_paths = replace(selected_paths, override_existing_workspace=True)
 
         self.ingestRequested.emit(selected_paths)
 
@@ -351,7 +359,7 @@ class SetupMode(QWidget):
                 )
         else:
             self.historical_mode_combo.setCurrentIndex(
-                max(0, self.historical_mode_combo.findData(_HISTORICAL_MODE_LATEST_IMAGE))
+                max(0, self.historical_mode_combo.findData(_HISTORICAL_MODE_LATEST_DATE))
             )
         self._update_historical_controls_state()
 
@@ -388,8 +396,7 @@ class SetupMode(QWidget):
                 end_date=_date_from_qdate(self.historical_end_date_edit.date()),
             )
         return HistoricalImageSelectionConfig(
-            mode=HistoricalSelectionMode.LATEST_IMAGES,
-            limit_per_target=1,
+            mode=HistoricalSelectionMode.LATEST_DATE,
         )
 
     def _emit_open_workspace_requested(self) -> None:

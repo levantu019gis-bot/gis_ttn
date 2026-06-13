@@ -6,6 +6,8 @@ from pathlib import Path
 
 from thucthengay.ingestion import CachePopulationResult, create_target_date_compositions
 from thucthengay.models import (
+    Composition,
+    CompositionArtifacts,
     GridConfig,
     GridInterval,
     ImageLayer,
@@ -13,6 +15,8 @@ from thucthengay.models import (
     MetadataStatus,
     TargetConfig,
     TargetExportConfig,
+    ValidationSummary,
+    ViewState,
 )
 from thucthengay.workspace import WorkspaceService
 
@@ -129,6 +133,74 @@ def test_layer_stack_sorts_newest_valid_time_first_and_keeps_missing_time(
     assert [layer.layer_id for layer in composition.layers] == ["new", "old", "missing"]
     assert [layer.order for layer in composition.layers] == [0, 1, 2]
     assert composition.layers[2].metadata_status == MetadataStatus.NEEDS_MANUAL_CORRECTION
+
+
+def test_create_target_date_compositions_merges_existing_workspace_composition(
+    tmp_path: Path,
+) -> None:
+    workspace = WorkspaceService(tmp_path / "workspace")
+    workspace.initialize(config_path="config.json")
+    day = date(2026, 5, 25)
+    existing = Composition(
+        composition_id="target_001__20260525",
+        target_id="target_001",
+        capture_date=day,
+        layers=[
+            cached_layer("old", capture_date=day, capture_time=time(8, 0)).model_copy(
+                update={"visible": False, "order": 0, "cloud_percent": 77}
+            )
+        ],
+        view=ViewState(center=[106.71, 10.81], scale=25000),
+        grid_override=GridConfig(interval=GridInterval(seconds=30)),
+        reviewed=True,
+        ready=True,
+        include=True,
+        needs_revalidation=False,
+        review_order=3,
+        notes="keep me",
+        validation_summary=ValidationSummary(last_validated_at=None, error_count=0),
+        artifacts=CompositionArtifacts(
+            final_render_path="renders/target_001__20260525.png",
+            render_log_path="renders/target_001__20260525.render-log.json",
+        ),
+    )
+    workspace.write_composition(existing)
+    result = CachePopulationResult(
+        layers_by_target_date={
+            ("target_001", "20260525"): [
+                cached_layer("old", capture_date=day, capture_time=time(8, 0)).model_copy(
+                    update={"cloud_percent": 11}
+                ),
+                cached_layer("new", capture_date=day, capture_time=time(12, 0)),
+            ]
+        },
+        issues=[],
+    )
+
+    created = create_target_date_compositions(
+        result,
+        {"target_001": target()},
+        workspace,
+        merge_existing=True,
+    )
+
+    assert created.composition_ids == ["target_001__20260525"]
+    merged = workspace.read_composition("target_001__20260525")
+    assert [layer.layer_id for layer in merged.layers] == ["old", "new"]
+    assert [layer.order for layer in merged.layers] == [0, 1]
+    assert merged.layers[0].visible is False
+    assert merged.layers[0].cloud_percent == 11
+    assert merged.view.center == [106.71, 10.81]
+    assert merged.view.scale == 25000
+    assert merged.grid_override == existing.grid_override
+    assert merged.reviewed is True
+    assert merged.ready is False
+    assert merged.include is False
+    assert merged.needs_revalidation is True
+    assert merged.review_order is None
+    assert merged.notes == "keep me"
+    assert merged.artifacts.final_render_path is None
+    assert merged.artifacts.render_log_path is None
 
 
 def test_unknown_target_or_date_group_creates_issue_without_writing_composition(

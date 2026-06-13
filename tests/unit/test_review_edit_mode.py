@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import json
 import os
-import sqlite3
 from datetime import date, time
 from pathlib import Path
 
@@ -49,6 +48,7 @@ from thucthengay.editor.widgets import (
     TargetPreviewViewportOverlay,
     TargetPreviewWidget,
 )
+from thucthengay.history import HistoryRecordResult, HistorySkipResult
 from thucthengay.jobs import (
     IngestionJobResult,
     JobState,
@@ -199,9 +199,14 @@ class RecordingHistoryService:
         *,
         target: TargetConfig,
         workspace_path: str | Path,
-    ) -> object:
+    ) -> HistoryRecordResult:
         self.records.append((composition, target, Path(workspace_path)))
-        return object()
+        return HistoryRecordResult(
+            enabled=True,
+            composition_id=composition.composition_id,
+            recorded_layers=len([layer for layer in composition.layers if layer.visible]),
+            include_events=len([layer for layer in composition.layers if layer.visible]),
+        )
 
     def record_skipped_composition(
         self,
@@ -209,9 +214,13 @@ class RecordingHistoryService:
         *,
         target: TargetConfig,
         workspace_path: str | Path,
-    ) -> object:
+    ) -> HistorySkipResult:
         self.skips.append((composition, target, Path(workspace_path)))
-        return object()
+        return HistorySkipResult(
+            enabled=True,
+            composition_id=composition.composition_id,
+            skipped_layers=len([layer for layer in composition.layers if layer.visible]),
+        )
 
 
 class FailingHistoryService:
@@ -1987,17 +1996,27 @@ def test_review_edit_places_grid_controls_beside_warnings_below_gis_editor() -> 
     mode = ReviewEditMode()
 
     bottom_panel = mode.findChild(QWidget, "reviewBottomPanel")
+    right_panel = mode.findChild(QWidget, "reviewRightPanel")
     warnings_frame = mode.findChild(QFrame, "reviewWarningsFrame")
     grid_panel = mode.findChild(QFrame, "reviewGridPanel")
     target_preview_frame = mode.findChild(QFrame, "reviewTargetPreviewFrame")
 
     assert bottom_panel is not None
+    assert right_panel is not None
     assert warnings_frame is not None
     assert grid_panel is not None
     assert target_preview_frame is not None
+    assert mode.composition_title.parent() is None
     assert warnings_frame.parent() is bottom_panel
     assert grid_panel.parent() is bottom_panel
     assert target_preview_frame.parent() is not bottom_panel
+    assert bottom_panel.maximumHeight() == 128
+    assert right_panel.layout().stretch(0) == 8
+    assert right_panel.layout().stretch(2) == 1
+    assert mode.grid_degrees_input.minimumHeight() == mode.GRID_INPUT_MIN_HEIGHT
+    assert mode.grid_minutes_input.minimumHeight() == mode.GRID_INPUT_MIN_HEIGHT
+    assert mode.grid_seconds_input.minimumHeight() == mode.GRID_INPUT_MIN_HEIGHT
+    assert mode.grid_scale_input.minimumHeight() == mode.GRID_INPUT_MIN_HEIGHT
 
 
 def test_review_edit_grid_controls_reject_invalid_values_without_write(
@@ -2190,11 +2209,9 @@ def test_review_edit_include_records_history_after_workspace_include(
 
     included = service.read_composition("alpha__20260525")
     assert included.include is True
-    assert len(history.records) == 1
-    recorded_composition, recorded_target, recorded_workspace = history.records[0]
-    assert recorded_composition.composition_id == "alpha__20260525"
-    assert recorded_target.id == "alpha"
-    assert recorded_workspace == service.paths.root
+    assert history.records == []
+    assert "Đã include composition" in mode.action_summary.text()
+    assert "Database history sẽ được cập nhật khi Export PPTX/TXT" in mode.action_summary.text()
 
 
 def test_review_edit_skip_records_history_after_previous_include(
@@ -2232,12 +2249,9 @@ def test_review_edit_skip_records_history_after_previous_include(
     skipped = service.read_composition("alpha__20260525")
     assert skipped.include is False
     assert skipped.ready is False
-    assert len(history.skips) == 1
-    skipped_composition, skipped_target, skipped_workspace = history.skips[0]
-    assert skipped_composition.composition_id == "alpha__20260525"
-    assert skipped_composition.include is True
-    assert skipped_target.id == "alpha"
-    assert skipped_workspace == service.paths.root
+    assert history.skips == []
+    assert "Đã skip composition" in mode.action_summary.text()
+    assert "Database history chưa thay đổi" in mode.action_summary.text()
 
 
 def test_app_shell_wires_configured_history_service_after_ingestion(
@@ -2282,12 +2296,9 @@ def test_app_shell_wires_configured_history_service_after_ingestion(
 
     shell.review_edit_mode.include_validate_button.click()
 
-    assert database_path.exists()
-    with sqlite3.connect(database_path) as connection:
-        image_count = connection.execute("SELECT COUNT(*) FROM image_asset").fetchone()[0]
-        event_count = connection.execute("SELECT COUNT(*) FROM include_event").fetchone()[0]
-    assert image_count == 1
-    assert event_count == 1
+    assert not database_path.exists()
+    assert shell.export_mode._history_service is not None  # noqa: SLF001
+    assert shell.export_mode._history_service.database_path == database_path  # noqa: SLF001
 
 
 def test_review_edit_history_failure_does_not_rollback_workspace_include(
@@ -2316,7 +2327,7 @@ def test_review_edit_history_failure_does_not_rollback_workspace_include(
     assert included.reviewed is True
     assert included.ready is True
     assert included.include is True
-    assert "history unavailable for alpha__20260525" in mode.action_summary.text()
+    assert "Database history sẽ được cập nhật khi Export PPTX/TXT" in mode.action_summary.text()
 
 
 def test_review_edit_actions_advance_by_visible_group_tree_order(
@@ -2368,9 +2379,13 @@ def test_review_edit_actions_advance_by_visible_group_tree_order(
     assert mode.tree_model.composition_id_for_index(mode.tree_view.currentIndex()) == (
         "alpha__20260525"
     )
+    assert "Database history chưa thay đổi" in mode.action_summary.text()
     mode.previous_button.click()
     assert mode.tree_model.composition_id_for_index(mode.tree_view.currentIndex()) == (
         "beta__20260525"
+    )
+    assert "Database history không thay đổi vì đây chỉ là thao tác điều hướng" in (
+        mode.action_summary.text()
     )
 
 
@@ -2638,7 +2653,9 @@ def test_review_edit_compare_pane_view_persists_to_selected_compare_state(
     assert rendered[-1] == "alpha__20260525"
 
 
-def test_review_edit_temporal_compare_requires_two_usable_layers(tmp_path: Path) -> None:
+def test_review_edit_temporal_compare_disabled_when_target_has_one_composition(
+    tmp_path: Path,
+) -> None:
     qapp()
     service = WorkspaceService(tmp_path / "workspace")
     service.initialize(config_path="config.json")
@@ -2650,10 +2667,12 @@ def test_review_edit_temporal_compare_requires_two_usable_layers(tmp_path: Path)
     mode.load_workspace(service, targets=[target_config("alpha", sort_order=1, name="Alpha")])
     mode.tree_view.setCurrentIndex(mode.tree_model.index_for_composition_id("alpha__20260525"))
 
-    assert mode.compare_enabled_checkbox.isEnabled()
-    mode.compare_enabled_checkbox.setChecked(True)
-    assert mode.compare_enabled_checkbox.isChecked()
-    assert "two usable" in mode.compare_status_label.text()
+    assert not mode.compare_enabled_checkbox.isEnabled()
+    assert not mode.compare_enabled_checkbox.isChecked()
+    assert not mode.compare_orientation_combo.isEnabled()
+    assert not mode.compare_pane_a_combo.isEnabled()
+    assert not mode.compare_pane_b_combo.isEnabled()
+    assert "requires at least two compositions" in mode.compare_status_label.text()
     assert service.read_composition("alpha__20260525").temporal_compare.enabled is False
     assert mode.include_validate_button.isEnabled()
 

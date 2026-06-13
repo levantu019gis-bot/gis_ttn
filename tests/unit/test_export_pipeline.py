@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import sqlite3
 from datetime import date, time
 from pathlib import Path
 
@@ -9,6 +10,7 @@ from pptx.enum.shapes import MSO_SHAPE
 from pptx.util import Inches
 
 from thucthengay.export import run_full_export
+from thucthengay.history import HistoryService
 from thucthengay.models import (
     Composition,
     GridConfig,
@@ -23,6 +25,8 @@ from thucthengay.models import (
     TargetConfig,
     TemplateMetadata,
     TemplatePlaceholder,
+    TemporalCompareOrientation,
+    TemporalCompareState,
     ViewState,
 )
 from thucthengay.render import RasterRenderResult, RenderError, RenderSpec
@@ -54,6 +58,121 @@ def test_run_full_export_renders_final_images_and_writes_outputs(tmp_path: Path)
     )
     assert (service.paths.exports / "report.export-log.json").is_file()
     assert result.preflight_plan.summary.error_count == 0
+
+
+def test_run_full_export_records_single_pane_history_after_final_preflight(
+    tmp_path: Path,
+) -> None:
+    map_id = _write_template(tmp_path / "templates" / "alpha.pptx")
+    target = _target(tmp_path / "templates" / "alpha.pptx", map_id)
+    service = WorkspaceService(tmp_path / "workspace")
+    service.initialize(config_path="config.json")
+    service.write_composition(_composition())
+    history = HistoryService(tmp_path / "history" / "target-history.sqlite")
+
+    result = run_full_export(
+        service,
+        [target],
+        output_stem="report",
+        render=_success_render,
+        history_service=history,
+    )
+
+    assert result.ok is True
+    assert result.history_sync_result.recorded_layers == 1
+    assert result.history_sync_result.include_events == 1
+    with sqlite3.connect(history.database_path) as connection:
+        link_rows = connection.execute(
+            "SELECT latest_composition_id, active FROM target_image_history"
+        ).fetchall()
+        event_rows = connection.execute("SELECT composition_id FROM include_event").fetchall()
+    assert link_rows == [("alpha__20260525", 1)]
+    assert event_rows == [("alpha__20260525",)]
+
+
+def test_run_full_export_history_sync_is_idempotent_for_repeated_export(
+    tmp_path: Path,
+) -> None:
+    map_id = _write_template(tmp_path / "templates" / "alpha.pptx")
+    target = _target(tmp_path / "templates" / "alpha.pptx", map_id)
+    service = WorkspaceService(tmp_path / "workspace")
+    service.initialize(config_path="config.json")
+    service.write_composition(_composition())
+    history = HistoryService(tmp_path / "history" / "target-history.sqlite")
+
+    first = run_full_export(
+        service,
+        [target],
+        output_stem="report",
+        render=_success_render,
+        history_service=history,
+    )
+    second = run_full_export(
+        service,
+        [target],
+        output_stem="report",
+        render=_success_render,
+        history_service=history,
+    )
+
+    assert first.history_sync_result.include_events == 1
+    assert second.history_sync_result.include_events == 0
+    assert second.history_sync_result.existing_layers == 1
+    with sqlite3.connect(history.database_path) as connection:
+        event_count = connection.execute("SELECT COUNT(*) FROM include_event").fetchone()[0]
+    assert event_count == 1
+
+
+def test_run_full_export_records_compare_pane_compositions_in_history(
+    tmp_path: Path,
+) -> None:
+    map_id = _write_template(tmp_path / "templates" / "alpha.pptx")
+    target = _target(tmp_path / "templates" / "alpha.pptx", map_id)
+    service = WorkspaceService(tmp_path / "workspace")
+    service.initialize(config_path="config.json")
+    pane_a = _composition(
+        composition_id="alpha__20260525",
+        capture_date=date(2026, 5, 25),
+        include=False,
+        review_order=None,
+    )
+    pane_b = _composition(
+        composition_id="alpha__20260526",
+        capture_date=date(2026, 5, 26),
+        include=False,
+        review_order=None,
+    )
+    selected = _composition(
+        composition_id="alpha__20260527",
+        capture_date=date(2026, 5, 27),
+        review_order=1,
+        temporal_compare=TemporalCompareState(
+            enabled=True,
+            orientation=TemporalCompareOrientation.VERTICAL,
+            pane_a_composition_id=pane_a.composition_id,
+            pane_b_composition_id=pane_b.composition_id,
+        ),
+    )
+    service.write_composition(pane_a)
+    service.write_composition(pane_b)
+    service.write_composition(selected)
+    history = HistoryService(tmp_path / "history" / "target-history.sqlite")
+
+    result = run_full_export(
+        service,
+        [target],
+        output_stem="compare",
+        render=_success_render,
+        history_service=history,
+    )
+
+    assert result.ok is True
+    assert result.history_sync_result.include_events == 2
+    with sqlite3.connect(history.database_path) as connection:
+        event_rows = connection.execute(
+            "SELECT composition_id FROM include_event ORDER BY composition_id"
+        ).fetchall()
+    assert event_rows == [("alpha__20260525",), ("alpha__20260526",)]
 
 
 def test_run_full_export_sanitizes_output_stem_for_windows(tmp_path: Path) -> None:
@@ -202,7 +321,9 @@ def _composition(
     *,
     composition_id: str = "alpha__20260525",
     capture_date: date = date(2026, 5, 25),
-    review_order: int = 1,
+    review_order: int | None = 1,
+    include: bool = True,
+    temporal_compare: TemporalCompareState | None = None,
 ) -> Composition:
     return Composition(
         composition_id=composition_id,
@@ -211,9 +332,10 @@ def _composition(
         view=ViewState(center=[106.7, 10.8], scale=50000),
         reviewed=True,
         ready=True,
-        include=True,
+        include=include,
         needs_revalidation=False,
         review_order=review_order,
+        temporal_compare=temporal_compare or TemporalCompareState(),
         layers=[
             ImageLayer(
                 layer_id=f"{composition_id}-layer",

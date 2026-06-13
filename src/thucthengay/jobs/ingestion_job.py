@@ -67,6 +67,7 @@ def run_ingestion_job(
     workspace_service: WorkspaceService,
     clear_existing: bool = False,
     clear_confirmed: bool = False,
+    merge_existing: bool = False,
     control: JobControl | None = None,
     publish: ProgressPublisher | None = None,
     historical_loader: HistoricalLoader | None = None,
@@ -187,6 +188,7 @@ def run_ingestion_job(
             additional_images=historical_cache_inputs,
             clear_existing=clear_existing,
             clear_confirmed=clear_confirmed,
+            overwrite_existing=merge_existing and not clear_existing,
             checkpoint=checkpoint,
         )
         issues.extend(cache_result.issues)
@@ -197,6 +199,7 @@ def run_ingestion_job(
             cache_result,
             _targets_by_id(config_result.enabled_targets),
             workspace_service,
+            merge_existing=merge_existing and not clear_existing,
             checkpoint=checkpoint,
         )
     except JobCancelled:
@@ -633,8 +636,8 @@ def _completion_message(
 ) -> str:
     created_count = len(composition_result.composition_ids)
     if state == JobState.WARNING:
-        return f"Lấy dữ liệu hoàn tất với cảnh báo; đã tạo {created_count} composition."
-    return f"Lấy dữ liệu hoàn tất; đã tạo {created_count} composition."
+        return f"Lấy dữ liệu hoàn tất với cảnh báo; đã tạo/cập nhật {created_count} composition."
+    return f"Lấy dữ liệu hoàn tất; đã tạo/cập nhật {created_count} composition."
 
 
 def _setup_error_issue(error: Exception) -> Issue:

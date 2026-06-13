@@ -20,7 +20,12 @@ from thucthengay.editor.app_shell import AppShell
 from thucthengay.editor.models.export_plan_model import ExportPlanRole
 from thucthengay.editor.modes.export_mode import ExportMode
 from thucthengay.editor.preferences import PreferencesService
-from thucthengay.export import FullExportResult, ensure_final_renders_for_export, run_full_export
+from thucthengay.export import (
+    ExportHistorySyncResult,
+    FullExportResult,
+    ensure_final_renders_for_export,
+    run_full_export,
+)
 from thucthengay.models import (
     Composition,
     CompositionArtifacts,
@@ -253,6 +258,7 @@ def test_export_mode_shows_export_error_details(tmp_path: Path) -> None:
         return FullExportResult(
             initial_preflight_plan=mode._last_plan,
             final_render_result=ExportFinalRenderResult(issues=[issue]),
+            history_sync_result=ExportHistorySyncResult(enabled=False),
             preflight_plan=mode._last_plan.model_copy(
                 update={
                     "rows": [

@@ -7,10 +7,12 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from thucthengay.export.final_render import ensure_final_renders_for_export
+from thucthengay.export.history_sync import ExportHistorySyncResult, sync_export_history
 from thucthengay.export.log_writer import write_export_summary_and_trace_log
 from thucthengay.export.pptx_exporter import export_combined_pptx
 from thucthengay.export.preflight import build_export_preflight_plan
 from thucthengay.export.txt_exporter import export_txt_report
+from thucthengay.history import HistoryService
 from thucthengay.models import (
     ExportFinalRenderResult,
     ExportLogWriteResult,
@@ -43,6 +45,7 @@ class FullExportResult:
 
     initial_preflight_plan: ExportPreflightPlan
     final_render_result: ExportFinalRenderResult
+    history_sync_result: ExportHistorySyncResult
     preflight_plan: ExportPreflightPlan
     pptx_result: ExportPptxResult
     txt_result: ExportTxtResult
@@ -58,6 +61,7 @@ class FullExportResult:
         for source in (
             self.initial_preflight_plan.issues,
             self.final_render_result.issues,
+            self.history_sync_result.issues,
             self.preflight_plan.issues,
             self.pptx_result.issues,
             self.txt_result.issues,
@@ -77,6 +81,7 @@ def run_full_export(
     render: FinalRenderFunction | None = None,
     is_cancelled: CancelCallback | None = None,
     template_issues: Iterable[Issue] = (),
+    history_service: HistoryService | None = None,
 ) -> FullExportResult:
     """Render missing final images, export PPTX/TXT, and write a trace log."""
     target_list = list(targets)
@@ -100,6 +105,13 @@ def run_full_export(
         ),
         final_render_result,
     )
+    history_sync_result = sync_export_history(
+        workspace_service,
+        target_list,
+        final_plan,
+        history_service=history_service,
+    )
+    final_plan = _attach_history_sync_issues(final_plan, history_sync_result)
     pptx_path, txt_path, log_path = _output_paths(workspace_service, output_stem)
     exportable_composition_ids = _exportable_composition_ids(final_plan)
 
@@ -131,6 +143,7 @@ def run_full_export(
     return FullExportResult(
         initial_preflight_plan=initial_plan,
         final_render_result=final_render_result,
+        history_sync_result=history_sync_result,
         preflight_plan=final_plan,
         pptx_result=pptx_result,
         txt_result=txt_result,
@@ -178,6 +191,32 @@ def _attach_final_render_issues(
                 row_issues.append(issue)
             if issue not in all_issues:
                 all_issues.append(issue)
+        rows.append(row.model_copy(update={"issues": row_issues}))
+    return plan.model_copy(
+        update={
+            "rows": rows,
+            "issues": all_issues,
+            "summary": _summary(rows, all_issues),
+        }
+    )
+
+
+def _attach_history_sync_issues(
+    plan: ExportPreflightPlan,
+    history_sync_result: ExportHistorySyncResult,
+) -> ExportPreflightPlan:
+    if not history_sync_result.issues:
+        return plan
+    all_issues = list(plan.issues)
+    for issue in history_sync_result.issues:
+        if issue not in all_issues:
+            all_issues.append(issue)
+    rows = []
+    for row in plan.rows:
+        row_issues = list(row.issues)
+        for issue in history_sync_result.issues:
+            if issue.composition_id == row.composition_id and issue not in row_issues:
+                row_issues.append(issue)
         rows.append(row.model_copy(update={"issues": row_issues}))
     return plan.model_copy(
         update={

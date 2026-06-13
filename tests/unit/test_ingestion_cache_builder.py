@@ -107,6 +107,31 @@ def test_populate_workspace_cache_deduplicates_same_source_for_same_target_date(
     assert first.layers_by_target_date == second.layers_by_target_date
 
 
+def test_populate_workspace_cache_can_overwrite_existing_cached_file(
+    tmp_path: Path,
+) -> None:
+    source = tmp_path / "imagery" / "same.tif"
+    source.parent.mkdir()
+    source.write_bytes(b"first")
+    image = scanned_image(source)
+    workspace = WorkspaceService(tmp_path / "workspace")
+    workspace.initialize(config_path="config.json")
+
+    first = populate_workspace_cache(matching_result("target_001", image), workspace)
+    cached_path = workspace.paths.root / first.layers_by_target_date[
+        ("target_001", "20260525")
+    ][0].cache_path
+    source.write_bytes(b"second")
+
+    populate_workspace_cache(
+        matching_result("target_001", image),
+        workspace,
+        overwrite_existing=True,
+    )
+
+    assert cached_path.read_bytes() == b"second"
+
+
 def test_populate_workspace_cache_sanitizes_source_filename_for_windows(
     tmp_path: Path,
 ) -> None:

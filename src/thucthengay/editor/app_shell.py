@@ -85,6 +85,7 @@ class AppShell(QMainWindow):
             historical_image_selection=setup_paths.historical_image_selection,
             clear_existing=setup_paths.clear_existing_workspace,
             clear_confirmed=setup_paths.clear_workspace_confirmed,
+            merge_existing=setup_paths.override_existing_workspace,
         )
         worker.moveToThread(thread)
 
@@ -147,15 +148,17 @@ class AppShell(QMainWindow):
                 workspace_folder=workspace_service.paths.root,
             )
 
+        history_service = _history_service_from_config(config_result)
         self.review_edit_mode.load_workspace(
             workspace_service,
             targets=config_result.enabled_targets,
         )
-        self.review_edit_mode.set_history_service(_history_service_from_config(config_result))
+        self.review_edit_mode.set_history_service(history_service)
         self.export_mode.load_workspace(
             workspace_service,
             targets=config_result.enabled_targets,
             template_issues=_export_template_issues(config_result),
+            history_service=history_service,
         )
         self.mode_tabs.setCurrentWidget(self.review_edit_mode)
 
@@ -179,15 +182,17 @@ class AppShell(QMainWindow):
             self.setup_mode.show_workspace_open_error(str(error))
             return
 
+        history_service = _history_service_from_config(config_result)
         self.review_edit_mode.load_workspace(
             workspace_service,
             targets=config_result.enabled_targets,
         )
-        self.review_edit_mode.set_history_service(_history_service_from_config(config_result))
+        self.review_edit_mode.set_history_service(history_service)
         self.export_mode.load_workspace(
             workspace_service,
             targets=config_result.enabled_targets,
             template_issues=_export_template_issues(config_result),
+            history_service=history_service,
         )
         self.setup_mode.config_row.set_path(config_path)
         self.setup_mode.show_workspace_opened(workspace_service.paths.root, composition_count)
@@ -230,7 +235,9 @@ class AppShell(QMainWindow):
                 f"{_config_issue_summary(config_result)}"
             )
             return
-        self.review_edit_mode.set_history_service(_history_service_from_config(config_result))
+        history_service = _history_service_from_config(config_result)
+        self.review_edit_mode.set_history_service(history_service)
+        self.export_mode.set_history_service(history_service)
         self.review_edit_mode.refresh_config_targets(config_result.enabled_targets)
         self.export_mode.refresh_config_targets(
             config_result.enabled_targets,
