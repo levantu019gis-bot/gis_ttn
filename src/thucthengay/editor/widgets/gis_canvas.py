@@ -57,8 +57,10 @@ class GisCanvasWidget(QGraphicsView):
     """Minimal map canvas that edits persisted view center/scale."""
 
     viewEditCompleted = Signal(object, int)
+    viewInteractionChanged = Signal(object, int)
     compositionViewEditCompleted = Signal(str, object, int)
     comparePaneViewEditCompleted = Signal(str, object)
+    comparePaneViewInteractionChanged = Signal(str, object)
 
     DEFAULT_FRAME_ASPECT = 16 / 9
     EXPORT_DPI = 200
@@ -142,6 +144,12 @@ class GisCanvasWidget(QGraphicsView):
 
     def visible_layer_count(self) -> int:
         return len(self._visible_layers)
+
+    def map_frame_size_points(self) -> tuple[float, float]:
+        return self._map_frame_width_points, self._map_frame_height_points
+
+    def compare_pane_centers(self) -> dict[str, list[float]]:
+        return {key: list(pane.center) for key, pane in self._compare_panes.items()}
 
     def render_output_size(self) -> tuple[int, int]:
         """Return the pixel size that should be rendered for the visible map frame."""
@@ -301,6 +309,7 @@ class GisCanvasWidget(QGraphicsView):
             dy=dy,
         )
         self._mark_interaction_stale()
+        self.viewInteractionChanged.emit(list(self._center), self._scale)
         if emit:
             self._emit_view_edit()
         self._redraw()
@@ -312,6 +321,7 @@ class GisCanvasWidget(QGraphicsView):
         scale = int(round(self._scale * factor))
         self._scale = int(_clamp(scale, self.MIN_SCALE, self.MAX_SCALE))
         self._mark_interaction_stale()
+        self.viewInteractionChanged.emit(list(self._center), self._scale)
         if emit:
             self._emit_view_edit()
         self._redraw()
@@ -351,7 +361,10 @@ class GisCanvasWidget(QGraphicsView):
         if self._compare_panes:
             self.zoom_by_factor(factor)
         else:
-            self._zoom_interaction_target(self._interaction_target_at(event.pos()), factor)
+            self._zoom_interaction_target(
+                self._interaction_target_at(event.position()),
+                factor,
+            )
         event.accept()
 
     def _emit_view_edit(self) -> None:
@@ -388,6 +401,7 @@ class GisCanvasWidget(QGraphicsView):
             pane_key=target.pane_key,
         )
         self._apply_interaction_view_state(self._drag_target)
+        self._emit_interaction_view_changed(self._drag_target)
         self._drag_last_pos = pos
         self._drag_changed = True
         self._mark_interaction_stale()
@@ -416,6 +430,7 @@ class GisCanvasWidget(QGraphicsView):
         )
         self._apply_interaction_view_state(updated)
         self._mark_interaction_stale()
+        self._emit_interaction_view_changed(updated)
         self._emit_interaction_view_edit(updated)
         self._redraw()
 
@@ -505,6 +520,16 @@ class GisCanvasWidget(QGraphicsView):
                 self.comparePaneViewEditCompleted.emit(target.pane_key, list(target.center))
             return
         self.viewEditCompleted.emit(list(target.center), target.scale)
+
+    def _emit_interaction_view_changed(self, target: _InteractionTarget) -> None:
+        if target.compare_pane:
+            if target.pane_key is not None:
+                self.comparePaneViewInteractionChanged.emit(
+                    target.pane_key,
+                    list(target.center),
+                )
+            return
+        self.viewInteractionChanged.emit(list(target.center), target.scale)
 
     def _mark_interaction_stale(self) -> None:
         if self._visible_layers:

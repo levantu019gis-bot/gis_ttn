@@ -40,11 +40,13 @@ from thucthengay.editor.widgets import (
     GisCanvasWidget,
     MetadataEditorDialog,
     TargetPreviewRequestToken,
+    TargetPreviewViewportOverlay,
     TargetPreviewWidget,
     WarningsPanelWidget,
     confirm_date_change_dialog,
 )
 from thucthengay.export.final_render import final_render_output_size
+from thucthengay.gis import view_geo_bounds
 from thucthengay.history import HistoryService
 from thucthengay.jobs import (
     JobState,
@@ -104,6 +106,9 @@ class ReviewEditMode(QWidget):
         self._target_render_worker: RenderWorker | None = None
         self._target_render_token: TargetPreviewRequestToken | None = None
         self._loading_compare_controls = False
+        self._compare_enabled_global = False
+        self._compare_orientation_global = TemporalCompareOrientation.VERTICAL
+        self._compare_global_initialized = False
 
         self.tree_model = CompositionTreeModel(self)
         self.tree_view = QTreeView()
@@ -209,8 +214,12 @@ class ReviewEditMode(QWidget):
 
         self.gis_canvas = GisCanvasWidget()
         self.gis_canvas.viewEditCompleted.connect(self._persist_canvas_view)
+        self.gis_canvas.viewInteractionChanged.connect(self._sync_target_preview_viewport_overlays)
         self.gis_canvas.comparePaneViewEditCompleted.connect(
             self._persist_compare_pane_view
+        )
+        self.gis_canvas.comparePaneViewInteractionChanged.connect(
+            self._sync_target_preview_viewport_overlays
         )
         self._canvas_view_persist_timer = QTimer(self)
         self._canvas_view_persist_timer.setSingleShot(True)
@@ -331,6 +340,9 @@ class ReviewEditMode(QWidget):
         self._workspace_service = workspace_service
         self._targets = list(targets) if targets is not None else None
         self._canvas_render_cache.clear()
+        self._compare_enabled_global = False
+        self._compare_orientation_global = TemporalCompareOrientation.VERTICAL
+        self._compare_global_initialized = False
         compositions = workspace_service.list_compositions()
         self.tree_model.set_compositions(compositions, targets=targets)
         self.tree_view.expandAll()
@@ -374,8 +386,14 @@ class ReviewEditMode(QWidget):
         layout.addWidget(self.tree_view, 3)
         layout.addWidget(self.empty_state_label)
         layout.addWidget(self._build_layer_panel(), 2)
-        layout.addWidget(self._build_grid_panel(), 1)
-        layout.addWidget(self._panel_frame("Target Preview", self.target_preview), 1)
+        layout.addWidget(
+            self._panel_frame(
+                "Target Preview",
+                self.target_preview,
+                object_name="reviewTargetPreviewFrame",
+            ),
+            2,
+        )
         return panel
 
     def _filter_bar_layout(self) -> QHBoxLayout:
@@ -395,7 +413,7 @@ class ReviewEditMode(QWidget):
         layout.addWidget(self.composition_title)
         layout.addWidget(self._build_gis_editor_panel(), 4)
         layout.addLayout(self._review_action_layout())
-        layout.addWidget(self._panel_frame("Warnings", self.warnings_panel), 1)
+        layout.addWidget(self._build_review_bottom_panel(), 1)
         return panel
 
     def _build_gis_editor_panel(self) -> QFrame:
@@ -442,8 +460,23 @@ class ReviewEditMode(QWidget):
         layout.addWidget(self.action_summary)
         return layout
 
-    def _panel_frame(self, title: str, content: QWidget) -> QFrame:
+    def _build_review_bottom_panel(self) -> QWidget:
+        panel = QWidget()
+        panel.setObjectName("reviewBottomPanel")
+        layout = QHBoxLayout(panel)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(8)
+        layout.addWidget(
+            self._panel_frame("Warnings", self.warnings_panel, object_name="reviewWarningsFrame"),
+            1,
+        )
+        layout.addWidget(self._build_grid_panel(), 1)
+        return panel
+
+    def _panel_frame(self, title: str, content: QWidget, *, object_name: str = "") -> QFrame:
         frame = QFrame()
+        if object_name:
+            frame.setObjectName(object_name)
         frame.setFrameShape(QFrame.Shape.StyledPanel)
         frame.setMinimumHeight(104)
         layout = QVBoxLayout(frame)
@@ -475,6 +508,7 @@ class ReviewEditMode(QWidget):
 
     def _build_grid_panel(self) -> QFrame:
         frame = QFrame()
+        frame.setObjectName("reviewGridPanel")
         frame.setFrameShape(QFrame.Shape.StyledPanel)
         frame.setMinimumHeight(152)
         layout = QVBoxLayout(frame)
@@ -906,6 +940,15 @@ class ReviewEditMode(QWidget):
                 output_width=self.target_preview.render_width(),
                 output_height=self.target_preview.render_height(),
             )
+            self.target_preview.set_preview_geo_window(
+                (
+                    spec.geo_window.min_lon,
+                    spec.geo_window.min_lat,
+                    spec.geo_window.max_lon,
+                    spec.geo_window.max_lat,
+                )
+            )
+            self._sync_target_preview_viewport_overlays()
         except (RenderSpecError, ValidationError) as error:
             token = self.target_preview.begin_render_request()
             self.target_preview.set_error(token, str(error))
@@ -1264,12 +1307,14 @@ class ReviewEditMode(QWidget):
             list(center),
             scale,
         )
+        self._sync_target_preview_viewport_overlays()
         self._canvas_view_persist_timer.start(self.CANVAS_VIEW_PERSIST_DEBOUNCE_MS)
 
     def _persist_compare_pane_view(self, pane: str, center: list[float]) -> None:
         if self.selected_composition is None:
             return
         self._pending_canvas_view = ("compare_pane", pane, list(center), None)
+        self._sync_target_preview_viewport_overlays()
         self._canvas_view_persist_timer.start(self.CANVAS_VIEW_PERSIST_DEBOUNCE_MS)
 
     def _flush_pending_canvas_view(self) -> None:
@@ -1504,9 +1549,11 @@ class ReviewEditMode(QWidget):
         map_frame_size = self._map_frame_size_for_composition(composition)
         if map_frame_size is not None:
             self.gis_canvas.set_map_frame_size(*map_frame_size)
+        composition = self._load_temporal_compare_controls(composition)
+        self.selected_composition = composition
         self.gis_canvas.set_composition(composition)
         self._load_canvas_compare_context(composition)
-        self._load_temporal_compare_controls(composition)
+        self._sync_target_preview_viewport_overlays()
         self._load_grid_controls(composition)
         self.warnings_panel.set_issues(
             (),
@@ -1535,6 +1582,63 @@ class ReviewEditMode(QWidget):
             return
         self.gis_canvas.set_compare_context(composition, pane_a=pane_a, pane_b=pane_b)
 
+    def _sync_target_preview_viewport_overlays(self, *_args: object) -> None:
+        composition = self.selected_composition
+        if composition is None:
+            self.target_preview.set_viewport_overlays(())
+            return
+
+        width_points, height_points = self.gis_canvas.map_frame_size_points()
+        scale = self.gis_canvas.scale
+        try:
+            if composition.temporal_compare.enabled:
+                pane_centers = self.gis_canvas.compare_pane_centers()
+                if set(pane_centers) == {"A", "B"}:
+                    overlays = (
+                        TargetPreviewViewportOverlay(
+                            bbox=view_geo_bounds(
+                                center_lon=pane_centers["A"][0],
+                                center_lat=pane_centers["A"][1],
+                                scale_denom=scale,
+                                map_frame_width_points=width_points,
+                                map_frame_height_points=height_points,
+                            ),
+                            color="#ff3b30",
+                            label="A",
+                        ),
+                        TargetPreviewViewportOverlay(
+                            bbox=view_geo_bounds(
+                                center_lon=pane_centers["B"][0],
+                                center_lat=pane_centers["B"][1],
+                                scale_denom=scale,
+                                map_frame_width_points=width_points,
+                                map_frame_height_points=height_points,
+                            ),
+                            color="#1f8bff",
+                            label="B",
+                        ),
+                    )
+                    self.target_preview.set_viewport_overlays(overlays)
+                    return
+
+            center = self.gis_canvas.center
+            self.target_preview.set_viewport_overlays(
+                (
+                    TargetPreviewViewportOverlay(
+                        bbox=view_geo_bounds(
+                            center_lon=center[0],
+                            center_lat=center[1],
+                            scale_denom=scale,
+                            map_frame_width_points=width_points,
+                            map_frame_height_points=height_points,
+                        ),
+                        color="#ff3b30",
+                    ),
+                )
+            )
+        except ValueError:
+            self.target_preview.set_viewport_overlays(())
+
     def _map_frame_size_for_composition(
         self,
         composition: Composition,
@@ -1556,8 +1660,9 @@ class ReviewEditMode(QWidget):
                 return float(explicit_aspect), 1.0
         return None
 
-    def _load_temporal_compare_controls(self, composition: Composition) -> None:
+    def _load_temporal_compare_controls(self, composition: Composition) -> Composition:
         self._loading_compare_controls = True
+        options: list[Composition] = []
         try:
             self.compare_pane_a_combo.clear()
             self.compare_pane_b_combo.clear()
@@ -1568,9 +1673,15 @@ class ReviewEditMode(QWidget):
                 self.compare_pane_b_combo.addItem(label, option.composition_id)
 
             state = composition.temporal_compare
-            orientation_index = self.compare_orientation_combo.findText(state.orientation.value)
+            if not self._compare_global_initialized:
+                self._compare_enabled_global = state.enabled
+                self._compare_orientation_global = state.orientation
+                self._compare_global_initialized = True
+            orientation_index = self.compare_orientation_combo.findText(
+                self._compare_orientation_global.value
+            )
             self.compare_orientation_combo.setCurrentIndex(max(0, orientation_index))
-            self.compare_enabled_checkbox.setChecked(state.enabled)
+            self.compare_enabled_checkbox.setChecked(self._compare_enabled_global)
             self._select_compare_composition(
                 self.compare_pane_a_combo,
                 state.pane_a_composition_id,
@@ -1582,22 +1693,64 @@ class ReviewEditMode(QWidget):
                 1,
             )
             enough_options = len(options) >= 2
-            self.compare_enabled_checkbox.setEnabled(enough_options or state.enabled)
-            self.compare_orientation_combo.setEnabled(enough_options and state.enabled)
-            self.compare_pane_a_combo.setEnabled(enough_options and state.enabled)
-            self.compare_pane_b_combo.setEnabled(enough_options and state.enabled)
-            if enough_options:
+            self.compare_enabled_checkbox.setEnabled(True)
+            self.compare_orientation_combo.setEnabled(self._compare_enabled_global)
+            self.compare_pane_a_combo.setEnabled(enough_options and self._compare_enabled_global)
+            self.compare_pane_b_combo.setEnabled(enough_options and self._compare_enabled_global)
+            if not self._compare_enabled_global:
                 self.compare_status_label.setText(
                     "Comparison off: single-map workflow is unchanged."
-                    if not state.enabled
-                    else "Comparison panes render the selected compositions/time points."
+                )
+            elif enough_options:
+                self.compare_status_label.setText(
+                    "Comparison panes render the selected compositions/time points."
                 )
             else:
                 self.compare_status_label.setText(
-                    "Comparison requires two usable time points; single-map review is unchanged."
+                    "Comparison is on globally, but this target requires two usable time points."
                 )
         finally:
             self._loading_compare_controls = False
+        return self._sync_temporal_compare_state_from_controls(composition, len(options) >= 2)
+
+    def _sync_temporal_compare_state_from_controls(
+        self,
+        composition: Composition,
+        enough_options: bool,
+    ) -> Composition:
+        """Persist the global compare mode into the selected composition when needed."""
+        if self._workspace_service is None:
+            return composition
+        effective_enabled = self._compare_enabled_global and enough_options
+        pane_a_composition_id = self.compare_pane_a_combo.currentData()
+        pane_b_composition_id = self.compare_pane_b_combo.currentData()
+        desired_a = (
+            str(pane_a_composition_id) if effective_enabled and pane_a_composition_id else None
+        )
+        desired_b = (
+            str(pane_b_composition_id) if effective_enabled and pane_b_composition_id else None
+        )
+        state = composition.temporal_compare
+        if not effective_enabled and not state.enabled:
+            return composition
+        if (
+            state.enabled == effective_enabled
+            and state.orientation == self._compare_orientation_global
+            and state.pane_a_composition_id == desired_a
+            and state.pane_b_composition_id == desired_b
+        ):
+            return composition
+        try:
+            return self._workspace_service.update_temporal_compare_state(
+                composition.composition_id,
+                enabled=effective_enabled,
+                orientation=self._compare_orientation_global,
+                pane_a_composition_id=desired_a,
+                pane_b_composition_id=desired_b,
+            )
+        except (WorkspaceError, ValidationError, ValueError) as error:
+            self.compare_status_label.setText(f"Could not save comparison state: {error}")
+            return composition
 
     def _usable_compare_compositions(self, composition: Composition) -> list[Composition]:
         if self._workspace_service is None:
@@ -1633,40 +1786,25 @@ class ReviewEditMode(QWidget):
         if self._workspace_service is None or self.selected_composition is None:
             return
 
-        enabled = self.compare_enabled_checkbox.isChecked()
-        if enabled and self.compare_pane_a_combo.count() < 2:
-            self._loading_compare_controls = True
-            try:
-                self.compare_enabled_checkbox.setChecked(False)
-            finally:
-                self._loading_compare_controls = False
-            self.compare_status_label.setText(
-                "Comparison requires two usable time points; single-map review is unchanged."
-            )
-            return
-
-        pane_a_composition_id = self.compare_pane_a_combo.currentData()
-        pane_b_composition_id = self.compare_pane_b_combo.currentData()
-        orientation = self.compare_orientation_combo.currentText() or (
-            TemporalCompareOrientation.VERTICAL.value
-        )
+        self._compare_enabled_global = self.compare_enabled_checkbox.isChecked()
         try:
-            updated = self._workspace_service.update_temporal_compare_state(
-                self.selected_composition.composition_id,
-                enabled=enabled,
-                orientation=orientation,
-                pane_a_composition_id=(
-                    str(pane_a_composition_id) if pane_a_composition_id else None
-                ),
-                pane_b_composition_id=(
-                    str(pane_b_composition_id) if pane_b_composition_id else None
-                ),
+            self._compare_orientation_global = TemporalCompareOrientation(
+                self.compare_orientation_combo.currentText()
+                or TemporalCompareOrientation.VERTICAL.value
             )
-        except (WorkspaceError, ValidationError, ValueError) as error:
-            self._load_temporal_compare_controls(self.selected_composition)
-            self.compare_status_label.setText(f"Could not save comparison state: {error}")
-            return
+        except ValueError:
+            self._compare_orientation_global = TemporalCompareOrientation.VERTICAL
 
+        enough_options = self.compare_pane_a_combo.count() >= 2
+        if self._compare_enabled_global and not enough_options:
+            self.compare_status_label.setText(
+                "Comparison is on globally, but this target requires two usable time points."
+            )
+
+        updated = self._sync_temporal_compare_state_from_controls(
+            self.selected_composition,
+            enough_options,
+        )
         self.selected_composition = updated
         self._update_detail_panels(updated)
         self._refresh_workspace_projection(updated.composition_id, validate_selection=False)

@@ -7,8 +7,8 @@ from datetime import date
 from enum import StrEnum
 
 import numpy as np
-from PySide6.QtCore import Qt
-from PySide6.QtGui import QImage, QPixmap
+from PySide6.QtCore import QRectF, Qt
+from PySide6.QtGui import QColor, QImage, QPainter, QPen, QPixmap
 from PySide6.QtWidgets import QLabel, QVBoxLayout, QWidget
 
 from thucthengay.models import Composition, ImageLayer
@@ -42,6 +42,15 @@ class TargetPreviewRequestToken:
     key: TargetPreviewKey | None
 
 
+@dataclass(frozen=True)
+class TargetPreviewViewportOverlay:
+    """One GIS editor viewport rectangle drawn over the target overview."""
+
+    bbox: tuple[float, float, float, float]
+    color: str
+    label: str = ""
+
+
 class TargetPreviewWidget(QWidget):
     """Small fixed overview of all imagery coverage for the selected target/day."""
 
@@ -57,6 +66,8 @@ class TargetPreviewWidget(QWidget):
         self._state_message = "Chưa chọn composition."
         self._detail_message = ""
         self._pixmap: QPixmap | None = None
+        self._preview_geo_window: tuple[float, float, float, float] | None = None
+        self._viewport_overlays: tuple[TargetPreviewViewportOverlay, ...] = ()
 
         self.status_label = QLabel(self._state_message)
         self.status_label.setObjectName("reviewTargetPreviewSummary")
@@ -103,6 +114,9 @@ class TargetPreviewWidget(QWidget):
     def render_height(self) -> int:
         return max(self.image_label.height(), 140)
 
+    def viewport_overlays(self) -> tuple[TargetPreviewViewportOverlay, ...]:
+        return self._viewport_overlays
+
     def set_composition(self, composition: Composition | None) -> bool:
         """Load selection context and return true when a new target/day needs rendering."""
         if composition is None:
@@ -121,6 +135,8 @@ class TargetPreviewWidget(QWidget):
         self._composition_id = composition.composition_id
         self._layer_count = len(composition.layers)
         self._pixmap = None
+        self._preview_geo_window = None
+        self._viewport_overlays = ()
         self._bump_generation()
 
         if not composition.layers:
@@ -142,6 +158,17 @@ class TargetPreviewWidget(QWidget):
         self._detail_message = self._overview_text()
         self._refresh_labels()
         return True
+
+    def set_preview_geo_window(self, bbox: tuple[float, float, float, float] | None) -> None:
+        self._preview_geo_window = bbox
+        self._refresh_pixmap()
+
+    def set_viewport_overlays(
+        self,
+        overlays: tuple[TargetPreviewViewportOverlay, ...],
+    ) -> None:
+        self._viewport_overlays = overlays
+        self._refresh_pixmap()
 
     def set_loading(
         self,
@@ -201,6 +228,8 @@ class TargetPreviewWidget(QWidget):
         self._state_message = message
         self._detail_message = ""
         self._pixmap = None
+        self._preview_geo_window = None
+        self._viewport_overlays = ()
         self._bump_generation()
         self._refresh_labels()
 
@@ -231,7 +260,58 @@ class TargetPreviewWidget(QWidget):
             Qt.AspectRatioMode.KeepAspectRatio,
             Qt.TransformationMode.SmoothTransformation,
         )
+        scaled = self._pixmap_with_viewport_overlays(scaled)
         self.image_label.setPixmap(scaled)
+
+    def _pixmap_with_viewport_overlays(self, pixmap: QPixmap) -> QPixmap:
+        if not self._viewport_overlays or self._preview_geo_window is None:
+            return pixmap
+        decorated = QPixmap(pixmap)
+        painter = QPainter(decorated)
+        try:
+            for overlay, rect in zip(
+                self._viewport_overlays,
+                self._overlay_rects_for_size(decorated.width(), decorated.height()),
+                strict=False,
+            ):
+                if rect.isEmpty():
+                    continue
+                pen = QPen(QColor(overlay.color), 2)
+                pen.setCosmetic(True)
+                painter.setPen(pen)
+                painter.setBrush(Qt.BrushStyle.NoBrush)
+                painter.drawRect(rect)
+                if overlay.label:
+                    painter.drawText(rect.adjusted(4, 4, -4, -4), overlay.label)
+        finally:
+            painter.end()
+        return decorated
+
+    def _overlay_rects_for_size(self, width: int, height: int) -> list[QRectF]:
+        if self._preview_geo_window is None or width <= 0 or height <= 0:
+            return []
+        min_lon, min_lat, max_lon, max_lat = self._preview_geo_window
+        lon_span = max_lon - min_lon
+        lat_span = max_lat - min_lat
+        if lon_span <= 0 or lat_span <= 0:
+            return []
+
+        image_rect = QRectF(0, 0, width, height)
+        rects: list[QRectF] = []
+        for overlay in self._viewport_overlays:
+            box_min_lon, box_min_lat, box_max_lon, box_max_lat = overlay.bbox
+            left = (box_min_lon - min_lon) / lon_span * width
+            right = (box_max_lon - min_lon) / lon_span * width
+            top = (max_lat - box_max_lat) / lat_span * height
+            bottom = (max_lat - box_min_lat) / lat_span * height
+            rect = QRectF(
+                min(left, right),
+                min(top, bottom),
+                abs(right - left),
+                abs(bottom - top),
+            ).intersected(image_rect)
+            rects.append(rect)
+        return rects
 
     def _empty_image_text(self) -> str:
         if self._state == TargetPreviewState.LOADING:

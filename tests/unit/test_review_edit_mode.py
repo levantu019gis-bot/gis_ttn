@@ -11,15 +11,17 @@ from PIL import Image
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
-from PySide6.QtCore import QPoint, Qt
-from PySide6.QtGui import QBrush, QFont, QImage, QKeyEvent
+from PySide6.QtCore import QPoint, QPointF, Qt
+from PySide6.QtGui import QBrush, QFont, QImage, QKeyEvent, QWheelEvent
 from PySide6.QtWidgets import (
     QApplication,
+    QFrame,
     QGraphicsView,
     QLineEdit,
     QSplitter,
     QTableView,
     QTreeView,
+    QWidget,
 )
 
 import thucthengay.editor.modes.review_edit_mode as review_edit_mode
@@ -44,6 +46,7 @@ from thucthengay.editor.widgets import (
     SlidePreviewState,
     SlidePreviewWidget,
     TargetPreviewState,
+    TargetPreviewViewportOverlay,
     TargetPreviewWidget,
 )
 from thucthengay.jobs import (
@@ -792,6 +795,36 @@ def test_gis_canvas_pan_uses_template_map_frame_size_for_ground_distance() -> No
     assert large_delta > small_delta * 1.9
 
 
+def test_gis_canvas_wheel_event_zooms_with_qt6_position_api() -> None:
+    qapp()
+    canvas = GisCanvasWidget()
+    canvas.resize(800, 450)
+    canvas.set_composition(
+        composition(
+            "alpha__20260525",
+            "alpha",
+            date(2026, 5, 25),
+            needs_revalidation=False,
+        )
+    )
+    event = QWheelEvent(
+        QPointF(400, 225),
+        QPointF(400, 225),
+        QPoint(0, 0),
+        QPoint(0, 120),
+        Qt.MouseButton.NoButton,
+        Qt.KeyboardModifier.NoModifier,
+        Qt.ScrollPhase.ScrollUpdate,
+        False,
+    )
+
+    canvas.wheelEvent(event)
+
+    assert event.isAccepted()
+    assert canvas.scale == 42500
+    assert canvas.state() == GisCanvasState.STALE
+
+
 def test_gis_canvas_compare_drag_targets_pane_b_composition() -> None:
     qapp()
     canvas = GisCanvasWidget()
@@ -1431,6 +1464,29 @@ def test_target_preview_applies_render_canvas_and_rejects_stale_results() -> Non
     assert "beta" in preview.detail_text()
 
 
+def test_target_preview_viewport_overlay_maps_geo_bbox_to_preview_pixels() -> None:
+    qapp()
+    preview = TargetPreviewWidget()
+    preview.set_preview_geo_window((100.0, 10.0, 110.0, 20.0))
+    preview.set_viewport_overlays(
+        (
+            TargetPreviewViewportOverlay(
+                bbox=(102.0, 12.0, 104.0, 14.0),
+                color="#ff3b30",
+                label="A",
+            ),
+        )
+    )
+
+    rects = preview._overlay_rects_for_size(200, 100)  # noqa: SLF001
+
+    assert len(rects) == 1
+    assert round(rects[0].left(), 2) == 40.0
+    assert round(rects[0].top(), 2) == 60.0
+    assert round(rects[0].width(), 2) == 40.0
+    assert round(rects[0].height(), 2) == 20.0
+
+
 def test_target_preview_stays_fixed_for_same_target_day_view_changes() -> None:
     qapp()
     preview = TargetPreviewWidget()
@@ -1455,6 +1511,95 @@ def test_target_preview_stays_fixed_for_same_target_day_view_changes() -> None:
     assert preview.set_composition(changed_view) is False
     assert preview.state() == TargetPreviewState.RENDERED
     assert "Scale 1:25,000" not in preview.detail_text()
+
+
+def test_review_edit_target_preview_overlays_single_canvas_view(tmp_path: Path) -> None:
+    qapp()
+    service = WorkspaceService(tmp_path / "workspace")
+    service.initialize(config_path="config.json")
+    service.write_composition(
+        composition("alpha__20260525", "alpha", date(2026, 5, 25), needs_revalidation=False)
+    )
+
+    mode = ReviewEditMode()
+    mode._request_canvas_render = lambda _composition: None  # noqa: SLF001
+    mode._request_target_preview = lambda _composition: None  # noqa: SLF001
+    mode.load_workspace(service, targets=[target_config("alpha", sort_order=1, name="Alpha")])
+    mode.tree_view.setCurrentIndex(mode.tree_model.index_for_composition_id("alpha__20260525"))
+    mode.target_preview.set_preview_geo_window((106.0, 10.0, 108.0, 12.0))
+    mode._sync_target_preview_viewport_overlays()  # noqa: SLF001
+
+    overlays = mode.target_preview.viewport_overlays()
+    assert len(overlays) == 1
+    assert overlays[0].color == "#ff3b30"
+    previous_bbox = overlays[0].bbox
+
+    mode.gis_canvas.pan_by_pixels(40, 0, emit=False)
+
+    assert len(mode.target_preview.viewport_overlays()) == 1
+    assert mode.target_preview.viewport_overlays()[0].bbox != previous_bbox
+
+
+def test_review_edit_target_preview_overlays_compare_panes_and_updates_pane_b(
+    tmp_path: Path,
+) -> None:
+    qapp()
+    service = WorkspaceService(tmp_path / "workspace")
+    service.initialize(config_path="config.json")
+    selected = composition(
+        "alpha__20260525",
+        "alpha",
+        date(2026, 5, 25),
+        needs_revalidation=False,
+    ).model_copy(
+        update={
+            "temporal_compare": TemporalCompareState(
+                enabled=True,
+                orientation=TemporalCompareOrientation.VERTICAL,
+                pane_a_composition_id="alpha__20260525",
+                pane_b_composition_id="alpha__20260526",
+                pane_a_center=[106.7, 10.8],
+                pane_b_center=[107.0, 10.8],
+            )
+        }
+    )
+    pane_b = composition(
+        "alpha__20260526",
+        "alpha",
+        date(2026, 5, 26),
+        needs_revalidation=False,
+    ).model_copy(update={"view": ViewState(center=[107.0, 10.8], scale=50000)})
+    service.write_composition(selected)
+    service.write_composition(pane_b)
+
+    mode = ReviewEditMode()
+    mode.gis_canvas.resize(800, 450)
+    mode._request_canvas_render = lambda _composition: None  # noqa: SLF001
+    mode._request_target_preview = lambda _composition: None  # noqa: SLF001
+    mode.load_workspace(service, targets=[target_config("alpha", sort_order=1, name="Alpha")])
+    mode.tree_view.setCurrentIndex(mode.tree_model.index_for_composition_id("alpha__20260525"))
+    mode.target_preview.set_preview_geo_window((106.0, 10.0, 108.0, 12.0))
+    mode._sync_target_preview_viewport_overlays()  # noqa: SLF001
+
+    overlays = mode.target_preview.viewport_overlays()
+    assert [(overlay.label, overlay.color) for overlay in overlays] == [
+        ("A", "#ff3b30"),
+        ("B", "#1f8bff"),
+    ]
+    previous_b_bbox = overlays[1].bbox
+
+    frame = mode.gis_canvas._frame_rect()  # noqa: SLF001
+    start = QPoint(
+        int(frame.left() + frame.width() * 0.75),
+        int(frame.center().y()),
+    )
+    mode.gis_canvas._begin_drag_at(start)  # noqa: SLF001
+    mode.gis_canvas._move_drag_to(QPoint(start.x() + 40, start.y()))  # noqa: SLF001
+
+    updated = mode.target_preview.viewport_overlays()
+    assert len(updated) == 2
+    assert updated[0].bbox == overlays[0].bbox
+    assert updated[1].bbox != previous_b_bbox
 
 
 def test_target_preview_refreshes_for_layer_visibility_and_order_changes() -> None:
@@ -1834,6 +1979,25 @@ def test_review_edit_target_preview_panel_uses_target_preview_name(
     mode.tree_view.setCurrentIndex(mode.tree_model.index(0, 0, target_index))
 
     assert "Target Preview" in mode.preview_summary.text()
+
+
+def test_review_edit_places_grid_controls_beside_warnings_below_gis_editor() -> None:
+    qapp()
+
+    mode = ReviewEditMode()
+
+    bottom_panel = mode.findChild(QWidget, "reviewBottomPanel")
+    warnings_frame = mode.findChild(QFrame, "reviewWarningsFrame")
+    grid_panel = mode.findChild(QFrame, "reviewGridPanel")
+    target_preview_frame = mode.findChild(QFrame, "reviewTargetPreviewFrame")
+
+    assert bottom_panel is not None
+    assert warnings_frame is not None
+    assert grid_panel is not None
+    assert target_preview_frame is not None
+    assert warnings_frame.parent() is bottom_panel
+    assert grid_panel.parent() is bottom_panel
+    assert target_preview_frame.parent() is not bottom_panel
 
 
 def test_review_edit_grid_controls_reject_invalid_values_without_write(
@@ -2376,6 +2540,44 @@ def test_review_edit_temporal_compare_controls_persist_selection(tmp_path: Path)
     assert reloaded.temporal_compare.pane_b_composition_id == "alpha__20260526"
 
 
+def test_review_edit_compare_mode_is_global_across_composition_selection(
+    tmp_path: Path,
+) -> None:
+    qapp()
+    service = WorkspaceService(tmp_path / "workspace")
+    service.initialize(config_path="config.json")
+    service.write_composition(
+        composition("alpha__20260525", "alpha", date(2026, 5, 25), needs_revalidation=False)
+    )
+    service.write_composition(
+        composition("alpha__20260526", "alpha", date(2026, 5, 26), needs_revalidation=False)
+    )
+
+    mode = ReviewEditMode()
+    mode._request_canvas_render = lambda _composition: None  # noqa: SLF001
+    mode.load_workspace(service, targets=[target_config("alpha", sort_order=1, name="Alpha")])
+    mode.tree_view.setCurrentIndex(mode.tree_model.index_for_composition_id("alpha__20260525"))
+
+    mode.compare_enabled_checkbox.setChecked(True)
+    mode.compare_orientation_combo.setCurrentText("horizontal")
+    mode.compare_pane_a_combo.setCurrentIndex(0)
+    mode.compare_pane_b_combo.setCurrentIndex(1)
+
+    mode.tree_view.setCurrentIndex(mode.tree_model.index_for_composition_id("alpha__20260526"))
+
+    assert mode.compare_enabled_checkbox.isChecked()
+    assert mode.compare_orientation_combo.currentText() == "horizontal"
+    second = service.read_composition("alpha__20260526")
+    assert second.temporal_compare.enabled is True
+    assert second.temporal_compare.orientation == TemporalCompareOrientation.HORIZONTAL
+
+    mode.compare_enabled_checkbox.setChecked(False)
+    mode.tree_view.setCurrentIndex(mode.tree_model.index_for_composition_id("alpha__20260525"))
+
+    assert not mode.compare_enabled_checkbox.isChecked()
+    assert service.read_composition("alpha__20260525").temporal_compare.enabled is False
+
+
 def test_review_edit_compare_pane_view_persists_to_selected_compare_state(
     tmp_path: Path,
 ) -> None:
@@ -2448,7 +2650,9 @@ def test_review_edit_temporal_compare_requires_two_usable_layers(tmp_path: Path)
     mode.load_workspace(service, targets=[target_config("alpha", sort_order=1, name="Alpha")])
     mode.tree_view.setCurrentIndex(mode.tree_model.index_for_composition_id("alpha__20260525"))
 
-    assert not mode.compare_enabled_checkbox.isEnabled()
+    assert mode.compare_enabled_checkbox.isEnabled()
+    mode.compare_enabled_checkbox.setChecked(True)
+    assert mode.compare_enabled_checkbox.isChecked()
     assert "two usable" in mode.compare_status_label.text()
     assert service.read_composition("alpha__20260525").temporal_compare.enabled is False
     assert mode.include_validate_button.isEnabled()

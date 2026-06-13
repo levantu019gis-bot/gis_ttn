@@ -10,8 +10,8 @@ from __future__ import annotations
 import math
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator, model_validator
-from pyproj import Geod
 
+from thucthengay.gis import view_geo_bounds
 from thucthengay.models import TemporalCompareOrientation
 from thucthengay.models.composition import Composition
 from thucthengay.models.config import GridConfig, TargetConfig
@@ -22,7 +22,6 @@ POINT_TO_INCH: float = 1.0 / 72.0
 INCH_TO_METER: float = 0.0254
 METERS_PER_DEGREE_LAT: float = 111_320.0
 MAX_RENDER_PIXELS: int = 50_000_000
-_GEOD = Geod(ellps="WGS84")
 
 
 class RenderSpecError(Exception):
@@ -218,28 +217,14 @@ def _compute_geo_window(
     computed geodesically from the persisted center so preview and final render
     share one stable, CRS-aware source of truth.
     """
-    ground_width_m, ground_height_m = _ground_span_meters(
-        scale_denom=scale_denom, map_frame=map_frame
+    min_lon, min_lat, max_lon, max_lat = view_geo_bounds(
+        center_lon=center_lon,
+        center_lat=center_lat,
+        scale_denom=scale_denom,
+        map_frame_width_points=map_frame.width,
+        map_frame_height_points=map_frame.height,
     )
-
-    half_w_m = ground_width_m / 2.0
-    half_h_m = ground_height_m / 2.0
-    west_lon, _, _ = _GEOD.fwd(center_lon, center_lat, 270.0, half_w_m)
-    east_lon, _, _ = _GEOD.fwd(center_lon, center_lat, 90.0, half_w_m)
-    _, south_lat, _ = _GEOD.fwd(center_lon, center_lat, 180.0, half_h_m)
-    _, north_lat, _ = _GEOD.fwd(center_lon, center_lat, 0.0, half_h_m)
-
-    lon_values = [west_lon, east_lon]
-    if max(lon_values) - min(lon_values) > 180:
-        msg = "render window crosses the antimeridian, which is not supported yet"
-        raise ValueError(msg)
-
-    return GeoWindow(
-        min_lon=min(lon_values),
-        max_lon=max(lon_values),
-        min_lat=south_lat,
-        max_lat=north_lat,
-    )
+    return GeoWindow(min_lon=min_lon, min_lat=min_lat, max_lon=max_lon, max_lat=max_lat)
 
 
 def build_render_spec(

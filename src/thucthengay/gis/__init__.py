@@ -12,6 +12,7 @@ from thucthengay.gis.view import (
     POINT_TO_INCH,
     map_frame_ground_span_meters,
     pan_center_by_viewport_pixels,
+    view_geo_bounds,
 )
 
 __all__ = [
@@ -24,4 +25,5 @@ __all__ = [
     "map_frame_ground_span_meters",
     "normalize_crs_key",
     "pan_center_by_viewport_pixels",
+    "view_geo_bounds",
 ]

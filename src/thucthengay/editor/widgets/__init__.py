@@ -21,6 +21,7 @@ from thucthengay.editor.widgets.slide_preview import (
 from thucthengay.editor.widgets.target_preview import (
     TargetPreviewRequestToken,
     TargetPreviewState,
+    TargetPreviewViewportOverlay,
     TargetPreviewWidget,
 )
 from thucthengay.editor.widgets.warnings_panel import WarningsPanelWidget
@@ -38,6 +39,7 @@ __all__ = [
     "SlidePreviewWidget",
     "TargetPreviewRequestToken",
     "TargetPreviewState",
+    "TargetPreviewViewportOverlay",
     "TargetPreviewWidget",
     "WarningsPanelWidget",
     "confirm_date_change_dialog",
