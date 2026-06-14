@@ -84,6 +84,23 @@ def test_config_editor_create_save_and_backup(tmp_path: Path) -> None:
     )
     assert state.draft["defaults"]["export"]["date_format"] == "dd.MM.yy"
     assert state.draft["defaults"]["export"]["time_format"] == "HH.mm/dd.MM.yy"
+    assert (
+        state.draft["defaults"]["grid"]["style"]["temporal_compare_pane_gap_px"]
+        == 8
+    )
+    assert (
+        state.draft["defaults"]["grid"]["style"]["temporal_compare_gap_color"]
+        == "#FFFFFF"
+    )
+    assert state.draft["historical_registry"] == {
+        "enabled": False,
+        "database_path": "history/target-history.sqlite",
+    }
+    assert state.draft["historical_loading"] == {
+        "enabled": False,
+        "target_scope": "targets_with_current_matches",
+        "image_selection": {"mode": "latest_date"},
+    }
     assert state.draft["filename_patterns"] == [
         {
             "name": "PlanetScope PSScene",
@@ -95,9 +112,9 @@ def test_config_editor_create_save_and_backup(tmp_path: Path) -> None:
         },
     ]
 
-    service.add_target(group_key="2.2.4", group_title="Có người Trường Sa ĐL")
+    target_id = service.add_target(group_key="2.2.4", group_title="Có người Trường Sa ĐL")
     service.update_target(
-        "target_001",
+        target_id,
         {
             "id": "da_lac",
             "name": "Đá Lạc",
@@ -119,6 +136,52 @@ def test_config_editor_create_save_and_backup(tmp_path: Path) -> None:
         for placeholder in raw["targets"][0]["export"]["placeholders"]
     }
     assert placeholders["time"]["value"] == "{time_label}"
+
+
+def test_config_editor_derives_target_id_from_name() -> None:
+    service = ConfigEditorService()
+    first_id = service.add_target()
+    second_id = service.add_target()
+
+    updated_first_id = service.update_target(first_id, {"name": "Đá Lạc 01!*"})
+    updated_second_id = service.update_target(second_id, {"name": "Đá Lạc 01"})
+
+    assert updated_first_id == "DaLac01"
+    assert updated_second_id == "DaLac012"
+    assert service.target("DaLac01")["name"] == "Đá Lạc 01!*"
+    assert service.target("DaLac012")["name"] == "Đá Lạc 01"
+
+
+def test_config_editor_updates_historical_settings() -> None:
+    service = ConfigEditorService()
+
+    service.update_historical_settings(
+        registry={"enabled": True, "database_path": "history/custom.sqlite"},
+        loading={
+            "enabled": True,
+            "target_scope": "all_enabled_targets",
+            "image_selection": {
+                "mode": "latest_images",
+                "lookback_anchor": "current_session_latest_date",
+                "limit_per_target": 2,
+            },
+        },
+    )
+
+    assert service.state.draft["historical_registry"] == {
+        "enabled": True,
+        "database_path": "history/custom.sqlite",
+    }
+    assert service.state.draft["historical_loading"] == {
+        "enabled": True,
+        "target_scope": "all_enabled_targets",
+        "image_selection": {
+            "mode": "latest_images",
+            "lookback_anchor": "current_session_latest_date",
+            "limit_per_target": 2,
+        },
+    }
+    assert service.state.ok is True
 
 
 def test_config_editor_save_blocks_invalid_draft(tmp_path: Path) -> None:
@@ -264,7 +327,7 @@ def test_config_editor_imports_and_exports_geojson(tmp_path: Path) -> None:
             "properties": {"name": "Target"},
             "geometry": {
                 "type": "Polygon",
-                "coordinates": [[[1, 2], [3, 2], [3, 4], [1, 2]]],
+                "coordinates": [[[1, 2], [3, 2], [3, 4], [1, 4], [1, 2]]],
             },
         },
     )
@@ -275,6 +338,8 @@ def test_config_editor_imports_and_exports_geojson(tmp_path: Path) -> None:
     export_path = tmp_path / "export.geojson"
     service.export_geojson("target_a", export_path)
 
+    target = service.target("target_a")
+    assert target["coordinate"] == [2.0, 3.0]
     raw = json.loads(export_path.read_text(encoding="utf-8"))
     assert raw["type"] == "Feature"
     assert raw["geometry"]["type"] == "Polygon"

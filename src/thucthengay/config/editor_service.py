@@ -5,8 +5,10 @@ from __future__ import annotations
 import copy
 import json
 import os
+import re
 import shutil
 import tempfile
+import unicodedata
 from dataclasses import dataclass, field
 from datetime import datetime
 from json import JSONDecodeError
@@ -15,6 +17,8 @@ from string import Formatter
 from typing import Any
 
 from pydantic import ValidationError
+from shapely.errors import ShapelyError
+from shapely.geometry import shape
 
 from thucthengay.config.loader import load_json_file
 from thucthengay.config.path_resolver import (
@@ -212,7 +216,8 @@ class ConfigEditorService:
     def add_target(self, group_key: str = "0", group_title: str = "Chưa phân nhóm") -> str:
         """Append a minimal target draft and return its id."""
         targets = _ensure_targets(self._state.draft)
-        target_id = _next_target_id(targets)
+        target_name = f"Target {len(targets) + 1:03d}"
+        target_id = _unique_target_id_from_name(target_name, targets)
         sort_order = _next_sort_order(targets, group_key)
         targets.append(
             {
@@ -220,7 +225,7 @@ class ConfigEditorService:
                 "enabled": True,
                 "group": {"key": group_key, "title": group_title},
                 "sort_order": sort_order,
-                "name": target_id,
+                "name": target_name,
                 "alias": target_id,
                 "coordinate": [0.0, 0.0],
                 "scale": 50000,
@@ -265,8 +270,21 @@ class ConfigEditorService:
         targets = _ensure_targets(self._state.draft)
         old_group_key, _old_group_title = _target_group(target)
         affects_order = "sort_order" in updates
+        current_id = str(target.get("id") or "")
+        current_name = str(target.get("name") or "")
+        if (
+            "name" in updates
+            and "id" not in updates
+            and current_id == _target_id_from_name(current_name)
+        ):
+            updates["id"] = _unique_target_id_from_name(
+                str(updates["name"]),
+                targets,
+                current_target=target,
+            )
         for dotted_key, value in updates.items():
             _set_dotted(target, dotted_key, value)
+        _remove_target_default_owned_fields(target)
         new_id = str(target.get("id") or target_id)
         new_group_key, _new_group_title = _target_group(target)
         if old_group_key != new_group_key:
@@ -302,6 +320,30 @@ class ConfigEditorService:
         self._state.draft["filename_patterns"] = copy.deepcopy(patterns)
         self.validate()
 
+    def update_historical_settings(
+        self,
+        *,
+        registry: dict[str, Any],
+        loading: dict[str, Any],
+    ) -> None:
+        """Update historical registry/loading settings in the draft."""
+        registry_draft = self._state.draft.setdefault("historical_registry", {})
+        if not isinstance(registry_draft, dict):
+            registry_draft = {}
+            self._state.draft["historical_registry"] = registry_draft
+        registry_draft.update(copy.deepcopy(registry))
+
+        loading_draft = self._state.draft.setdefault("historical_loading", {})
+        if not isinstance(loading_draft, dict):
+            loading_draft = {}
+            self._state.draft["historical_loading"] = loading_draft
+        loading_updates = copy.deepcopy(loading)
+        image_selection = loading_updates.pop("image_selection", None)
+        loading_draft.update(loading_updates)
+        if image_selection is not None:
+            loading_draft["image_selection"] = image_selection
+        self.validate()
+
     def import_geojson(self, target_id: str, path: str | Path) -> None:
         """Import one GeoJSON geometry into a target's metadata."""
         target = self.target(target_id)
@@ -313,6 +355,7 @@ class ConfigEditorService:
             metadata = {}
             target["metadata"] = metadata
         metadata["geojson_geometry"] = geometry
+        target["coordinate"] = _geojson_center(geometry)
         self.validate()
 
     def export_geojson(self, target_id: str, path: str | Path) -> None:
@@ -454,6 +497,15 @@ def _new_config_draft() -> dict[str, Any]:
     return {
         "schema_version": "1.0",
         "defaults": copy.deepcopy(_DEFAULT_CONFIG_SEED),
+        "historical_registry": {
+            "enabled": False,
+            "database_path": "history/target-history.sqlite",
+        },
+        "historical_loading": {
+            "enabled": False,
+            "target_scope": "targets_with_current_matches",
+            "image_selection": {"mode": "latest_date"},
+        },
         "filename_patterns": copy.deepcopy(_DEFAULT_FILENAME_PATTERNS_SEED),
         "targets": [],
     }
@@ -480,6 +532,8 @@ _DEFAULT_CONFIG_SEED: dict[str, Any] = {
             "label_color": "#000000",
             "label_font_size": 24,
             "tick_length_px": 8,
+            "temporal_compare_pane_gap_px": 8,
+            "temporal_compare_gap_color": "#FFFFFF",
             "max_frame_ticks": "",
         },
     },
@@ -800,6 +854,44 @@ def _next_target_id(targets: list[dict[str, Any]]) -> str:
         index += 1
 
 
+def _unique_target_id_from_name(
+    name: str,
+    targets: list[dict[str, Any]],
+    *,
+    current_target: dict[str, Any] | None = None,
+) -> str:
+    base_id = _target_id_from_name(name)
+    used = {
+        str(target.get("id"))
+        for target in targets
+        if current_target is None or target is not current_target
+    }
+    target_id = base_id
+    suffix = 2
+    while target_id in used:
+        target_id = f"{base_id}{suffix}"
+        suffix += 1
+    return target_id
+
+
+def _target_id_from_name(name: str) -> str:
+    text = name.strip().replace("đ", "d").replace("Đ", "D")
+    normalized = unicodedata.normalize("NFKD", text)
+    ascii_text = "".join(char for char in normalized if not unicodedata.combining(char))
+    target_id = re.sub(r"[^A-Za-z0-9]+", "", ascii_text)
+    return target_id or "Target"
+
+
+def _remove_target_default_owned_fields(target: dict[str, Any]) -> None:
+    grid = target.get("grid")
+    if isinstance(grid, dict):
+        grid.pop("label_format", None)
+    export = target.get("export")
+    if isinstance(export, dict):
+        for field_name in ("date_format", "time_format", "map_background_color"):
+            export.pop(field_name, None)
+
+
 def _next_sort_order(targets: list[dict[str, Any]], group_key: str) -> int:
     orders = [
         target.get("sort_order")
@@ -838,6 +930,16 @@ def _sort_order_insert_index(requested_sort_order: int | None, existing_count: i
 def _sort_order_value(target: dict[str, Any]) -> int | None:
     sort_order = target.get("sort_order")
     return sort_order if isinstance(sort_order, int) else None
+
+
+def _geojson_center(geometry: dict[str, Any]) -> list[float]:
+    try:
+        centroid = shape(geometry).centroid
+    except (ShapelyError, TypeError, ValueError) as error:
+        raise ConfigEditorError(f"KhÃ´ng tÃ­nh Ä‘Æ°á»£c tÃ¢m GeoJSON: {error}") from error
+    if centroid.is_empty:
+        raise ConfigEditorError("KhÃ´ng tÃ­nh Ä‘Æ°á»£c tÃ¢m GeoJSON rá»—ng.")
+    return [float(centroid.x), float(centroid.y)]
 
 
 def _set_dotted(target: dict[str, Any], dotted_key: str, value: Any) -> None:

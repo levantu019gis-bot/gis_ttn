@@ -13,6 +13,7 @@ from PySide6.QtGui import QColor
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QCheckBox,
+    QColorDialog,
     QComboBox,
     QFileDialog,
     QFormLayout,
@@ -42,6 +43,20 @@ from thucthengay.models import Issue, IssueSeverity
 
 _INVALID_INDEX = QModelIndex()
 _PLACEHOLDER_VISIBLE_ROWS = 5
+_PLACEHOLDER_COLUMNS = {
+    "field": 0,
+    "kind": 1,
+    "element_id": 2,
+    "selector.name": 3,
+    "required": 4,
+    "diagnostic_name": 5,
+    "value": 6,
+}
+_DEFAULT_COMBO_OPTIONS = {
+    "grid.label_format": ["dms_full", "dms_short"],
+    "export.date_format": ["dd.MM.yy", "yyyy-MM-dd", "dd/MM/yyyy"],
+    "export.time_format": ["HH.mm/dd.MM.yy", "HH:mm:ss", "HH:mm dd/MM/yyyy"],
+}
 
 
 class TargetTableColumn(IntEnum):
@@ -362,8 +377,29 @@ class ConfigMode(QWidget):
         self.add_target_button = QPushButton("Thêm target")
 
         self.defaults_fields: dict[str, QLineEdit] = {}
+        self.defaults_combo_fields: dict[str, QComboBox] = {}
         self.default_label_font_browse_button = QPushButton("Browse")
         self.default_label_font_browse_button.setToolTip("Chọn font label và copy vào fonts")
+        self.default_map_background_color_button = QPushButton("Pick")
+        self.default_map_background_color_button.setToolTip("Chọn màu nền map mặc định")
+        self.historical_fields: dict[str, QLineEdit] = {}
+        self.historical_registry_enabled_check = QCheckBox("historical_registry.enabled")
+        self.historical_loading_enabled_check = QCheckBox("historical_loading.enabled")
+        self.historical_target_scope_combo = QComboBox()
+        self.historical_target_scope_combo.addItem(
+            "targets_with_current_matches",
+            "targets_with_current_matches",
+        )
+        self.historical_target_scope_combo.addItem("all_enabled_targets", "all_enabled_targets")
+        self.historical_selection_mode_combo = QComboBox()
+        for mode in ("latest_date", "latest_images", "date_range", "lookback_days"):
+            self.historical_selection_mode_combo.addItem(mode, mode)
+        self.historical_lookback_anchor_combo = QComboBox()
+        self.historical_lookback_anchor_combo.addItem(
+            "current_session_latest_date",
+            "current_session_latest_date",
+        )
+        self.historical_lookback_anchor_combo.addItem("today", "today")
         self.pattern_table = QTableWidget(0, 3)
         self.pattern_table.setHorizontalHeaderLabels(["Tên", "Pattern", "Separator"])
         self.add_pattern_button = QPushButton("Thêm pattern")
@@ -385,8 +421,10 @@ class ConfigMode(QWidget):
         self.target_fields: dict[str, QLineEdit] = {}
         self.template_browse_button = QPushButton("Browse")
         self.template_browse_button.setToolTip("Chọn template PPTX và copy vào data/templates")
-        self.placeholder_table = QTableWidget(0, 2)
-        self.placeholder_table.setHorizontalHeaderLabels(["field", "value"])
+        self.placeholder_table = QTableWidget(0, len(_PLACEHOLDER_COLUMNS))
+        self.placeholder_table.setHorizontalHeaderLabels(
+            ["field", "kind", "element_id", "selector.name", "required", "diagnostic_name", "value"]
+        )
         self.placeholder_table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self.placeholder_table.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
         self.add_placeholder_button = QPushButton("Thêm field")
@@ -507,6 +545,7 @@ class ConfigMode(QWidget):
         layout.setContentsMargins(0, 0, 0, 0)
         self.work_tabs.addTab(self._build_targets_tab(), "Targets")
         self.work_tabs.addTab(self._build_defaults_tab(), "Defaults")
+        self.work_tabs.addTab(self._build_historical_tab(), "Historical")
         self.work_tabs.addTab(self._build_patterns_tab(), "Filename Patterns")
         self.work_tabs.addTab(self._build_raw_json_tab(), "Raw JSON")
         layout.addWidget(self.work_tabs)
@@ -544,12 +583,15 @@ class ConfigMode(QWidget):
             ("Default Grid", "grid.style.label_color", "label_color"),
             ("Default Grid", "grid.style.label_font_size", "label_font_size"),
             ("Default Grid", "grid.style.tick_length_px", "tick_length_px"),
+            ("Default Grid", "grid.style.temporal_compare_pane_gap_px", "compare_gap_px"),
+            ("Default Grid", "grid.style.temporal_compare_gap_color", "compare_gap_color"),
             ("Default Grid", "grid.style.reference_label_font_size", "reference_label_font_size"),
             ("Frame Reference", "grid.style.reference_width", "reference_width"),
             ("Frame Reference", "grid.style.reference_height", "reference_height"),
             ("Frame Reference", "grid.style.reference_outer_frame", "reference_outer_frame"),
             ("Frame Reference", "grid.style.reference_frame_gap", "reference_frame_gap"),
             ("Advanced Grid Style", "grid.style.max_frame_ticks_per_axis", "max_ticks_per_axis"),
+            ("Advanced Grid Style", "grid.style.max_frame_ticks", "max_frame_ticks"),
             ("Advanced Grid Style", "grid.style.epsilon", "epsilon"),
             ("Advanced Grid Style", "grid.style.surround_tick_length", "surround_tick_length"),
             (
@@ -578,6 +620,14 @@ class ConfigMode(QWidget):
             box = QGroupBox(group)
             form = QFormLayout(box)
             for key, label in fields:
+                if key in _DEFAULT_COMBO_OPTIONS:
+                    combo = QComboBox()
+                    combo.setEditable(True)
+                    combo.setObjectName(f"configDefault_{key.replace('.', '_')}")
+                    combo.addItems(_DEFAULT_COMBO_OPTIONS[key])
+                    self.defaults_combo_fields[key] = combo
+                    form.addRow(label, combo)
+                    continue
                 field = QLineEdit()
                 field.setObjectName(f"configDefault_{key.replace('.', '_')}")
                 self.defaults_fields[key] = field
@@ -589,11 +639,60 @@ class ConfigMode(QWidget):
                     picker_layout.addWidget(field, 1)
                     picker_layout.addWidget(self.default_label_font_browse_button)
                     form.addRow(label, picker)
+                elif key == "export.map_background_color":
+                    field.setReadOnly(True)
+                    picker = QWidget()
+                    picker_layout = QHBoxLayout(picker)
+                    picker_layout.setContentsMargins(0, 0, 0, 0)
+                    picker_layout.addWidget(field, 1)
+                    picker_layout.addWidget(self.default_map_background_color_button)
+                    form.addRow(label, picker)
                 else:
                     form.addRow(label, field)
             layout.addWidget(box)
         apply_button = QPushButton("Apply defaults")
         apply_button.clicked.connect(self._apply_defaults)
+        layout.addWidget(apply_button)
+        layout.addStretch(1)
+        scroll.setWidget(content)
+        return scroll
+
+    def _build_historical_tab(self) -> QWidget:
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        content = QWidget()
+        layout = QVBoxLayout(content)
+        layout.setContentsMargins(4, 8, 4, 8)
+
+        registry_box = QGroupBox("Historical Registry")
+        registry_form = QFormLayout(registry_box)
+        registry_form.addRow(self.historical_registry_enabled_check)
+        database_path = QLineEdit()
+        database_path.setObjectName("configHistorical_database_path")
+        self.historical_fields["historical_registry.database_path"] = database_path
+        registry_form.addRow("database_path", database_path)
+        layout.addWidget(registry_box)
+
+        loading_box = QGroupBox("Historical Loading")
+        loading_form = QFormLayout(loading_box)
+        loading_form.addRow(self.historical_loading_enabled_check)
+        loading_form.addRow("target_scope", self.historical_target_scope_combo)
+        loading_form.addRow("image_selection.mode", self.historical_selection_mode_combo)
+        for label, key in (
+            ("limit_per_target", "historical_loading.image_selection.limit_per_target"),
+            ("start_date", "historical_loading.image_selection.start_date"),
+            ("end_date", "historical_loading.image_selection.end_date"),
+            ("lookback_days", "historical_loading.image_selection.lookback_days"),
+        ):
+            field = QLineEdit()
+            field.setObjectName(f"configHistorical_{key.replace('.', '_')}")
+            self.historical_fields[key] = field
+            loading_form.addRow(label, field)
+        loading_form.addRow("lookback_anchor", self.historical_lookback_anchor_combo)
+        layout.addWidget(loading_box)
+
+        apply_button = QPushButton("Apply historical")
+        apply_button.clicked.connect(self._apply_historical)
         layout.addWidget(apply_button)
         layout.addStretch(1)
         scroll.setWidget(content)
@@ -650,14 +749,11 @@ class ConfigMode(QWidget):
         box = QGroupBox("Thông tin")
         form = QFormLayout(box)
         specs = [
-            ("id", "id"),
             ("group.key", "group.key"),
             ("group.title", "group.title"),
             ("sort_order", "sort_order"),
             ("name", "name"),
             ("alias", "alias"),
-            ("lon", "coordinate.0"),
-            ("lat", "coordinate.1"),
             ("scale", "scale"),
         ]
         form.addRow(self.enabled_check)
@@ -758,6 +854,9 @@ class ConfigMode(QWidget):
         self.apply_button.clicked.connect(self._apply_target)
         self.template_browse_button.clicked.connect(self._browse_template_pptx)
         self.default_label_font_browse_button.clicked.connect(self._browse_default_label_font)
+        self.default_map_background_color_button.clicked.connect(
+            self._pick_default_map_background_color
+        )
         self.add_placeholder_button.clicked.connect(self._add_placeholder_field)
         self.delete_placeholder_button.clicked.connect(self._delete_placeholder_field)
         self.import_geojson_button.clicked.connect(self._import_geojson)
@@ -775,6 +874,7 @@ class ConfigMode(QWidget):
         self._refresh_targets()
         self._populate_inspector()
         self._refresh_defaults()
+        self._refresh_historical()
         self._refresh_patterns()
         self._refresh_raw_json()
         self._refresh_issues()
@@ -913,11 +1013,41 @@ class ConfigMode(QWidget):
         for row, placeholder in enumerate(placeholders):
             if not isinstance(placeholder, dict):
                 placeholder = {}
-            field_item = QTableWidgetItem(str(placeholder.get("field", "")))
-            self.placeholder_table.setItem(row, 0, field_item)
             self.placeholder_table.setItem(
                 row,
-                1,
+                _PLACEHOLDER_COLUMNS["field"],
+                QTableWidgetItem(str(placeholder.get("field", ""))),
+            )
+            self.placeholder_table.setItem(
+                row,
+                _PLACEHOLDER_COLUMNS["kind"],
+                QTableWidgetItem(str(placeholder.get("kind", ""))),
+            )
+            self.placeholder_table.setItem(
+                row,
+                _PLACEHOLDER_COLUMNS["element_id"],
+                QTableWidgetItem(_format_default_value(placeholder.get("element_id"))),
+            )
+            selector = placeholder.get("selector")
+            selector_name = selector.get("name") if isinstance(selector, dict) else ""
+            self.placeholder_table.setItem(
+                row,
+                _PLACEHOLDER_COLUMNS["selector.name"],
+                QTableWidgetItem(_format_default_value(selector_name)),
+            )
+            self.placeholder_table.setItem(
+                row,
+                _PLACEHOLDER_COLUMNS["required"],
+                QTableWidgetItem(str(placeholder.get("required", True)).lower()),
+            )
+            self.placeholder_table.setItem(
+                row,
+                _PLACEHOLDER_COLUMNS["diagnostic_name"],
+                QTableWidgetItem(str(placeholder.get("diagnostic_name", ""))),
+            )
+            self.placeholder_table.setItem(
+                row,
+                _PLACEHOLDER_COLUMNS["value"],
                 QTableWidgetItem(str(placeholder.get("value", ""))),
             )
         self.placeholder_table.resizeColumnsToContents()
@@ -937,13 +1067,40 @@ class ConfigMode(QWidget):
         self.placeholder_table.insertRow(row)
         self.placeholder_table.setItem(
             row,
-            0,
+            _PLACEHOLDER_COLUMNS["field"],
             QTableWidgetItem(_next_placeholder_field_name(self.placeholder_table)),
         )
-        self.placeholder_table.setItem(row, 1, QTableWidgetItem(""))
+        self.placeholder_table.setItem(
+            row,
+            _PLACEHOLDER_COLUMNS["kind"],
+            QTableWidgetItem("text"),
+        )
+        self.placeholder_table.setItem(
+            row,
+            _PLACEHOLDER_COLUMNS["element_id"],
+            QTableWidgetItem(""),
+        )
+        self.placeholder_table.setItem(
+            row,
+            _PLACEHOLDER_COLUMNS["selector.name"],
+            QTableWidgetItem(""),
+        )
+        self.placeholder_table.setItem(
+            row,
+            _PLACEHOLDER_COLUMNS["required"],
+            QTableWidgetItem("true"),
+        )
+        self.placeholder_table.setItem(
+            row,
+            _PLACEHOLDER_COLUMNS["diagnostic_name"],
+            QTableWidgetItem(""),
+        )
+        self.placeholder_table.setItem(row, _PLACEHOLDER_COLUMNS["value"], QTableWidgetItem(""))
         self.placeholder_table.selectRow(row)
-        self.placeholder_table.setCurrentCell(row, 0)
-        self.placeholder_table.editItem(self.placeholder_table.item(row, 0))
+        self.placeholder_table.setCurrentCell(row, _PLACEHOLDER_COLUMNS["field"])
+        self.placeholder_table.editItem(
+            self.placeholder_table.item(row, _PLACEHOLDER_COLUMNS["field"])
+        )
 
     def _delete_placeholder_field(self) -> None:
         if self._selected_target_id is None or self.placeholder_table.rowCount() == 0:
@@ -960,6 +1117,44 @@ class ConfigMode(QWidget):
             defaults = {}
         for key, field in self.defaults_fields.items():
             value = _get_dotted(defaults, key)
+            field.setText(_format_default_value(value))
+        for key, combo in self.defaults_combo_fields.items():
+            value = _format_default_value(_get_dotted(defaults, key))
+            _set_combo_text(combo, value)
+
+    def _refresh_historical(self) -> None:
+        draft = self._service.state.draft
+        registry = draft.get("historical_registry")
+        if not isinstance(registry, dict):
+            registry = {}
+        loading = draft.get("historical_loading")
+        if not isinstance(loading, dict):
+            loading = {}
+        image_selection = loading.get("image_selection")
+        if not isinstance(image_selection, dict):
+            image_selection = {}
+
+        self.historical_registry_enabled_check.setChecked(registry.get("enabled") is True)
+        self.historical_loading_enabled_check.setChecked(loading.get("enabled") is True)
+        self.historical_fields["historical_registry.database_path"].setText(
+            _format_default_value(registry.get("database_path"))
+        )
+        _set_combo_data(
+            self.historical_target_scope_combo,
+            str(loading.get("target_scope") or "targets_with_current_matches"),
+        )
+        _set_combo_data(
+            self.historical_selection_mode_combo,
+            str(image_selection.get("mode") or "latest_date"),
+        )
+        _set_combo_data(
+            self.historical_lookback_anchor_combo,
+            str(image_selection.get("lookback_anchor") or "current_session_latest_date"),
+        )
+        for key, field in self.historical_fields.items():
+            if key == "historical_registry.database_path":
+                continue
+            value = _get_dotted(draft, key)
             field.setText(_format_default_value(value))
 
     def _refresh_patterns(self) -> None:
@@ -1210,9 +1405,9 @@ class ConfigMode(QWidget):
             for key, field in self.target_fields.items()
         )
         placeholder_values = tuple(
-            (
-                _table_text(self.placeholder_table, row, 0),
-                _table_text(self.placeholder_table, row, 1),
+            tuple(
+                _table_text(self.placeholder_table, row, column)
+                for column in range(self.placeholder_table.columnCount())
             )
             for row in range(self.placeholder_table.rowCount())
         )
@@ -1314,15 +1509,65 @@ class ConfigMode(QWidget):
         self._refresh_raw_json()
         self._refresh_issues()
 
+    def _pick_default_map_background_color(self) -> None:
+        field = self.defaults_fields.get("export.map_background_color")
+        if field is None:
+            return
+        color = QColorDialog.getColor(QColor(field.text().strip() or "#FFFFFF"), self)
+        if not color.isValid():
+            return
+        field.setText(color.name().upper())
+
     def _apply_defaults(self) -> None:
         updates: dict[str, Any] = {}
         for key, field in self.defaults_fields.items():
             value = field.text().strip()
             updates[key] = _parse_scalar(value)
+        for key, combo in self.defaults_combo_fields.items():
+            updates[key] = combo.currentText().strip()
         self._service.update_defaults(updates)
         self.downstream_label.setText(
             "Đã cập nhật defaults trong draft. Target grid.interval và target overrides "
             "không bị ghi đè."
+        )
+        self._refresh_all()
+
+    def _apply_historical(self) -> None:
+        database_path = self.historical_fields["historical_registry.database_path"].text().strip()
+        registry = {
+            "enabled": self.historical_registry_enabled_check.isChecked(),
+            "database_path": database_path or None,
+        }
+
+        selection: dict[str, Any] = {
+            "mode": str(self.historical_selection_mode_combo.currentData() or "latest_date"),
+            "lookback_anchor": str(
+                self.historical_lookback_anchor_combo.currentData()
+                or "current_session_latest_date"
+            ),
+        }
+        for key, field_name in (
+            ("limit_per_target", "historical_loading.image_selection.limit_per_target"),
+            ("start_date", "historical_loading.image_selection.start_date"),
+            ("end_date", "historical_loading.image_selection.end_date"),
+            ("lookback_days", "historical_loading.image_selection.lookback_days"),
+        ):
+            text = self.historical_fields[field_name].text().strip()
+            if not text:
+                continue
+            selection[key] = _parse_scalar(text)
+
+        loading = {
+            "enabled": self.historical_loading_enabled_check.isChecked(),
+            "target_scope": str(
+                self.historical_target_scope_combo.currentData()
+                or "targets_with_current_matches"
+            ),
+            "image_selection": selection,
+        }
+        self._service.update_historical_settings(registry=registry, loading=loading)
+        self.downstream_label.setText(
+            "ÄÃ£ cáº­p nháº­t historical_registry vÃ  historical_loading trong draft."
         )
         self._refresh_all()
 
@@ -1493,7 +1738,6 @@ def _target_search_text(target: dict[str, Any]) -> str:
 def _target_form_values(target: dict[str, Any]) -> dict[str, str]:
     values: dict[str, str] = {}
     for key in (
-        "id",
         "group.key",
         "group.title",
         "sort_order",
@@ -1508,13 +1752,6 @@ def _target_form_values(target: dict[str, Any]) -> dict[str, str]:
     ):
         value = _get_dotted(target, key)
         values[key] = "" if value is None else str(value)
-    coordinate = target.get("coordinate")
-    if isinstance(coordinate, list) and len(coordinate) == 2:
-        values["coordinate.0"] = str(coordinate[0])
-        values["coordinate.1"] = str(coordinate[1])
-    else:
-        values["coordinate.0"] = ""
-        values["coordinate.1"] = ""
     return values
 
 
@@ -1525,20 +1762,14 @@ def _collect_target_updates(
     current_target: dict[str, Any],
 ) -> dict[str, Any]:
     updates: dict[str, Any] = {"enabled": enabled_check.isChecked()}
-    coordinate: list[float] = [0.0, 0.0]
     for key, field in fields.items():
         text = field.text().strip()
-        if key == "coordinate.0":
-            coordinate[0] = float(text or 0)
-        elif key == "coordinate.1":
-            coordinate[1] = float(text or 0)
-        elif key in {"sort_order", "scale"}:
+        if key in {"sort_order", "scale"}:
             updates[key] = int(text or 0)
         elif key.startswith("grid.interval."):
             updates[key] = float(text) if "." in text else int(text or 0)
         else:
             updates[key] = text
-    updates["coordinate"] = coordinate
     updates["export.placeholders"] = _collect_placeholders(placeholder_table, current_target)
     return updates
 
@@ -1559,10 +1790,9 @@ def _collect_placeholders(
 
     placeholders: list[dict[str, Any]] = []
     for row in range(table.rowCount()):
-        field = _table_text(table, row, 0)
+        field = _table_text(table, row, _PLACEHOLDER_COLUMNS["field"])
         if not field:
             continue
-        value = _table_text(table, row, 1)
         placeholder = copy.deepcopy(
             existing_by_field.get(
                 field,
@@ -1570,7 +1800,40 @@ def _collect_placeholders(
             )
         )
         placeholder["field"] = field
-        placeholder.setdefault("kind", "map_image" if field == "map_image" else "text")
+
+        kind = _table_text(table, row, _PLACEHOLDER_COLUMNS["kind"])
+        placeholder["kind"] = kind or ("map_image" if field == "map_image" else "text")
+
+        element_id = _table_text(table, row, _PLACEHOLDER_COLUMNS["element_id"])
+        if element_id:
+            placeholder["element_id"] = int(element_id)
+        else:
+            placeholder.pop("element_id", None)
+
+        selector_name = _table_text(table, row, _PLACEHOLDER_COLUMNS["selector.name"])
+        selector = placeholder.get("selector")
+        if selector_name:
+            if not isinstance(selector, dict):
+                selector = {}
+            selector["name"] = selector_name
+            placeholder["selector"] = selector
+        elif isinstance(selector, dict):
+            selector.pop("name", None)
+            if selector:
+                placeholder["selector"] = selector
+            else:
+                placeholder.pop("selector", None)
+
+        required = _table_text(table, row, _PLACEHOLDER_COLUMNS["required"])
+        placeholder["required"] = _parse_bool_text(required, default=True)
+
+        diagnostic_name = _table_text(table, row, _PLACEHOLDER_COLUMNS["diagnostic_name"])
+        if diagnostic_name:
+            placeholder["diagnostic_name"] = diagnostic_name
+        else:
+            placeholder.pop("diagnostic_name", None)
+
+        value = _table_text(table, row, _PLACEHOLDER_COLUMNS["value"])
         if value:
             placeholder["value"] = value
         else:
@@ -1594,8 +1857,33 @@ def _table_text(table: QTableWidget, row: int, column: int) -> str:
     return "" if item is None else item.text().strip()
 
 
+def _set_combo_data(combo: QComboBox, value: str) -> None:
+    index = combo.findData(value)
+    combo.setCurrentIndex(index if index >= 0 else 0)
+
+
+def _set_combo_text(combo: QComboBox, value: str) -> None:
+    index = combo.findText(value)
+    if index >= 0:
+        combo.setCurrentIndex(index)
+        return
+    combo.setEditText(value)
+
+
+def _parse_bool_text(value: str, *, default: bool) -> bool:
+    normalized = value.strip().lower()
+    if normalized in {"true", "1", "yes", "y", "on"}:
+        return True
+    if normalized in {"false", "0", "no", "n", "off"}:
+        return False
+    return default
+
+
 def _next_placeholder_field_name(table: QTableWidget) -> str:
-    used = {_table_text(table, row, 0) for row in range(table.rowCount())}
+    used = {
+        _table_text(table, row, _PLACEHOLDER_COLUMNS["field"])
+        for row in range(table.rowCount())
+    }
     index = 1
     while True:
         field_name = f"field_{index}"
