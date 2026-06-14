@@ -17,6 +17,7 @@ ExportRunner = Callable[..., FullExportResult]
 class ExportWorker(QObject):
     """Run final render and export off the UI thread."""
 
+    progress = Signal(object)
     finished = Signal(object)
 
     def __init__(
@@ -56,5 +57,6 @@ class ExportWorker(QObject):
             is_cancelled=self.is_cancelled,
             template_issues=self._template_issues,
             history_service=self._history_service,
+            on_progress=self.progress.emit,
         )
         self.finished.emit(result)

@@ -31,7 +31,7 @@ class TargetPreviewKey:
 
     target_id: str
     capture_date: date
-    layer_signature: tuple[tuple[str, int, bool], ...]
+    layer_signature: tuple[tuple[object, ...], ...]
 
 
 @dataclass(frozen=True)
@@ -339,8 +339,17 @@ def _numpy_to_pixmap(canvas: np.ndarray) -> QPixmap:
     return QPixmap.fromImage(image.copy())
 
 
-def _layer_signature(layers: list[ImageLayer]) -> tuple[tuple[str, int, bool], ...]:
+def _layer_signature(layers: list[ImageLayer]) -> tuple[tuple[object, ...], ...]:
     return tuple(
-        (layer.layer_id, layer.order, layer.visible)
+        (
+            layer.layer_id,
+            layer.order,
+            layer.visible,
+            layer.source_path,
+            layer.cache_path,
+            layer.capture_date.isoformat() if layer.capture_date is not None else None,
+            layer.capture_time.isoformat() if layer.capture_time is not None else None,
+            layer.cloud_percent,
+        )
         for layer in sorted(layers, key=lambda item: (item.order, item.layer_id))
     )

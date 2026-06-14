@@ -10,13 +10,22 @@ from PySide6.QtCore import QThread
 from PySide6.QtWidgets import QApplication, QMainWindow, QTabWidget
 
 from thucthengay.config import ConfigLoadResult, load_project_config
+from thucthengay.download import SatelliteDownloadRequest, SatelliteDownloadResult
+from thucthengay.editor.download_worker import DownloadRunner, DownloadWorker
 from thucthengay.editor.ingestion_worker import IngestionWorker
+from thucthengay.editor.modes.download_mode import DownloadMode
 from thucthengay.editor.modes.export_mode import ExportMode
 from thucthengay.editor.modes.review_edit_mode import ReviewEditMode
 from thucthengay.editor.modes.setup_mode import SetupMode, SetupPaths
 from thucthengay.editor.preferences import PreferencesService, RecentProjectEntry
 from thucthengay.history import HistoryService
-from thucthengay.jobs import IngestionJobResult, IngestionSummary, JobControl, JobState
+from thucthengay.jobs import (
+    IngestionJobResult,
+    IngestionSummary,
+    JobControl,
+    JobState,
+    run_satellite_download_job,
+)
 from thucthengay.models import Issue, IssueScope
 from thucthengay.utils.path_safety import is_absolute_path_text
 from thucthengay.workspace import WorkspaceError, WorkspaceService
@@ -25,19 +34,29 @@ from thucthengay.workspace import WorkspaceError, WorkspaceService
 class AppShell(QMainWindow):
     """Top-level desktop window for the application."""
 
-    def __init__(self, *, preferences_service: PreferencesService | None = None) -> None:
+    def __init__(
+        self,
+        *,
+        preferences_service: PreferencesService | None = None,
+        download_runner: DownloadRunner = run_satellite_download_job,
+    ) -> None:
         super().__init__()
         self.setWindowTitle("3.ThucTheNgay")
         self.preferences_service = preferences_service or PreferencesService()
+        self._download_runner = download_runner
         self.setup_mode = SetupMode()
         self.review_edit_mode = ReviewEditMode(preferences_service=self.preferences_service)
         self.export_mode = ExportMode(preferences_service=self.preferences_service)
+        self.download_mode = DownloadMode()
         from thucthengay.editor.modes.config_mode import ConfigMode
 
         self.config_mode = ConfigMode()
         self._ingestion_thread: QThread | None = None
         self._ingestion_worker: IngestionWorker | None = None
         self._ingestion_control: JobControl | None = None
+        self._download_thread: QThread | None = None
+        self._download_worker: DownloadWorker | None = None
+        self._download_control: JobControl | None = None
         self._active_setup_paths: SetupPaths | None = None
 
         self.mode_tabs = QTabWidget()
@@ -45,6 +64,7 @@ class AppShell(QMainWindow):
         self.mode_tabs.addTab(self.setup_mode, "Setup")
         self.mode_tabs.addTab(self.review_edit_mode, "Review/Edit")
         self.mode_tabs.addTab(self.export_mode, "Export")
+        self.mode_tabs.addTab(self.download_mode, "Download")
         self.mode_tabs.addTab(self.config_mode, "Config")
         self.setup_mode.ingestRequested.connect(self._run_ingestion)
         self.setup_mode.openWorkspaceRequested.connect(self._open_existing_workspace)
@@ -53,6 +73,8 @@ class AppShell(QMainWindow):
         self.setup_mode.stopRequested.connect(self._stop_ingestion)
         self.setup_mode.recentProjectRemoveRequested.connect(self._remove_recent_project)
         self.export_mode.jumpRequested.connect(self._jump_to_review_context)
+        self.download_mode.downloadRequested.connect(self._run_download)
+        self.download_mode.cancelRequested.connect(self._stop_download)
         self.config_mode.configSaved.connect(self._config_saved)
 
         self.setCentralWidget(self.mode_tabs)
@@ -126,6 +148,49 @@ class AppShell(QMainWindow):
         self._ingestion_worker = None
         self._ingestion_control = None
         self._active_setup_paths = None
+
+    def _run_download(self, request: SatelliteDownloadRequest) -> None:
+        if self._download_thread is not None:
+            return
+
+        job_id = f"download-{uuid4().hex}"
+        control = JobControl()
+        thread = QThread(self)
+        worker = DownloadWorker(
+            job_id=job_id,
+            request=request,
+            control=control,
+            runner=self._download_runner,
+        )
+        worker.moveToThread(thread)
+
+        self._download_thread = thread
+        self._download_worker = worker
+        self._download_control = control
+        self.download_mode.start_download_progress()
+
+        thread.started.connect(worker.run)
+        worker.progress.connect(self.download_mode.show_download_progress)
+        worker.finished.connect(self._finish_download)
+        worker.finished.connect(thread.quit)
+        worker.finished.connect(worker.deleteLater)
+        thread.finished.connect(thread.deleteLater)
+        thread.finished.connect(self._clear_download_worker)
+        thread.start()
+
+    def _stop_download(self) -> None:
+        if self._download_control is None:
+            return
+        self._download_control.request_cancel()
+        self.download_mode.mark_download_stopping()
+
+    def _finish_download(self, result: SatelliteDownloadResult) -> None:
+        self.download_mode.show_download_summary(result)
+
+    def _clear_download_worker(self) -> None:
+        self._download_thread = None
+        self._download_worker = None
+        self._download_control = None
 
     def _finish_ingestion(
         self,

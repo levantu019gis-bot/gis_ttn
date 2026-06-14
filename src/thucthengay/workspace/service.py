@@ -284,6 +284,8 @@ class WorkspaceService:
         composition_id: str,
         layer_id: str,
         *,
+        source_path: str | None = None,
+        cache_path: str | None = None,
         capture_date: Any,
         capture_time: Any,
         cloud_percent: float | None,
@@ -295,6 +297,10 @@ class WorkspaceService:
             msg = "Cần nhập ngày chụp khi đã có giờ chụp."
             raise WorkspaceError(msg)
 
+        if source_path is not None and not source_path.strip():
+            msg = "File nguồn không được để trống."
+            raise WorkspaceError(msg)
+
         metadata_updates = {
             "capture_date": capture_date,
             "capture_time": capture_time,
@@ -302,6 +308,10 @@ class WorkspaceService:
             "metadata_source": metadata_source,
             "metadata_status": metadata_status,
         }
+        if source_path is not None:
+            metadata_updates["source_path"] = source_path.strip()
+        if cache_path is not None:
+            metadata_updates["cache_path"] = cache_path.strip() or None
         composition = self.read_composition(composition_id)
         found = False
         updated_layers: list[ImageLayer] = []
@@ -336,10 +346,16 @@ class WorkspaceService:
         cloud_percent: float | None,
         metadata_source: MetadataSource,
         metadata_status: MetadataStatus,
+        source_path: str | None = None,
+        cache_path: str | None = None,
     ) -> tuple[Composition, Composition]:
         """Move a layer from one composition to another (creating dest if needed)."""
         if new_capture_date is None:
             msg = "Cần có capture_date để xác định composition đích."
+            raise WorkspaceError(msg)
+
+        if source_path is not None and not source_path.strip():
+            msg = "File nguồn không được để trống."
             raise WorkspaceError(msg)
 
         source = self.read_composition(source_composition_id)
@@ -396,6 +412,10 @@ class WorkspaceService:
                 "order": len(dest_layers),
             }
         )
+        if source_path is not None:
+            layer_data["source_path"] = source_path.strip()
+        if cache_path is not None:
+            layer_data["cache_path"] = cache_path.strip() or None
         try:
             updated_layer = ImageLayer.model_validate(layer_data)
         except ValidationError as error:

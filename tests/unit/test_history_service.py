@@ -709,6 +709,24 @@ def test_repair_image_path_validates_and_updates_registry_transactionally(
         assert connection.execute("SELECT source_path FROM image_asset").fetchone()[0] == str(
             valid_replacement.resolve()
         )
+        preserved = connection.execute(
+            "SELECT capture_date, capture_time, cloud_percent FROM image_asset"
+        ).fetchone()
+        assert preserved == ("2026-05-25", "08:00:00", 12.5)
+
+    service.repair_image_path(
+        image_asset_id,
+        valid_replacement,
+        capture_date=date(2026, 5, 26),
+        capture_time=time(9, 30),
+        cloud_percent=44.0,
+    )
+
+    with sqlite3.connect(database_path) as connection:
+        updated = connection.execute(
+            "SELECT capture_date, capture_time, cloud_percent FROM image_asset"
+        ).fetchone()
+        assert updated == ("2026-05-26", "09:30:00", 44.0)
 
 
 def test_bulk_prefix_replacement_previews_and_requires_confirmation(

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import date, time
+from pathlib import Path
 from typing import Any
 
 from PySide6.QtCore import QDate, Qt, QTime, Signal
@@ -12,9 +13,13 @@ from PySide6.QtWidgets import (
     QDialog,
     QDialogButtonBox,
     QDoubleSpinBox,
+    QFileDialog,
     QFormLayout,
+    QHBoxLayout,
     QLabel,
+    QLineEdit,
     QMessageBox,
+    QPushButton,
     QTimeEdit,
     QVBoxLayout,
     QWidget,
@@ -49,8 +54,12 @@ class MetadataEditorDialog(QDialog):
         self.setWindowTitle("Sửa metadata layer")
         self._layer = layer
 
-        self._source_path_label = QLabel(layer.source_path)
-        self._source_path_label.setWordWrap(True)
+        self._source_path_edit = QLineEdit(layer.source_path)
+        self._source_path_edit.setObjectName("metadataSourcePathEdit")
+        self._source_path_edit.setMinimumWidth(360)
+        self._source_path_browse_button = QPushButton("Chọn")
+        self._source_path_browse_button.setObjectName("metadataSourcePathBrowse")
+        self._source_path_browse_button.clicked.connect(self._browse_source_path)
         self._parsed_source_label = QLabel(_SOURCE_LABELS[layer.metadata_source])
         self._state_label = QLabel(_state_pill_text(layer))
         self._state_label.setObjectName("metadataStatePill")
@@ -111,7 +120,7 @@ class MetadataEditorDialog(QDialog):
         button_box.rejected.connect(self.reject)
 
         form = QFormLayout()
-        form.addRow("File:", self._source_path_label)
+        form.addRow("File:", self._build_source_path_row())
         form.addRow("Nguồn parse:", self._parsed_source_label)
         form.addRow("Trạng thái:", self._state_label)
         form.addRow(self._capture_date_checkbox, self._capture_date_edit)
@@ -158,6 +167,7 @@ class MetadataEditorDialog(QDialog):
             cloud_percent = float(self._cloud_spin.value())
 
         return {
+            "source_path": self._source_path_edit.text().strip(),
             "capture_date": capture_date,
             "capture_time": capture_time,
             "cloud_percent": cloud_percent,
@@ -165,6 +175,8 @@ class MetadataEditorDialog(QDialog):
 
     @staticmethod
     def _validate(payload: dict[str, Any]) -> str | None:
+        if not str(payload.get("source_path") or "").strip():
+            return "Cần nhập file nguồn."
         cloud = payload.get("cloud_percent")
         if cloud is not None and (cloud < 0 or cloud > 100):
             return "Giá trị mây phải trong 0–100."
@@ -173,6 +185,27 @@ class MetadataEditorDialog(QDialog):
         if payload.get("capture_time") is None:
             return "Cần nhập giờ chụp."
         return None
+
+    def _build_source_path_row(self) -> QWidget:
+        row = QWidget()
+        layout = QHBoxLayout(row)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.addWidget(self._source_path_edit, 1)
+        layout.addWidget(self._source_path_browse_button)
+        return row
+
+    def _browse_source_path(self) -> None:
+        current_text = self._source_path_edit.text().strip()
+        current_path = Path(current_text).expanduser() if current_text else Path.cwd()
+        start_dir = current_path.parent if current_path.suffix else current_path
+        selected, _filter = QFileDialog.getOpenFileName(
+            self,
+            "Chọn file nguồn",
+            str(start_dir),
+            "GeoTIFF (*.tif *.tiff);;All files (*)",
+        )
+        if selected:
+            self._source_path_edit.setText(selected)
 
 
 def _state_pill_text(layer: ImageLayer) -> str:

@@ -48,8 +48,7 @@
     "enabled": true,
     "target_scope": "targets_with_current_matches",
     "image_selection": {
-      "mode": "latest_images",
-      "limit_per_target": 1
+      "mode": "latest_date"
     }
   },
   "filename_patterns": [
@@ -77,7 +76,7 @@
         111.50678145,
         17.08697955
       ],
-      "scale": 36125,
+      "scale": 51315,
       "grid": {
         "interval": {
           "minutes": 2
@@ -656,10 +655,10 @@
       "name": "Bãi cạn Đinh Ba, Núi Cầu",
       "alias": "Bãi cạn Đinh Ba, Núi Cầu",
       "coordinate": [
-        114.62240151127081,
-        11.352912314179745
+        114.45282341,
+        11.45046684
       ],
-      "scale": 50000,
+      "scale": 10000,
       "grid": {
         "interval": {
           "minutes": 1
@@ -1244,10 +1243,10 @@
       "name": "Đá Lạc",
       "alias": "Đá Lạc",
       "coordinate": [
-        114.2517756844011,
-        10.162738514802186
+        114.25151443,
+        10.15155858
       ],
-      "scale": 10000,
+      "scale": 20000,
       "grid": {
         "interval": {
           "seconds": 30
@@ -2853,10 +2852,10 @@
         112.34197958414788,
         16.83539777421951
       ],
-      "scale": 10000,
+      "scale": 15000,
       "grid": {
         "interval": {
-          "seconds": 30
+          "seconds": 20
         }
       },
       "export": {

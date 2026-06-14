@@ -47,7 +47,8 @@ from thucthengay.editor.widgets import (
 )
 from thucthengay.export.final_render import final_render_output_size
 from thucthengay.gis import view_geo_bounds
-from thucthengay.history import HistoryService
+from thucthengay.history import HistoryRecordError, HistoryService
+from thucthengay.ingestion import cache_layer_source, scan_geotiff_file
 from thucthengay.jobs import (
     JobState,
     PreviewRenderJobResult,
@@ -58,7 +59,11 @@ from thucthengay.models import (
     Composition,
     GridConfig,
     GridInterval,
+    ImageLayer,
+    ImageLayerSourceKind,
     Issue,
+    MetadataSource,
+    MetadataStatus,
     TargetConfig,
     TemplateMetadata,
     TemporalCompareOrientation,
@@ -1080,7 +1085,7 @@ class ReviewEditMode(QWidget):
             and self.selected_composition is not None
         )
 
-    def _current_layer(self) -> object | None:
+    def _current_layer(self) -> ImageLayer | None:
         if self.selected_composition is None:
             return None
         layer_id = self.layer_model.layer_id_for_index(self.layer_table.currentIndex())
@@ -1102,8 +1107,24 @@ class ReviewEditMode(QWidget):
     def _apply_layer_metadata(self, layer_id: str, payload: dict) -> None:
         if self._workspace_service is None or self.selected_composition is None:
             return
+        current_layer = self._current_layer()
+        if current_layer is None or current_layer.layer_id != layer_id:
+            self.action_summary.setText("Không tìm thấy layer đang chọn để lưu metadata.")
+            return
         composition_id = self.selected_composition.composition_id
         target_id = self.selected_composition.target_id
+        source_path = str(payload.get("source_path") or "").strip()
+        source_changed = source_path != current_layer.source_path
+        try:
+            payload, source_update_message = self._prepare_source_path_payload(
+                current_layer,
+                payload,
+                source_path,
+            )
+        except (OSError, ValueError) as error:
+            self.action_summary.setText(f"Không cập nhật được file nguồn: {error}")
+            return
+        history_message = None
         new_date = payload.get("capture_date")
         candidate_id = (
             f"{target_id}__{new_date.strftime('%Y%m%d')}" if new_date is not None else None
@@ -1115,6 +1136,18 @@ class ReviewEditMode(QWidget):
                 self.action_summary.setText("Đã hủy đổi ngày; metadata không được lưu.")
                 return
             try:
+                payload, cache_message = self._activate_source_path_payload(
+                    current_layer,
+                    payload,
+                    source_path,
+                )
+                if cache_message is not None:
+                    source_update_message = cache_message
+                history_message = self._repair_historical_source_path(
+                    current_layer,
+                    source_path,
+                    payload,
+                )
                 updated_source, updated_dest = (
                     self._workspace_service.move_layer_between_compositions(
                         composition_id,
@@ -1126,9 +1159,18 @@ class ReviewEditMode(QWidget):
                         cloud_percent=payload["cloud_percent"],
                         metadata_source=payload["metadata_source"],
                         metadata_status=payload["metadata_status"],
+                        source_path=source_path,
+                        cache_path=payload.get("cache_path"),
                     )
                 )
-            except (WorkspaceError, ValidationError, OSError, ValueError) as error:
+            except (
+                HistoryRecordError,
+                WorkspaceError,
+                ValidationError,
+                OSError,
+                ValueError,
+            ) as error:
+                self._rollback_historical_source_path(current_layer, source_path)
                 self.action_summary.setText(
                     f"Không di chuyển được layer: {error} "
                     "Vui lòng kiểm tra composition JSON/workspace rồi thử lại."
@@ -1141,28 +1183,168 @@ class ReviewEditMode(QWidget):
             )
             self.action_summary.setText(
                 f"Đã chuyển layer sang {updated_dest.composition_id}; "
-                "cả hai composition cần revalidate."
+                f"cả hai composition cần revalidate."
+                f"{_summary_suffix(source_update_message)}{_summary_suffix(history_message)}"
             )
+            if source_changed:
+                self._request_canvas_render(updated_dest)
             return
 
         try:
+            payload, cache_message = self._activate_source_path_payload(
+                current_layer,
+                payload,
+                source_path,
+            )
+            if cache_message is not None:
+                source_update_message = cache_message
+            history_message = self._repair_historical_source_path(
+                current_layer,
+                source_path,
+                payload,
+            )
             updated = self._workspace_service.update_layer_metadata(
                 composition_id,
                 layer_id,
+                source_path=source_path,
                 capture_date=payload["capture_date"],
                 capture_time=payload["capture_time"],
                 cloud_percent=payload["cloud_percent"],
                 metadata_source=payload["metadata_source"],
                 metadata_status=payload["metadata_status"],
+                cache_path=payload.get("cache_path"),
             )
-        except (WorkspaceError, ValidationError, OSError, ValueError) as error:
+        except (
+            HistoryRecordError,
+            WorkspaceError,
+            ValidationError,
+            OSError,
+            ValueError,
+        ) as error:
+            self._rollback_historical_source_path(current_layer, source_path)
             self.action_summary.setText(f"Không lưu được metadata: {error}")
             return
 
         self.selected_composition = updated
         self._update_detail_panels(updated)
         self._refresh_workspace_projection(updated.composition_id, validate_selection=False)
-        self.action_summary.setText("Đã lưu metadata; composition cần revalidate.")
+        if source_changed:
+            self._request_canvas_render(updated)
+        self.action_summary.setText(
+            f"Đã lưu metadata/source path; composition cần revalidate."
+            f"{_summary_suffix(source_update_message)}{_summary_suffix(history_message)}"
+        )
+
+    def _prepare_source_path_payload(
+        self,
+        layer: ImageLayer,
+        payload: dict,
+        source_path: str,
+    ) -> tuple[dict, str | None]:
+        if source_path == layer.source_path:
+            return dict(payload), None
+        if self._workspace_service is None or self.selected_composition is None:
+            return dict(payload), None
+
+        scanned = scan_geotiff_file(source_path)
+        updates = dict(payload)
+        for field_name in ("capture_date", "capture_time", "cloud_percent"):
+            parsed_value = getattr(scanned.layer, field_name)
+            if parsed_value is not None:
+                updates[field_name] = parsed_value
+        if scanned.layer.metadata_source is not MetadataSource.UNKNOWN:
+            updates["metadata_source"] = scanned.layer.metadata_source
+        else:
+            updates["metadata_source"] = updates.get("metadata_source", MetadataSource.MANUAL)
+        updates["metadata_status"] = (
+            MetadataStatus.VALID
+            if updates.get("capture_date") is not None and updates.get("capture_time") is not None
+            else MetadataStatus.NEEDS_MANUAL_CORRECTION
+        )
+        cache_candidate = layer.model_copy(
+            update={
+                "source_path": source_path,
+                "capture_date": updates.get("capture_date"),
+                "capture_time": updates.get("capture_time"),
+                "cloud_percent": updates.get("cloud_percent"),
+                "metadata_source": updates["metadata_source"],
+                "metadata_status": updates["metadata_status"],
+            }
+        )
+        updates["_cache_candidate"] = cache_candidate
+        updates["_scanned_source_path"] = scanned.path
+        updates["source_path"] = str(scanned.path)
+        return updates, "Đã validate file mới và đọc metadata từ file nguồn."
+
+    def _activate_source_path_payload(
+        self,
+        layer: ImageLayer,
+        payload: dict,
+        source_path: str,
+    ) -> tuple[dict, str | None]:
+        if source_path == layer.source_path:
+            return dict(payload), None
+        if self._workspace_service is None or self.selected_composition is None:
+            return dict(payload), None
+
+        updates = dict(payload)
+        cache_candidate = updates.pop("_cache_candidate", None)
+        scanned_source_path = updates.pop("_scanned_source_path", None)
+        if not isinstance(cache_candidate, ImageLayer) or scanned_source_path is None:
+            return updates, None
+        cached_layer = cache_layer_source(
+            workspace_service=self._workspace_service,
+            target_id=self.selected_composition.target_id,
+            source_path=scanned_source_path,
+            layer=cache_candidate,
+            overwrite_existing=True,
+        )
+        updates["source_path"] = cached_layer.source_path
+        updates["cache_path"] = cached_layer.cache_path
+        return updates, f"Đã validate file mới và cập nhật cache: {cached_layer.cache_path}."
+
+    def _repair_historical_source_path(
+        self,
+        layer: ImageLayer,
+        source_path: str,
+        payload: dict,
+    ) -> str | None:
+        if source_path == layer.source_path:
+            return None
+        if layer.source_kind is not ImageLayerSourceKind.HISTORICAL:
+            return None
+        if layer.image_asset_id is None:
+            return "SQLite history chưa cập nhật vì layer historical cũ thiếu image_asset_id."
+        if not self._history_service.enabled:
+            return "SQLite history chưa cập nhật vì historical registry đang tắt."
+
+        self._history_service.repair_image_path(
+            layer.image_asset_id,
+            source_path,
+            capture_date=payload.get("capture_date"),
+            capture_time=payload.get("capture_time"),
+            cloud_percent=payload.get("cloud_percent"),
+        )
+        return f"SQLite history đã cập nhật image_asset_id={layer.image_asset_id}."
+
+    def _rollback_historical_source_path(self, layer: ImageLayer, source_path: str) -> None:
+        if (
+            source_path == layer.source_path
+            or layer.source_kind is not ImageLayerSourceKind.HISTORICAL
+            or layer.image_asset_id is None
+            or not self._history_service.enabled
+        ):
+            return
+        try:
+            self._history_service.repair_image_path(
+                layer.image_asset_id,
+                layer.source_path,
+                capture_date=layer.capture_date,
+                capture_time=layer.capture_time,
+                cloud_percent=layer.cloud_percent,
+            )
+        except HistoryRecordError:
+            return
 
     def _confirm_date_change(
         self,
@@ -1902,6 +2084,12 @@ def _render_spec_error_message(error: RenderSpecError | ValidationError) -> str:
     if text:
         return f"Không tạo được render spec cho GIS canvas: {text}"
     return "Không tạo được render spec cho GIS canvas."
+
+
+def _summary_suffix(message: str | None) -> str:
+    if not message:
+        return ""
+    return f" {message}"
 
 
 def _parse_non_negative_int(raw: str, label: str) -> int:

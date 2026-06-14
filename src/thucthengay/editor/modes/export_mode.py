@@ -9,6 +9,7 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QLineEdit,
+    QProgressBar,
     QPushButton,
     QTableView,
     QVBoxLayout,
@@ -79,6 +80,13 @@ class ExportMode(QWidget):
         self.status_label = QLabel("Chua chay preflight.")
         self.status_label.setObjectName("exportStatus")
         self.status_label.setWordWrap(True)
+        self.progress_bar = QProgressBar()
+        self.progress_bar.setObjectName("exportProgress")
+        self.progress_bar.setRange(0, 100)
+        self.progress_bar.setValue(0)
+        self.progress_bar.setTextVisible(True)
+        self.progress_bar.setFormat("%p%")
+        self.progress_bar.setMinimumWidth(220)
 
         self.plan_model = ExportPlanModel(self)
         self.plan_table = QTableView()
@@ -96,6 +104,7 @@ class ExportMode(QWidget):
         toolbar.addWidget(QLabel("Tên file"))
         toolbar.addWidget(self.output_stem_input)
         toolbar.addWidget(self.export_button)
+        toolbar.addWidget(self.progress_bar)
         toolbar.addStretch(1)
         toolbar.addWidget(self.status_label)
 
@@ -119,6 +128,7 @@ class ExportMode(QWidget):
         self._template_issues = list(template_issues or [])
         self._history_service = history_service
         self.status_label.setText("San sang chay preflight.")
+        self.progress_bar.setValue(0)
         self.export_button.setEnabled(False)
         self._last_plan = None
 
@@ -195,6 +205,7 @@ class ExportMode(QWidget):
         self.export_button.setEnabled(False)
         output_stem = self._current_output_stem()
         self._persist_output_stem()
+        self.progress_bar.setValue(0)
         self.status_label.setText("Dang tao anh final va export PPTX/TXT...")
         thread = QThread(self)
         worker = ExportWorker(
@@ -209,6 +220,7 @@ class ExportMode(QWidget):
         self._export_thread = thread
         self._export_worker = worker
         thread.started.connect(worker.run)
+        worker.progress.connect(self._update_export_progress)
         worker.finished.connect(self._finish_export)
         worker.finished.connect(thread.quit)
         worker.finished.connect(worker.deleteLater)
@@ -218,6 +230,7 @@ class ExportMode(QWidget):
 
     @Slot(object)
     def _finish_export(self, result: FullExportResult) -> None:
+        self.progress_bar.setValue(100)
         self._last_plan = result.preflight_plan
         self.summary.set_summary(result.preflight_plan.summary)
         self.plan_model.set_rows(result.preflight_plan.rows)
@@ -255,6 +268,18 @@ class ExportMode(QWidget):
             f"Export loi: {issue_count} issue. {_issue_details(issues)}{log_text}"
         )
         self.export_button.setToolTip("Kiem tra issue trong bang Preflight roi thu lai.")
+
+    @Slot(object)
+    def _update_export_progress(self, progress) -> None:  # noqa: ANN001
+        percent = getattr(progress, "percent", None)
+        if percent is None:
+            total = getattr(progress, "total", 100) or 100
+            completed = getattr(progress, "completed", 0) or 0
+            percent = max(0, min(100, round(completed / total * 100)))
+        self.progress_bar.setValue(percent)
+        message = getattr(progress, "message", "")
+        if message:
+            self.status_label.setText(message)
 
     def _clear_export_worker(self) -> None:
         self._export_thread = None

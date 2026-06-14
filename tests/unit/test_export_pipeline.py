@@ -9,7 +9,7 @@ from pptx import Presentation
 from pptx.enum.shapes import MSO_SHAPE
 from pptx.util import Inches
 
-from thucthengay.export import run_full_export
+from thucthengay.export import ExportProgress, run_full_export
 from thucthengay.history import HistoryService
 from thucthengay.models import (
     Composition,
@@ -58,6 +58,37 @@ def test_run_full_export_renders_final_images_and_writes_outputs(tmp_path: Path)
     )
     assert (service.paths.exports / "report.export-log.json").is_file()
     assert result.preflight_plan.summary.error_count == 0
+
+
+def test_run_full_export_emits_detailed_progress(tmp_path: Path) -> None:
+    map_id = _write_template(tmp_path / "templates" / "alpha.pptx")
+    target = _target(tmp_path / "templates" / "alpha.pptx", map_id)
+    service = WorkspaceService(tmp_path / "workspace")
+    service.initialize(config_path="config.json")
+    service.write_composition(_composition())
+    history = HistoryService(tmp_path / "history" / "target-history.sqlite")
+    events: list[ExportProgress] = []
+
+    result = run_full_export(
+        service,
+        [target],
+        output_stem="report",
+        render=_success_render,
+        history_service=history,
+        on_progress=events.append,
+    )
+
+    assert result.ok is True
+    assert events[0].stage == "preflight"
+    assert events[-1].stage == "done"
+    assert events[-1].percent == 100
+    messages = "\n".join(event.message for event in events)
+    assert "Đang render final image" in messages
+    assert "Đang ghi DB history" in messages
+    assert "Đang tạo file PPTX" in messages
+    assert "Đang tạo file TXT" in messages
+    assert "Xong quá trình export" in messages
+    assert all(0 <= event.percent <= 100 for event in events)
 
 
 def test_run_full_export_records_single_pane_history_after_final_preflight(

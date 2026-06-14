@@ -6,7 +6,9 @@ from datetime import date, time
 from pathlib import Path
 
 import numpy as np
+import rasterio
 from PIL import Image
+from rasterio.transform import from_origin
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
@@ -86,6 +88,22 @@ from thucthengay.workspace import WorkspaceService
 
 def qapp() -> QApplication:
     return QApplication.instance() or QApplication([])
+
+
+def write_geotiff(path: Path) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with rasterio.open(
+        path,
+        "w",
+        driver="GTiff",
+        height=2,
+        width=2,
+        count=1,
+        dtype="uint8",
+        crs="EPSG:4326",
+        transform=from_origin(106.0, 11.0, 0.01, 0.01),
+    ) as dataset:
+        dataset.write(np.ones((1, 2, 2), dtype="uint8"))
 
 
 def target_config(
@@ -1522,6 +1540,34 @@ def test_target_preview_stays_fixed_for_same_target_day_view_changes() -> None:
     assert "Scale 1:25,000" not in preview.detail_text()
 
 
+def test_target_preview_updates_when_layer_source_or_cache_changes() -> None:
+    qapp()
+    preview = TargetPreviewWidget()
+    selected = composition(
+        "alpha__20260525",
+        "alpha",
+        date(2026, 5, 25),
+        needs_revalidation=False,
+    )
+    assert preview.set_composition(selected) is True
+    token = preview.set_loading()
+    preview.apply_render_result(
+        token,
+        "done",
+        canvas=np.full((12, 12, 3), 80, dtype=np.uint8),
+    )
+    changed_layer = selected.layers[0].model_copy(
+        update={
+            "source_path": "new-source.tif",
+            "cache_path": "cache/alpha/20260525/new-source.tif",
+        }
+    )
+    changed = selected.model_copy(update={"layers": [changed_layer]})
+
+    assert preview.set_composition(changed) is True
+    assert preview.state() == TargetPreviewState.NEEDS_UPDATE
+
+
 def test_review_edit_target_preview_overlays_single_canvas_view(tmp_path: Path) -> None:
     qapp()
     service = WorkspaceService(tmp_path / "workspace")
@@ -2483,6 +2529,82 @@ def test_workspace_updates_temporal_compare_state_and_marks_stale(tmp_path: Path
     assert updated.include is False
 
 
+def test_review_edit_repairs_historical_source_path_when_asset_id_exists(
+    tmp_path: Path,
+) -> None:
+    qapp()
+    calls: list[tuple[int, str]] = []
+
+    class FakeHistoryService:
+        enabled = True
+
+        def repair_image_path(
+            self,
+            image_asset_id: int,
+            replacement_path: str,
+            **_metadata: object,
+        ) -> None:
+            calls.append((image_asset_id, replacement_path))
+
+    mode = ReviewEditMode(history_service=FakeHistoryService())  # type: ignore[arg-type]
+    replacement = str(tmp_path / "replacement.tif")
+    layer = ImageLayer(
+        layer_id="history",
+        source_path="old.tif",
+        order=0,
+        source_kind=ImageLayerSourceKind.HISTORICAL,
+        image_asset_id=42,
+    )
+
+    message = mode._repair_historical_source_path(layer, replacement, {})  # noqa: SLF001
+
+    assert calls == [(42, replacement)]
+    assert "image_asset_id=42" in str(message)
+
+
+def test_review_edit_source_path_update_parses_metadata_and_caches_replacement(
+    tmp_path: Path,
+) -> None:
+    qapp()
+    replacement = tmp_path / "imagery" / "20260525_010203_replacement.tif"
+    write_geotiff(replacement)
+    service = WorkspaceService(tmp_path / "workspace")
+    service.initialize(config_path="config.json")
+    comp = composition("alpha__20260525", "alpha", date(2026, 5, 25))
+    service.write_composition(comp)
+    mode = ReviewEditMode()
+    mode._workspace_service = service  # noqa: SLF001
+    mode.selected_composition = comp
+    payload = {
+        "source_path": str(replacement),
+        "capture_date": comp.layers[0].capture_date,
+        "capture_time": comp.layers[0].capture_time,
+        "cloud_percent": comp.layers[0].cloud_percent,
+        "metadata_source": MetadataSource.MANUAL,
+        "metadata_status": MetadataStatus.VALID,
+    }
+
+    prepared, parse_message = mode._prepare_source_path_payload(  # noqa: SLF001
+        comp.layers[0],
+        payload,
+        str(replacement),
+    )
+    activated, cache_message = mode._activate_source_path_payload(  # noqa: SLF001
+        comp.layers[0],
+        prepared,
+        str(replacement),
+    )
+
+    assert prepared["capture_date"] == date(2026, 5, 25)
+    assert prepared["capture_time"] == time(8, 2, 3)
+    assert prepared["metadata_source"] is MetadataSource.FILENAME
+    assert "đọc metadata" in str(parse_message)
+    assert activated["source_path"] == str(replacement.resolve())
+    assert activated["cache_path"].startswith("cache/alpha/20260525/")
+    assert (service.paths.root / activated["cache_path"]).is_file()
+    assert "cập nhật cache" in str(cache_message)
+
+
 def test_workspace_allows_same_composition_for_compare_panes_and_updates_pane_center(
     tmp_path: Path,
 ) -> None:
@@ -2915,11 +3037,12 @@ def test_review_edit_layout_and_app_shell_expose_review_mode(tmp_path: Path) -> 
 
     shell = AppShell(preferences_service=PreferencesService(tmp_path / "preferences.json"))
 
-    assert shell.mode_tabs.count() == 4
+    assert shell.mode_tabs.count() == 5
     assert shell.mode_tabs.tabText(0) == "Setup"
     assert shell.mode_tabs.tabText(1) == "Review/Edit"
     assert shell.mode_tabs.tabText(2) == "Export"
-    assert shell.mode_tabs.tabText(3) == "Config"
+    assert shell.mode_tabs.tabText(3) == "Download"
+    assert shell.mode_tabs.tabText(4) == "Config"
     assert isinstance(shell.review_edit_mode.tree_view, QTreeView)
     assert QueueFilter.ALL in shell.review_edit_mode.filter_buttons
     assert isinstance(shell.review_edit_mode.layer_table, QTableView)

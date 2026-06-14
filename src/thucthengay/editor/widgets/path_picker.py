@@ -22,7 +22,9 @@ class PathKind(StrEnum):
     """Supported path expectations for Setup mode."""
 
     CONFIG_FILE = "config_file"
+    GEOJSON_FILE = "geojson_file"
     INPUT_FOLDER = "input_folder"
+    OUTPUT_FOLDER = "output_folder"
     WORKSPACE_FOLDER = "workspace_folder"
 
 
@@ -58,8 +60,12 @@ def validate_selected_path(path_text: str, kind: PathKind) -> PathValidation:
 
     if kind == PathKind.CONFIG_FILE:
         return _validate_config_file(path)
+    if kind == PathKind.GEOJSON_FILE:
+        return _validate_geojson_file(path)
     if kind == PathKind.INPUT_FOLDER:
         return _validate_folder(path, "Thư mục ảnh không hợp lệ.", require_writable=False)
+    if kind == PathKind.OUTPUT_FOLDER:
+        return _validate_folder(path, "Thu muc output khong hop le.", require_writable=True)
     if kind == PathKind.WORKSPACE_FOLDER:
         return _validate_folder(path, "Thư mục workspace không hợp lệ.", require_writable=True)
 
@@ -74,6 +80,20 @@ def _validate_config_file(path: Path) -> PathValidation:
     if not os.access(path, os.R_OK):
         return PathValidation(PathStatus.INVALID, "Không thể đọc file config.", path)
     return PathValidation(PathStatus.VALID, "Hợp lệ.", path)
+
+
+def _validate_geojson_file(path: Path) -> PathValidation:
+    if not path.is_file():
+        return PathValidation(PathStatus.INVALID, "GeoJSON phai la file.", path)
+    if path.suffix.lower() not in {".geojson", ".json"}:
+        return PathValidation(
+            PathStatus.INVALID,
+            "File GeoJSON phai co phan mo rong .geojson hoac .json.",
+            path,
+        )
+    if not os.access(path, os.R_OK):
+        return PathValidation(PathStatus.INVALID, "Khong the doc file GeoJSON.", path)
+    return PathValidation(PathStatus.VALID, "Hop le.", path)
 
 
 def _validate_folder(

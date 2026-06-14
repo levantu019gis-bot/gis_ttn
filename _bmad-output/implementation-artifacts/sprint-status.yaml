@@ -1,5 +1,5 @@
 # generated: 2026-05-24
-# last_updated: 2026-06-09  # epic 9 expanded with historical loading mode and temporal compare view
+# last_updated: 2026-06-14  # epic 10 satellite download tab added
 # project: 3.ThucTheNgay
 # project_key: NOKEY
 # tracking_system: file-system
@@ -35,7 +35,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-05-24
-last_updated: 2026-06-09
+last_updated: 2026-06-14
 project: 3.ThucTheNgay
 project_key: NOKEY
 tracking_system: file-system
@@ -111,3 +111,13 @@ development_status:
   9-7-add-temporal-compare-controls-in-review-edit: review
   9-8-render-and-export-split-map-frame-for-temporal-comparison: review
   epic-9-retrospective: optional
+  epic-10: in-progress
+  10-1-extract-reusable-satellite-download-engine: review
+  10-2-match-source-geotiffs-against-explicit-geojson-files: review
+  10-3-parse-filename-metadata-and-apply-cloud-filters: review
+  10-4-write-output-tree-and-manifest-per-download-run: review
+  10-5-run-satellite-download-as-a-progress-job: review
+  10-6-add-satellite-download-tab-ui: review
+  10-7-wire-download-run-results-summary-and-app-boundaries: review
+  10-8-add-download-engine-and-ui-regression-tests: review
+  epic-10-retrospective: optional

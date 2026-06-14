@@ -3,6 +3,7 @@
 from thucthengay.ingestion.cache_builder import (
     CacheImageInput,
     CachePopulationResult,
+    cache_layer_source,
     populate_workspace_cache,
 )
 from thucthengay.ingestion.composition_builder import (
@@ -23,12 +24,14 @@ from thucthengay.ingestion.scanner import (
     RasterMetadata,
     ScannedGeoTiff,
     discover_geotiffs,
+    scan_geotiff_file,
     scan_imagery_folder,
 )
 
 __all__ = [
     "CachePopulationResult",
     "CacheImageInput",
+    "cache_layer_source",
     "CompositionCreationResult",
     "ImageryScanResult",
     "ImageryTargetMatch",
@@ -44,5 +47,6 @@ __all__ = [
     "parse_business_metadata",
     "populate_workspace_cache",
     "create_target_date_compositions",
+    "scan_geotiff_file",
     "scan_imagery_folder",
 ]

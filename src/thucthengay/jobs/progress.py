@@ -38,6 +38,12 @@ class ProgressEvent(BaseModel):
     scanned_file_count: int = 0
     total_image_count: int = 0
     matched_image_count: int = 0
+    downloaded_image_count: int = 0
+    skipped_existing_count: int = 0
+    skipped_cloud_count: int = 0
+    failed_image_count: int = 0
+    metadata_cache_hit_count: int = 0
+    metadata_cache_miss_count: int = 0
     targets_with_images_count: int = 0
     processed_target_count: int = 0
     total_target_count: int = 0
@@ -45,7 +51,17 @@ class ProgressEvent(BaseModel):
     current_target_id: str | None = None
     current_target_name: str | None = None
     current_target_matched_count: int = 0
+    current_source_folder: str | None = None
+    current_geojson: str | None = None
+    current_match_context: str | None = None
     created_composition_count: int = 0
+
+    @property
+    def percent(self) -> int | None:
+        """Return rounded percent when current/total are known."""
+        if self.current is None or self.total in (None, 0):
+            return None
+        return max(0, min(100, round((self.current / self.total) * 100)))
 
     @property
     def terminal(self) -> bool:

@@ -22,6 +22,7 @@ from thucthengay.editor.modes.export_mode import ExportMode
 from thucthengay.editor.preferences import PreferencesService
 from thucthengay.export import (
     ExportHistorySyncResult,
+    ExportProgress,
     FullExportResult,
     ensure_final_renders_for_export,
     run_full_export,
@@ -237,6 +238,51 @@ def test_export_mode_runs_full_export_pipeline(tmp_path: Path) -> None:
     assert (service.paths.exports / "report.pptx").is_file()
     assert (service.paths.exports / "report.txt").read_text("utf-8").strip() == "1|alpha|08:30:00"
     assert (service.paths.exports / "report.export-log.json").is_file()
+    assert mode.progress_bar.value() == 100
+
+
+def test_export_mode_displays_worker_progress_updates(tmp_path: Path) -> None:
+    app = qapp()
+    map_id, _text_id = _write_template(tmp_path / "templates" / "alpha.pptx")
+    target = target_config_for_template(tmp_path / "templates" / "alpha.pptx", map_id)
+    service = workspace(tmp_path, final_render_path=None)
+
+    def progress_runner(workspace_service, targets, **kwargs):  # noqa: ANN001
+        on_progress = kwargs.get("on_progress")
+        if on_progress is not None:
+            on_progress(
+                ExportProgress(
+                    stage="history",
+                    completed=65,
+                    message="Đang ghi DB history (mục tiêu alpha, đã ghi 3/10 mục tiêu).",
+                    current=3,
+                    item_total=10,
+                    target_id="alpha",
+                    composition_id="alpha__20260525",
+                )
+            )
+        time_module.sleep(0.05)
+        return run_full_export(
+            workspace_service,
+            targets,
+            render=success_render,
+            **kwargs,
+        )
+
+    mode = ExportMode(export_runner=progress_runner)
+    mode.load_workspace(service, targets=[target])
+
+    mode.preflight_button.click()
+    mode.export_button.click()
+    _wait_until(app, lambda: "Đang ghi DB history" in mode.status_label.text())
+
+    assert mode.progress_bar.value() == 65
+
+    _wait_until(
+        app,
+        lambda: "Export xong" in mode.status_label.text() and mode._export_thread is None,
+    )
+    assert mode.progress_bar.value() == 100
 
 
 def test_export_mode_shows_export_error_details(tmp_path: Path) -> None:
@@ -387,9 +433,10 @@ def test_app_shell_exposes_export_mode_and_jump_switches_to_review(tmp_path: Pat
     qapp()
     shell = AppShell(preferences_service=PreferencesService(tmp_path / "preferences.json"))
 
-    assert shell.mode_tabs.count() == 4
+    assert shell.mode_tabs.count() == 5
     assert shell.mode_tabs.tabText(2) == "Export"
-    assert shell.mode_tabs.tabText(3) == "Config"
+    assert shell.mode_tabs.tabText(3) == "Download"
+    assert shell.mode_tabs.tabText(4) == "Config"
 
     shell.mode_tabs.setCurrentWidget(shell.export_mode)
     shell._jump_to_review_context("alpha", "", "")

@@ -50,3 +50,4 @@ class ImageLayer(BaseModel):
     metadata_status: MetadataStatus = MetadataStatus.UNKNOWN
     metadata_source: MetadataSource = MetadataSource.UNKNOWN
     source_kind: ImageLayerSourceKind = ImageLayerSourceKind.CURRENT
+    image_asset_id: int | None = Field(default=None, ge=1)

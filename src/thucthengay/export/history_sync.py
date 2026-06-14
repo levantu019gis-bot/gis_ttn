@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 
 from thucthengay.history import HistoryRecordError, HistoryService
@@ -15,6 +15,8 @@ from thucthengay.models import (
     TargetConfig,
 )
 from thucthengay.workspace import WorkspaceError, WorkspaceService
+
+HistorySyncProgressCallback = Callable[[str, str, int, int, bool], None]
 
 
 @dataclass(frozen=True)
@@ -55,6 +57,7 @@ def sync_export_history(
     preflight_plan: ExportPreflightPlan,
     *,
     history_service: HistoryService | None = None,
+    on_progress: HistorySyncProgressCallback | None = None,
 ) -> ExportHistorySyncResult:
     """Record only compositions that survive final preflight into historical SQLite."""
     service = history_service or HistoryService.disabled()
@@ -66,7 +69,9 @@ def sync_export_history(
     rows: list[ExportHistorySyncRow] = []
     issues: list[Issue] = []
     seen: set[str] = set()
-    for composition_id in _exportable_composition_ids(preflight_plan):
+    exportable_composition_ids = _exportable_composition_ids(preflight_plan)
+    total = len(exportable_composition_ids)
+    for index, composition_id in enumerate(exportable_composition_ids, start=1):
         try:
             composition = workspace_service.read_composition(composition_id)
         except WorkspaceError as error:
@@ -78,7 +83,11 @@ def sync_export_history(
                     composition_id=composition_id,
                 )
             )
+            if on_progress is not None:
+                on_progress("", composition_id, index, total, True)
             continue
+        if on_progress is not None:
+            on_progress(composition.target_id, composition.composition_id, index, total, False)
         history_compositions, pane_issues = _history_compositions_for_export(
             workspace_service,
             composition,
@@ -127,6 +136,8 @@ def sync_export_history(
                     existing_layers=result.existing_layers,
                 )
             )
+        if on_progress is not None:
+            on_progress(composition.target_id, composition.composition_id, index, total, True)
     return ExportHistorySyncResult(enabled=True, rows=tuple(rows), issues=tuple(issues))
 
 

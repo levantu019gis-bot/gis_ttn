@@ -19,6 +19,7 @@ from thucthengay.export.pipeline import (
 )
 from thucthengay.export.pptx_exporter import export_combined_pptx
 from thucthengay.export.preflight import build_export_preflight_plan
+from thucthengay.export.progress import ExportProgress, ExportProgressCallback
 from thucthengay.export.template_loader import (
     LoadedTemplate,
     TemplateLoadError,
@@ -32,6 +33,8 @@ __all__ = [
     "ExportFinalRenderStatus",
     "ExportHistorySyncResult",
     "ExportHistorySyncRow",
+    "ExportProgress",
+    "ExportProgressCallback",
     "FullExportResult",
     "LoadedTemplate",
     "TemplateLoadError",

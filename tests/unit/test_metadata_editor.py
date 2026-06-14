@@ -30,6 +30,7 @@ def qapp() -> QApplication:
 def _layer(
     layer_id: str = "L1",
     *,
+    source_path: str | None = None,
     capture_date: date | None = date(2026, 5, 25),
     capture_time: time | None = time(8, 0),
     cloud_percent: float | None = 12.5,
@@ -38,7 +39,7 @@ def _layer(
 ) -> ImageLayer:
     return ImageLayer(
         layer_id=layer_id,
-        source_path=f"{layer_id}.tif",
+        source_path=source_path or f"{layer_id}.tif",
         order=0,
         capture_date=capture_date,
         capture_time=capture_time,
@@ -88,6 +89,24 @@ class TestUpdateLayerMetadata:
         assert layer.cloud_percent == 42.0
         assert layer.metadata_source is MetadataSource.MANUAL
         assert layer.metadata_status is MetadataStatus.VALID
+
+    def test_persists_source_path_when_provided(self, tmp_path: Path) -> None:
+        service, comp = self._bootstrap_service(tmp_path)
+
+        updated = service.update_layer_metadata(
+            comp.composition_id,
+            "L1",
+            source_path=str(tmp_path / "replacement.tif"),
+            cache_path="cache/tgt/20260525/replacement.tif",
+            capture_date=date(2026, 5, 25),
+            capture_time=time(8, 0),
+            cloud_percent=12.5,
+            metadata_source=MetadataSource.MANUAL,
+            metadata_status=MetadataStatus.VALID,
+        )
+
+        assert updated.layers[0].source_path == str(tmp_path / "replacement.tif")
+        assert updated.layers[0].cache_path == "cache/tgt/20260525/replacement.tif"
 
     def test_marks_composition_needs_revalidation(self, tmp_path: Path) -> None:
         service, comp = self._bootstrap_service(tmp_path)
@@ -180,6 +199,7 @@ class TestMetadataEditorDialog:
         assert dialog._capture_time_edit.time() == QTime(8, 0)
         assert dialog._cloud_checkbox.isChecked()
         assert dialog._cloud_spin.value() == 12.5
+        assert dialog._source_path_edit.text() == "L1.tif"
 
     def test_dialog_handles_missing_fields(self) -> None:
         qapp()
@@ -213,8 +233,23 @@ class TestMetadataEditorDialog:
         assert payload["capture_date"] == date(2026, 5, 25)
         assert payload["capture_time"] == time(8, 0)
         assert payload["cloud_percent"] == 12.5
+        assert payload["source_path"] == "L1.tif"
         assert payload["metadata_source"] == MetadataSource.MANUAL
         assert payload["metadata_status"] == MetadataStatus.VALID
+
+    def test_save_emits_updated_source_path(self, tmp_path: Path) -> None:
+        qapp()
+        replacement = tmp_path / "replacement.tif"
+        layer = _layer(source_path="missing.tif")
+        dialog = MetadataEditorDialog(layer)
+        dialog._source_path_edit.setText(str(replacement))
+
+        received: list[tuple[str, dict]] = []
+        dialog.metadataSaved.connect(lambda lid, payload: received.append((lid, payload)))
+
+        dialog._on_save()
+
+        assert received[0][1]["source_path"] == str(replacement)
 
     def test_save_with_time_only_shows_validation_and_does_not_emit(self) -> None:
         qapp()

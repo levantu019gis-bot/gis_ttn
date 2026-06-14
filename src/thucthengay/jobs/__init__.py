@@ -1,6 +1,7 @@
 """Background job orchestration package."""
 
 from thucthengay.jobs.control import JobCancelled, JobControl
+from thucthengay.jobs.download_job import run_satellite_download_job
 from thucthengay.jobs.ingestion_job import IngestionJobResult, run_ingestion_job
 from thucthengay.jobs.ingestion_summary import (
     IngestionSummary,
@@ -38,4 +39,5 @@ __all__ = [
     "QueuedProgressDispatcher",
     "run_preview_render_job",
     "run_ingestion_job",
+    "run_satellite_download_job",
 ]

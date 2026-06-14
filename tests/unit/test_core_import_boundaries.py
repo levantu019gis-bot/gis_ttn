@@ -10,6 +10,7 @@ CORE_PACKAGES = {
     "config",
     "workspace",
     "ingestion",
+    "download",
     "gis",
     "render",
     "validation",

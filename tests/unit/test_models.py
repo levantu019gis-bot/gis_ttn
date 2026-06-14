@@ -392,13 +392,16 @@ def test_image_layer_source_kind_round_trips_for_historical_layers() -> None:
         source_path="history/raw.tif",
         order=0,
         source_kind=ImageLayerSourceKind.HISTORICAL,
+        image_asset_id=42,
     )
 
     dumped = layer.model_dump(mode="json")
     restored = ImageLayer.model_validate(dumped)
 
     assert dumped["source_kind"] == "historical"
+    assert dumped["image_asset_id"] == 42
     assert restored.source_kind == ImageLayerSourceKind.HISTORICAL
+    assert restored.image_asset_id == 42
 
 
 def test_composition_temporal_compare_defaults_and_round_trip() -> None:

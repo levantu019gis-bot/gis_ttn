@@ -196,6 +196,23 @@ def discover_geotiffs(folder: str | Path) -> list[Path]:
     )
 
 
+def scan_geotiff_file(
+    path: str | Path,
+    *,
+    filename_patterns: list[FilenamePatternConfig] | None = None,
+) -> ScannedGeoTiff:
+    """Validate and parse one usable GeoTIFF file."""
+    geotiff_path = Path(path).expanduser().resolve()
+    if geotiff_path.suffix.lower() not in SUPPORTED_GEOTIFF_SUFFIXES:
+        msg = f"File không phải GeoTIFF được hỗ trợ: {geotiff_path}"
+        raise ValueError(msg)
+    scanned, issue = _scan_geotiff(geotiff_path, filename_patterns)
+    if scanned is None:
+        msg = issue.message if issue is not None else f"Không đọc được GeoTIFF: {geotiff_path}"
+        raise ValueError(msg)
+    return scanned
+
+
 def _scan_geotiff(
     path: Path,
     filename_patterns: list[FilenamePatternConfig] | None = None,

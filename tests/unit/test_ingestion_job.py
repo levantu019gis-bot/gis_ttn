@@ -389,6 +389,7 @@ def test_ingestion_job_loads_historical_imagery_into_workspace_cache(
     assert len(composition.layers) == 1
     assert composition.layers[0].source_path == str(history_source)
     assert composition.layers[0].source_kind == "historical"
+    assert composition.layers[0].image_asset_id is not None
     assert composition.layers[0].cache_path is not None
     assert (workspace.paths.root / composition.layers[0].cache_path).is_file()
 

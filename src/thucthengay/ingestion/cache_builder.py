@@ -97,6 +97,26 @@ def populate_workspace_cache(
     )
 
 
+def cache_layer_source(
+    *,
+    workspace_service: WorkspaceService,
+    target_id: str,
+    source_path: str | Path,
+    layer: ImageLayer,
+    overwrite_existing: bool = True,
+) -> ImageLayer:
+    """Copy one layer source into workspace cache and return the cached layer state."""
+    resolved_source = Path(source_path).expanduser().resolve()
+    cache_path = _cache_path_for_source(
+        workspace_service,
+        target_id,
+        _date_key(layer),
+        resolved_source,
+    )
+    _copy_source_to_cache(resolved_source, cache_path, overwrite_existing=overwrite_existing)
+    return _cached_layer(layer, resolved_source, workspace_service.paths.root, cache_path)
+
+
 def _add_cache_input(
     image: CacheImageInput,
     workspace_service: WorkspaceService,

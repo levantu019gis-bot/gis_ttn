@@ -493,6 +493,7 @@ def _historical_cache_inputs(
                 ),
                 metadata_source=MetadataSource.UNKNOWN,
                 source_kind=ImageLayerSourceKind.HISTORICAL,
+                image_asset_id=record.image_asset_id,
             ),
         )
         for record in records

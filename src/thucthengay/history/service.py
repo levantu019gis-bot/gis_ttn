@@ -29,6 +29,7 @@ from thucthengay.models import (
 
 SCHEMA_VERSION = 2
 DEFAULT_BUSY_TIMEOUT_MS = 5_000
+_UNCHANGED = object()
 
 
 class HistoryConfigurationError(RuntimeError):
@@ -393,6 +394,10 @@ class HistoryService:
         self,
         image_asset_id: int,
         replacement_path: str | Path,
+        *,
+        capture_date: object | None = _UNCHANGED,
+        capture_time: object | None = _UNCHANGED,
+        cloud_percent: float | None | object = _UNCHANGED,
     ) -> HistoricalPathRepairResult:
         """Validate and update one image asset source path transactionally."""
         if not self.enabled:
@@ -418,21 +423,42 @@ class HistoryService:
             try:
                 with connection:
                     row = connection.execute(
-                        "SELECT source_path FROM image_asset WHERE image_asset_id = ?",
+                        """
+                        SELECT source_path, capture_date, capture_time, cloud_percent
+                        FROM image_asset
+                        WHERE image_asset_id = ?
+                        """,
                         (image_asset_id,),
                     ).fetchone()
                     if row is None:
                         msg = f"image_asset_id does not exist: {image_asset_id}"
                         raise HistoryRecordError(msg)
                     old_path = Path(str(row[0])).expanduser()
+                    next_capture_date = (
+                        row[1] if capture_date is _UNCHANGED else _date_text_or_none(capture_date)
+                    )
+                    next_capture_time = (
+                        row[2] if capture_time is _UNCHANGED else _time_text_or_none(capture_time)
+                    )
+                    next_cloud_percent = row[3] if cloud_percent is _UNCHANGED else cloud_percent
                     connection.execute(
                         """
                         UPDATE image_asset
                         SET source_path = ?,
+                            capture_date = ?,
+                            capture_time = ?,
+                            cloud_percent = ?,
                             updated_at = ?
                         WHERE image_asset_id = ?
                         """,
-                        (str(resolved_replacement), updated_at, image_asset_id),
+                        (
+                            str(resolved_replacement),
+                            next_capture_date,
+                            next_capture_time,
+                            next_cloud_percent,
+                            updated_at,
+                            image_asset_id,
+                        ),
                     )
             except sqlite3.Error as error:
                 msg = f"could not repair historical image path {image_asset_id}: {error}"
@@ -1235,3 +1261,21 @@ def _required_row_id(
 
 def _utc_iso() -> str:
     return datetime.now(UTC).replace(microsecond=0).isoformat()
+
+
+def _date_text_or_none(value: object | None) -> str | None:
+    if value is None:
+        return None
+    isoformat = getattr(value, "isoformat", None)
+    if callable(isoformat):
+        return str(isoformat())
+    return str(value)
+
+
+def _time_text_or_none(value: object | None) -> str | None:
+    if value is None:
+        return None
+    isoformat = getattr(value, "isoformat", None)
+    if callable(isoformat):
+        return str(isoformat())
+    return str(value)

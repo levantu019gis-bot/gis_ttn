@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from math import ceil
 
 from pydantic import ValidationError
@@ -33,6 +33,8 @@ from thucthengay.workspace import WorkspaceError, WorkspaceService
 
 DEFAULT_FINAL_RENDER_DPI = 200
 
+FinalRenderProgressCallback = Callable[[Composition, int, int, bool], None]
+
 
 def ensure_final_renders_for_export(
     workspace_service: WorkspaceService,
@@ -41,6 +43,7 @@ def ensure_final_renders_for_export(
     render: FinalRenderFunction | None = None,
     is_cancelled: CancelCallback | None = None,
     final_dpi: int = DEFAULT_FINAL_RENDER_DPI,
+    on_progress: FinalRenderProgressCallback | None = None,
 ) -> ExportFinalRenderResult:
     """Ensure every included composition has a current final image for export."""
     target_map = {target.id: target for target in targets}
@@ -51,8 +54,12 @@ def ensure_final_renders_for_export(
     ]
     included.sort(key=_export_sort_key)
 
-    rows = [
-        _ensure_composition_final_render(
+    rows: list[ExportFinalRenderRow] = []
+    total = len(included)
+    for index, composition in enumerate(included, start=1):
+        if on_progress is not None:
+            on_progress(composition, index, total, False)
+        row = _ensure_composition_final_render(
             workspace_service,
             composition,
             target_map.get(composition.target_id),
@@ -60,8 +67,9 @@ def ensure_final_renders_for_export(
             is_cancelled=is_cancelled,
             final_dpi=final_dpi,
         )
-        for composition in included
-    ]
+        rows.append(row)
+        if on_progress is not None:
+            on_progress(composition, index, total, True)
     issues = [issue for row in rows for issue in row.issues]
     return ExportFinalRenderResult(rows=rows, issues=issues, summary=_summary(rows))
 

@@ -6,6 +6,8 @@ inputDocuments:
   - /home/ongtu/Working/3.ThucTheNgay/_bmad-output/planning-artifacts/ux-design-specification.md
   - /home/ongtu/Working/3.ThucTheNgay/_bmad-output/planning-artifacts/config-manager-tab-design.md
   - /home/ongtu/Working/3.ThucTheNgay/_bmad-output/planning-artifacts/config-manager-ui-mockup.html
+  - D:/0.TU_KHONG_XOA/1.NCPT/1.TTN/0.Download_Img/download_satellite_images_by_geojson.py
+  - D:/0.TU_KHONG_XOA/1.NCPT/1.TTN/0.Download_Img/satellite_download_config.json
 ---
 
 # 3.ThucTheNgay - Epic Breakdown
@@ -226,6 +228,48 @@ HIR-UX4: Comparison controls must stay close to the GIS canvas and expose only t
 
 HIR-UX5: Comparison panes must show visible labels for target, capture date/time, current/historical source, cloud percent where available, and missing/unreadable status where relevant.
 
+### Satellite Download Tab Requirements Addendum
+
+SDT-FR1: Provide a dedicated satellite image download tab in the main app flow, positioned as the outermost tab adjacent to the `Config` tab, so the Operator can run the download workflow without leaving the application.
+
+SDT-FR2: Allow the Operator to select one or more input GeoJSON files explicitly; the UI must not require or expose a GeoJSON folder input for the primary workflow.
+
+SDT-FR3: Allow the Operator to select multiple source image folders, including local or LAN paths, and preserve each source folder identity for output structuring and manifest reporting.
+
+SDT-FR4: Allow the Operator to select one output folder where downloaded/copied imagery is written.
+
+SDT-FR5: Reuse the satellite download logic from `0.Download_Img/download_satellite_images_by_geojson.py`: load GeoJSON geometries, scan configured GeoTIFF extensions recursively, read raster CRS/bounds with rasterio, transform GeoJSON geometry when needed, test intersection, parse filename date/time/cloud metadata from configurable patterns, apply cloud filters, use a raster metadata cache, and copy matched images.
+
+SDT-FR6: Write copied images under the output folder using the structure `<output>/<geojson_name>/<source_folder_name>/...`, where `geojson_name` is derived from the selected GeoJSON filename and `source_folder_name` matches the selected source image folder name using the same safe/unique naming behavior as the script.
+
+SDT-FR7: When a single source image intersects multiple selected GeoJSON files, copy/report it under each matching GeoJSON output branch unless an explicit deduplication option is later added; this preserves the requested per-GeoJSON output structure.
+
+SDT-FR8: Provide download options equivalent to the script where applicable: extensions, filename format rules with optional `max_cloud_percent`, overwrite existing outputs, dry-run, include-boundary-touch, preserve source tree under each source folder, and write manifest.
+
+SDT-FR9: Show progress while scanning/downloading with counters for total images, scanned images, matched images, downloaded/copied images, skipped existing, skipped cloud, failed images, metadata cache hits/misses, current source folder, and current GeoJSON/match context.
+
+SDT-FR10: Write a manifest CSV in the output folder for each run, including status, source folder, source path, destination path, matched GeoJSON, filename-format match status/rule, capture datetime, cloud percent, max cloud percent, and error message.
+
+SDT-FR11: Surface configuration/path/raster errors as structured Vietnamese issues or status messages; failed images must not abort the whole run unless the initial run configuration is invalid.
+
+SDT-FR12: Allow cancellation of a running download job and report whether the run completed, failed, or was cancelled, including any partial output and manifest state.
+
+SDT-FR13: Keep the satellite download workflow independent from workspace ingestion unless the Operator later selects the downloaded output as an imagery input folder; the download tab must not mutate workspace manifest/compositions/history directly.
+
+SDT-AR1: Implement the reusable download engine in a core module such as `src/thucthengay/download/`; PySide widgets must not contain raster scanning, CRS transform, copy, manifest, or cache business logic.
+
+SDT-AR2: Long-running download execution must use the existing job/progress pattern and deliver progress safely to the Qt main thread.
+
+SDT-AR3: The raster metadata cache should be stored under the selected output folder, keyed by source path, file size, and mtime, and must use short SQLite transactions with parameter binding.
+
+SDT-AR4: Tests for the download engine must use temp directories and lightweight generated GeoTIFF/GeoJSON fixtures; tests must not depend on LAN paths, real production imagery, or network availability.
+
+SDT-UX1: The tab layout must use path picker/list controls for GeoJSON files, source image folders, and output folder, with add/remove/clear actions, validation indicators, middle-elided long paths, and full-path tooltips.
+
+SDT-UX2: The download action area must show one primary action, clear disabled reasons, progress percentage/counters, current activity text, cancel when safe, and a completion summary with manifest/output links.
+
+SDT-UX3: Status must not rely on color alone; errors and warnings must include icons/text and Vietnamese remediation.
+
 ### FR Coverage Map
 
 FR1: Epic 1 - Load target config.
@@ -260,6 +304,9 @@ CM-UX1-CM-UX3: Epic 8 - Approved Config Manager layout and interactions.
 HIR-FR1-HIR-FR12: Epic 9 - Historical image registry, workspace seeding, and temporal comparison.
 HIR-AR1-HIR-AR4: Epic 9 - SQLite service boundary, migrations, cache integration, and comparison render boundary.
 HIR-UX1-HIR-UX5: Epic 9 - Historical imagery visibility, explicit loading mode, and comparison UX.
+SDT-FR1-SDT-FR13: Epic 10 - In-app satellite image download workflow.
+SDT-AR1-SDT-AR4: Epic 10 - Download engine/service boundary, progress jobs, SQLite metadata cache, and fixture-based tests.
+SDT-UX1-SDT-UX3: Epic 10 - Download tab path controls, progress/cancel/summary UX, and accessible status messaging.
 
 
 ## Epic List
@@ -319,6 +366,20 @@ Operator có thể tạo, mở, kiểm tra, chỉnh sửa, backup và lưu `conf
 
 **FRs covered:** CM-FR1, CM-FR2, CM-FR3, CM-FR4, CM-FR5, CM-FR6, CM-FR7, CM-FR8
 **Key architecture/UX coverage:** CM-AR1, CM-AR2, CM-UX1, CM-UX2, CM-UX3, NFR2, NFR6, NFR7, NFR9
+
+### Epic 9: Historical Image Registry and Temporal Compare View
+
+Operator co the chon ro co tai anh lich su hay khong, dung lai anh da include trong cac workspace truoc, va so sanh hai thoi diem trong cung khung ban do khi can.
+
+**FRs covered:** HIR-FR1, HIR-FR2, HIR-FR3, HIR-FR4, HIR-FR5, HIR-FR6, HIR-FR7, HIR-FR8, HIR-FR9, HIR-FR10, HIR-FR11, HIR-FR12
+**Key architecture/UX coverage:** HIR-AR1, HIR-AR2, HIR-AR3, HIR-AR4, HIR-UX1, HIR-UX2, HIR-UX3, HIR-UX4, HIR-UX5, NFR2, NFR3, NFR5, NFR6, NFR7, NFR9
+
+### Epic 10: Satellite Image Download Tab
+
+Operator co the chon nhieu file GeoJSON, nhieu folder anh nguon, va mot folder output de tai/copy anh ve tinh giao cat voi khu vuc quan tam ngay trong app, voi output duoc to chuc theo tung GeoJSON va tung folder anh nguon.
+
+**FRs covered:** SDT-FR1, SDT-FR2, SDT-FR3, SDT-FR4, SDT-FR5, SDT-FR6, SDT-FR7, SDT-FR8, SDT-FR9, SDT-FR10, SDT-FR11, SDT-FR12, SDT-FR13
+**Key architecture/UX coverage:** SDT-AR1, SDT-AR2, SDT-AR3, SDT-AR4, SDT-UX1, SDT-UX2, SDT-UX3, AR7, AR8, NFR5, NFR6, NFR7, NFR8
 
 ## Epic 1: Project Setup, Schemas, and Workspace Foundation
 
@@ -2079,3 +2140,253 @@ So that the exported report can compare target imagery across time without manua
 **When** preview/final render runs
 **Then** existing cancellation, cache, max-pixel, and memory safeguards continue to apply
 **And** PySide widgets do not duplicate render business logic.
+
+## Epic 10: Satellite Image Download Tab
+
+**Goal:** Operator co the chon nhieu file GeoJSON, nhieu folder anh nguon, va mot folder output de tai/copy anh ve tinh giao cat voi khu vuc quan tam ngay trong app. Ket qua duoc luu theo cau truc `<output>/<geojson_name>/<source_folder_name>/...`, co progress, manifest, loi/remediation ro rang, va khong lam thay doi workspace ingestion hien tai cho den khi Operator chu dong dung output do lam input.
+
+### Story 10.1: Extract Reusable Satellite Download Engine
+
+As a Developer,
+I want the existing satellite download script logic extracted into a reusable core service,
+So that the app can run the same scan/intersection/copy workflow without embedding business logic in PySide widgets.
+
+**Requirement References:** SDT-FR5, SDT-FR8, SDT-FR13, SDT-AR1, SDT-AR4, AR2, AR8
+
+**Acceptance Criteria:**
+
+**Given** the app needs to run satellite download from UI and tests
+**When** the reusable download module is added
+**Then** it exposes typed request/result/progress models for GeoJSON files, image folders, output folder, extensions, filename format rules, overwrite, dry-run, include-boundary-touch, preserve-source-tree, and write-manifest options
+**And** the core module does not import PySide6 or `thucthengay.editor`.
+
+**Given** a download request is built
+**When** paths are relative or absolute
+**Then** the service resolves and validates selected GeoJSON files, source image folders, and output folder consistently
+**And** invalid initial configuration returns a clear error before scanning starts.
+
+**Given** the old CLI script remains available in `0.Download_Img`
+**When** the app implementation is added
+**Then** the implementation either reuses extracted logic or ports it into `src/thucthengay/download/` with equivalent behavior covered by tests
+**And** no production test depends on the real LAN folders from the script config.
+
+### Story 10.2: Match Source GeoTIFFs Against Explicit GeoJSON Files
+
+As an Operator,
+I want selected GeoJSON files to be matched directly against selected source image folders,
+So that I can download imagery for exactly the AOI files I chose.
+
+**Requirement References:** SDT-FR2, SDT-FR3, SDT-FR5, SDT-FR7, SDT-FR11, SDT-AR3, SDT-AR4, NFR5, NFR6
+
+**Acceptance Criteria:**
+
+**Given** the Operator selects one or more GeoJSON files
+**When** the download run starts
+**Then** the engine loads only those explicit files
+**And** it does not require or scan a GeoJSON folder input in the primary workflow.
+
+**Given** a GeoJSON file contains a FeatureCollection, Feature, or geometry object
+**When** the engine loads AOIs
+**Then** valid non-empty geometries are merged per GeoJSON file for matching
+**And** invalid or unreadable GeoJSON produces a Vietnamese configuration error that identifies the file.
+
+**Given** source image folders contain GeoTIFF files recursively
+**When** the scan runs
+**Then** the engine reads raster CRS/bounds with rasterio, transforms each GeoJSON geometry to the raster CRS when needed, and tests intersection using the include-boundary-touch option.
+
+**Given** a source image intersects multiple selected GeoJSON files
+**When** matching completes
+**Then** the result records every matched GeoJSON for that image
+**And** the image is eligible for output under each matched GeoJSON branch.
+
+**Given** a raster cannot be opened or has no usable CRS
+**When** the engine scans it
+**Then** the run records a failed-image row with the error
+**And** scanning continues for the remaining images.
+
+### Story 10.3: Parse Filename Metadata and Apply Cloud Filters
+
+As an Operator,
+I want the download run to parse capture time and cloud percent from known filename patterns,
+So that high-cloud scenes can be skipped and the manifest contains useful metadata.
+
+**Requirement References:** SDT-FR5, SDT-FR8, SDT-FR9, SDT-FR10, SDT-FR11
+
+**Acceptance Criteria:**
+
+**Given** filename format rules are configured
+**When** a candidate image filename is evaluated
+**Then** the first matching rule extracts capture date/time and cloud percent using the supported tokens `yyyyMMdd`, `hhMMss`, `cloud-percent`, `cloud_percent`, and `*`
+**And** the matched rule name is recorded for manifest output.
+
+**Given** a matched filename rule has `max_cloud_percent`
+**When** the image cloud percent exceeds the threshold
+**Then** the image is skipped with status `skipped_cloud`
+**And** the run increments skipped-cloud progress counters.
+
+**Given** no filename rule matches
+**When** the image otherwise intersects a GeoJSON
+**Then** the image can still be copied unless a future option explicitly requires metadata parsing
+**And** the manifest records that filename format was not matched.
+
+**Given** multiple filename rules could overlap
+**When** options are validated or the run starts
+**Then** the app surfaces a non-blocking warning that an earlier rule may hide a later rule
+**And** the warning includes remediation to reorder the rules.
+
+### Story 10.4: Write Output Tree and Manifest Per Download Run
+
+As an Operator,
+I want downloaded imagery organized by GeoJSON and source folder,
+So that each AOI output can be inspected or used as an input folder later.
+
+**Requirement References:** SDT-FR4, SDT-FR6, SDT-FR7, SDT-FR8, SDT-FR10, SDT-FR13, NFR3
+
+**Acceptance Criteria:**
+
+**Given** a selected GeoJSON file named `all_processed.geojson` and a source folder named `20260613`
+**When** an intersecting image is copied
+**Then** its destination starts with `<output>/all_processed/20260613/`
+**And** when preserve-source-tree is enabled, the image's relative path under the source folder is preserved below that branch.
+
+**Given** two selected GeoJSON files or source folders have the same sanitized name
+**When** output branches are built
+**Then** the engine assigns stable unique safe names using suffixes
+**And** the manifest records the source path and matched GeoJSON so the branch remains traceable.
+
+**Given** the destination file already exists and overwrite is disabled
+**When** the engine would copy the file
+**Then** it records `skipped_existing`
+**And** it does not overwrite the existing file.
+
+**Given** dry-run is enabled
+**When** the engine processes matching images
+**Then** it records the destination path that would be used
+**And** it does not create or overwrite image files.
+
+**Given** write-manifest is enabled
+**When** the run finishes or is cancelled after processing at least one candidate
+**Then** a CSV manifest is written in the output folder
+**And** the manifest includes status, source folder, source path, destination path, matched GeoJSON, filename-format fields, capture datetime, cloud percent, max cloud percent, and error.
+
+### Story 10.5: Run Satellite Download as a Progress Job
+
+As an Operator,
+I want long download runs to show progress and allow safe cancellation,
+So that scanning large LAN imagery folders does not freeze the application.
+
+**Requirement References:** SDT-FR9, SDT-FR11, SDT-FR12, SDT-AR2, UX-DR14, NFR5, NFR8
+
+**Acceptance Criteria:**
+
+**Given** a download run is started from the UI
+**When** the job runs
+**Then** it executes outside the Qt main thread using the existing job/progress pattern
+**And** UI actions that would conflict with the running job are disabled.
+
+**Given** images are being scanned
+**When** progress events are emitted
+**Then** they include percentage when computable, stage, current activity text, total images, scanned images, matched images, downloaded/copied images, skipped existing, skipped cloud, failed images, metadata cache hits/misses, current source folder, and current GeoJSON or match context when known.
+
+**Given** the Operator cancels the job
+**When** cancellation is observed between candidates
+**Then** the job stops after the current safe unit of work
+**And** the final result reports cancelled state, partial counters, partial output, and manifest path if written.
+
+**Given** a non-fatal raster/copy error occurs
+**When** the job continues
+**Then** progress and final summary include the failure count
+**And** the detailed error is available in the manifest or issue/status detail.
+
+### Story 10.6: Add Satellite Download Tab UI
+
+As an Operator,
+I want a dedicated tab for satellite image download next to Config,
+So that I can configure and run downloads without editing JSON or running a batch script.
+
+**Requirement References:** SDT-FR1, SDT-FR2, SDT-FR3, SDT-FR4, SDT-FR8, SDT-UX1, SDT-UX2, SDT-UX3, UX-DR1, UX-DR2, UX-DR14, UX-DR16
+
+**Acceptance Criteria:**
+
+**Given** the app shell renders top-level tabs
+**When** the satellite download feature is available
+**Then** a new tab is shown at the outer edge adjacent to `Config`
+**And** the tab label clearly identifies the download function.
+
+**Given** the Operator opens the download tab
+**When** the form is rendered
+**Then** it provides explicit controls to add/remove/clear multiple GeoJSON files
+**And** it does not show a GeoJSON folder picker for the primary workflow.
+
+**Given** the Operator configures source imagery
+**When** source inputs are rendered
+**Then** the UI allows adding/removing/clearing multiple image folders
+**And** each row shows a validation indicator, middle-elided path, and full-path tooltip.
+
+**Given** the Operator configures output
+**When** output input is rendered
+**Then** the UI provides one output folder picker
+**And** the form explains through labels/status that copied images will be grouped by GeoJSON name then source folder name.
+
+**Given** required inputs are missing or invalid
+**When** the Operator views the primary action
+**Then** the Download action is disabled or blocked with a visible Vietnamese reason
+**And** status does not rely on color alone.
+
+### Story 10.7: Wire Download Run Results, Summary, and App Boundaries
+
+As an Operator,
+I want clear completion evidence after a download run,
+So that I know what was copied, skipped, failed, and where to use the output next.
+
+**Requirement References:** SDT-FR10, SDT-FR11, SDT-FR12, SDT-FR13, SDT-UX2, SDT-UX3, NFR3, NFR6, NFR7
+
+**Acceptance Criteria:**
+
+**Given** a download run succeeds
+**When** the job finishes
+**Then** the tab shows a completion summary with total scanned, matched, copied/downloaded, skipped existing, skipped cloud, failed, cache hits/misses, output folder, and manifest path.
+
+**Given** the run finishes with warnings or failed images
+**When** the summary is shown
+**Then** it identifies the failure count and provides Vietnamese remediation to inspect the manifest and verify unreadable paths, permissions, CRS, filename rules, or disk space.
+
+**Given** the run is cancelled
+**When** the summary is shown
+**Then** it clearly states that output may be partial
+**And** it still reports partial counters and manifest path if available.
+
+**Given** the download tab writes output files
+**When** the run completes
+**Then** it does not mutate workspace `manifest.json`, `cache/`, `compositions/`, `renders/`, `exports/`, or historical SQLite state
+**And** the Operator can later choose the output branch as an imagery input folder through the existing ingest workflow.
+
+### Story 10.8: Add Download Engine and UI Regression Tests
+
+As a Developer,
+I want focused tests for the download tab workflow,
+So that future changes do not break GeoJSON-file selection, output structure, progress, or app boundaries.
+
+**Requirement References:** SDT-FR2, SDT-FR3, SDT-FR6, SDT-FR7, SDT-FR9, SDT-FR10, SDT-FR13, SDT-AR4
+
+**Acceptance Criteria:**
+
+**Given** generated GeoTIFF and GeoJSON fixtures are available in a temp test directory
+**When** the download engine runs against intersecting and non-intersecting rasters
+**Then** tests verify matching, CRS transform behavior where practical, copied output structure, cloud skip behavior, and manifest rows.
+
+**Given** one image intersects two GeoJSON files
+**When** the engine writes outputs
+**Then** tests verify that each matched GeoJSON branch receives or reports the image according to the configured output behavior.
+
+**Given** a run uses multiple source image folders
+**When** output branches are generated
+**Then** tests verify safe/unique source folder branch naming and preserve-source-tree behavior.
+
+**Given** the job wrapper is tested without a real Qt event loop
+**When** progress events are collected
+**Then** tests verify counters and stage messages include enough detail for the UI progress panel.
+
+**Given** UI tests instantiate the download tab
+**When** GeoJSON files, image folders, and output folder are added or removed
+**Then** tests verify control state, disabled reasons, and that no workspace service write is triggered by the download workflow.
