@@ -832,7 +832,10 @@ class ReviewEditMode(QWidget):
         if not all(_has_existing_visible_raster(item) for item in raster_sources):
             self.gis_canvas.set_error("Không tìm thấy file raster visible để render canvas.")
             return
-        canvas_width, canvas_height = final_render_output_size(context.template_metadata)
+        canvas_width, canvas_height = final_render_output_size(
+            context.template_metadata,
+            final_dpi=target.export.final_render_dpi,
+        )
         try:
             spec = build_render_spec(
                 composition=render_composition,

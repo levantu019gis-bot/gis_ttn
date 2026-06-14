@@ -23,6 +23,7 @@ from thucthengay.models import (
     TargetConfig,
     TemplateMetadata,
     TemplatePlaceholder,
+    TemporalCompareState,
     ViewState,
 )
 from thucthengay.render import RasterRenderResult, RenderSpec
@@ -180,6 +181,9 @@ def _composition(
     target_id: str = "alpha",
     capture_date: date = date(2026, 5, 25),
     review_order: int = 1,
+    include: bool = True,
+    capture_time: time = time(8, 30),
+    temporal_compare: TemporalCompareState | None = None,
 ) -> Composition:
     return Composition(
         composition_id=composition_id,
@@ -188,9 +192,10 @@ def _composition(
         view=ViewState(center=[106.7, 10.8], scale=50000),
         reviewed=True,
         ready=True,
-        include=True,
+        include=include,
         needs_revalidation=False,
         review_order=review_order,
+        temporal_compare=temporal_compare or TemporalCompareState(),
         layers=[
             ImageLayer(
                 layer_id=f"{composition_id}-layer",
@@ -199,7 +204,7 @@ def _composition(
                 order=0,
                 visible=True,
                 capture_date=capture_date,
-                capture_time=time(8, 30),
+                capture_time=capture_time,
                 metadata_status=MetadataStatus.VALID,
             )
         ],
@@ -311,6 +316,79 @@ def test_export_combined_pptx_uses_config_placeholder_values_and_formats(
     assert "Hien trang Alpha Title ngay 25.05.26" in slide_text
     assert "08.30/25.05.26" in slide_text
     assert any(shape.shape_type == 13 for shape in presentation.slides[0].shapes)
+
+
+def test_export_combined_pptx_uses_compare_pane_time_placeholders(
+    tmp_path: Path,
+) -> None:
+    map_id, title_id, time_id = _write_contract_template(tmp_path / "templates" / "alpha.pptx")
+    target = TargetConfig(
+        id="alpha",
+        name="Alpha Name",
+        title="Alpha Title",
+        geojson_file="targets/alpha.geojson",
+        coordinate=[106.7, 10.8],
+        scale=50000,
+        grid=GridConfig(interval=GridInterval(minutes=1)),
+        export={
+            "template_pptx_file": str(tmp_path / "templates" / "alpha.pptx"),
+            "template_txt_value": "Tai {target_title} luc {time_label}",
+            "date_format": "dd.MM.yy",
+            "time_format": "HH.mm/dd.MM.yy",
+            "placeholders": [
+                {"field": "map_image", "element_id": str(map_id)},
+                {
+                    "field": "title",
+                    "element_id": str(title_id),
+                    "value": (
+                        "A {capture_date_A} {time_label_pane_A} | "
+                        "B {capture_date_B} {time_label_pane_B}"
+                    ),
+                },
+                {"field": "time", "element_id": str(time_id)},
+            ],
+        },
+    )
+    target.metadata["template_metadata"] = TemplateMetadata(
+        template_pptx=str(tmp_path / "templates" / "alpha.pptx"),
+        slide_index=0,
+        map_frame=MapFrame(x=36, y=54, width=288, height=216),
+        placeholders=target.export.placeholders,
+    ).model_dump(mode="json")
+    service = _workspace(
+        tmp_path,
+        _composition(
+            "alpha__20260525",
+            temporal_compare=TemporalCompareState(
+                enabled=True,
+                pane_a_composition_id="alpha__20260524",
+                pane_b_composition_id="alpha__20260526",
+            ),
+        ),
+        _composition(
+            "alpha__20260524",
+            capture_date=date(2026, 5, 24),
+            capture_time=time(7, 15),
+            include=False,
+        ),
+        _composition(
+            "alpha__20260526",
+            capture_date=date(2026, 5, 26),
+            capture_time=time(9, 45),
+            include=False,
+        ),
+    )
+    ensure_final_renders_for_export(service, [target], render=_success_render)
+
+    output_path = service.paths.exports / "compare-time.pptx"
+    result = export_combined_pptx(service, [target], output_path=output_path)
+
+    assert result.ok is True
+    presentation = Presentation(str(output_path))
+    slide_text = "\n".join(
+        shape.text for shape in presentation.slides[0].shapes if hasattr(shape, "text")
+    )
+    assert "A 24.05.26 07.15/24.05.26 | B 26.05.26 09.45/26.05.26" in slide_text
 
 
 def test_export_combined_pptx_time_placeholder_rectangle_fits_replaced_text(

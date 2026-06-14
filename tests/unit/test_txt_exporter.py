@@ -11,6 +11,7 @@ from thucthengay.models import (
     ImageLayer,
     MetadataStatus,
     TargetConfig,
+    TemporalCompareState,
     ViewState,
 )
 from thucthengay.workspace import WorkspaceService
@@ -52,7 +53,9 @@ def _composition(
     target_id: str = "alpha",
     capture_date: date = date(2026, 5, 25),
     review_order: int = 1,
+    include: bool = True,
     layers: list[ImageLayer] | None = None,
+    temporal_compare: TemporalCompareState | None = None,
 ) -> Composition:
     return Composition(
         composition_id=composition_id,
@@ -61,10 +64,11 @@ def _composition(
         view=ViewState(center=[106.7, 10.8], scale=50000),
         reviewed=True,
         ready=True,
-        include=True,
+        include=include,
         needs_revalidation=False,
         review_order=review_order,
         layers=layers if layers is not None else [_layer("valid", capture_time=time(8, 30))],
+        temporal_compare=temporal_compare or TemporalCompareState(),
     )
 
 
@@ -74,6 +78,7 @@ def _layer(
     visible: bool = True,
     status: MetadataStatus = MetadataStatus.VALID,
     capture_time: time | None = time(8, 30),
+    capture_date: date = date(2026, 5, 25),
 ) -> ImageLayer:
     return ImageLayer(
         layer_id=layer_id,
@@ -81,7 +86,7 @@ def _layer(
         cache_path=f"cache/{layer_id}.tif",
         order=0,
         visible=visible,
-        capture_date=date(2026, 5, 25),
+        capture_date=capture_date,
         capture_time=capture_time,
         metadata_status=status,
     )
@@ -144,6 +149,63 @@ def test_export_txt_report_uses_template_txt_value_and_config_formats(
     assert result.ok is True
     assert output_path.read_text(encoding="utf-8").strip() == (
         "Tai Alpha Title luc 08.30/25.05.26 ngay 25.05.26"
+    )
+
+
+def test_export_txt_report_uses_compare_pane_time_placeholders(
+    tmp_path: Path,
+) -> None:
+    service = _workspace(
+        tmp_path,
+        _composition(
+            "alpha__20260525",
+            temporal_compare=TemporalCompareState(
+                enabled=True,
+                pane_a_composition_id="alpha__20260524",
+                pane_b_composition_id="alpha__20260526",
+            ),
+        ),
+        _composition(
+            "alpha__20260524",
+            capture_date=date(2026, 5, 24),
+            include=False,
+            layers=[
+                _layer(
+                    "pane-a",
+                    capture_date=date(2026, 5, 24),
+                    capture_time=time(7, 15),
+                )
+            ],
+        ),
+        _composition(
+            "alpha__20260526",
+            capture_date=date(2026, 5, 26),
+            include=False,
+            layers=[
+                _layer(
+                    "pane-b",
+                    capture_date=date(2026, 5, 26),
+                    capture_time=time(9, 45),
+                )
+            ],
+        ),
+    )
+    output_path = service.paths.exports / "compare-time.txt"
+    target = _target(
+        txt_template=(
+            "{capture_date_A}|{time_label_pane_A}|"
+            "{capture_date_B}|{time_label_pane_B}|"
+            "{capture_date}|{time_label}"
+        )
+    )
+    target.export.date_format = "dd.MM.yy"
+    target.export.time_format = "HH.mm/dd.MM.yy"
+
+    result = export_txt_report(service, [target], output_path=output_path)
+
+    assert result.ok is True
+    assert output_path.read_text(encoding="utf-8").strip() == (
+        "24.05.26|07.15/24.05.26|26.05.26|09.45/26.05.26|25.05.26|08.30/25.05.26"
     )
 
 

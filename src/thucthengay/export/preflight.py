@@ -10,6 +10,7 @@ from pathlib import Path
 from pptx import Presentation
 from pydantic import ValidationError
 
+from thucthengay.export.compare_text import resolve_compare_text_panes
 from thucthengay.export.final_render import final_render_currentness_issue
 from thucthengay.export.txt_values import resolve_txt_line, time_label
 from thucthengay.models import (
@@ -75,7 +76,14 @@ def build_export_preflight_plan(
         row_issues.extend(global_issues)
         row_issues.extend(_composition_export_issues(composition, workspace_service, target))
         row_issues.extend(_target_export_issues(composition, target))
-        row_issues.extend(_txt_template_issues(composition, target, slide_number=index))
+        row_issues.extend(
+            _txt_template_issues(
+                composition,
+                target,
+                workspace_service=workspace_service,
+                slide_number=index,
+            )
+        )
         all_issues.extend(issue for issue in row_issues if issue not in all_issues)
         rows.append(
             ExportPlanRow(
@@ -259,6 +267,7 @@ def _txt_template_issues(
     composition: Composition,
     target: TargetConfig | None,
     *,
+    workspace_service: WorkspaceService,
     slide_number: int,
 ) -> list[Issue]:
     if target is None:
@@ -278,11 +287,14 @@ def _txt_template_issues(
         ]
 
     issues: list[Issue] = []
+    pane_a, pane_b = resolve_compare_text_panes(workspace_service, composition)
     resolution = resolve_txt_line(
         template,
         composition,
         target,
         slide_number=slide_number,
+        pane_a_composition=pane_a,
+        pane_b_composition=pane_b,
     )
     for problem in resolution.problems:
         if problem.issue_id == "export.txt_placeholder_unknown":
@@ -306,13 +318,13 @@ def _txt_template_issues(
                     target_id=target.id,
                     composition_id=composition.composition_id,
                     message=(
-                        "TXT template can time_label nhung khong co layer visible hop le "
-                        "co thoi gian."
+                        f"TXT template can {problem.field} nhung khong co layer visible "
+                        "hop le co thoi gian."
                     ),
                     remediation=(
                         "Quay lai Review/Edit Metadata de sua capture_time va metadata_status "
                         "cua layer visible, hoac danh dau placeholder la optional bang "
-                        "`{time_label?}`."
+                        f"`{{{problem.field}?}}`."
                     ),
                 )
             )

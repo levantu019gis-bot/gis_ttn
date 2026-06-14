@@ -25,6 +25,28 @@ from thucthengay.render import (
 )
 
 
+class _CountingDataset:
+    def __init__(
+        self,
+        dataset: rasterio.DatasetReader,
+        path: str,
+        read_counts: dict[str, int],
+    ) -> None:
+        self._dataset = dataset
+        self._path = path
+        self._read_counts = read_counts
+
+    def __getattr__(self, name: str):
+        return getattr(self._dataset, name)
+
+    def read(self, *args, **kwargs):
+        self._read_counts[self._path] = self._read_counts.get(self._path, 0) + 1
+        return self._dataset.read(*args, **kwargs)
+
+    def close(self) -> None:
+        self._dataset.close()
+
+
 def _spec(
     *,
     layers: list[RenderLayerRef],
@@ -132,6 +154,30 @@ def _opener_for(
             memfile.close()
 
 
+@contextmanager
+def _counting_opener_for(
+    mapping: dict[str, MemoryFile],
+    read_counts: dict[str, int],
+) -> Iterator[callable]:
+    handles: list = []
+
+    def opener(path: str) -> rasterio.DatasetReader:
+        memfile = mapping.get(path)
+        if memfile is None:
+            raise rasterio.RasterioIOError(f"Unknown synthetic path {path!r}")
+        ds = _CountingDataset(memfile.open(), path, read_counts)
+        handles.append(ds)
+        return ds
+
+    try:
+        yield opener
+    finally:
+        for ds in handles:
+            ds.close()
+        for memfile in mapping.values():
+            memfile.close()
+
+
 class TestSingleLayerHappyPath:
     def test_layer_pixels_overwrite_background(self) -> None:
         memfile = _make_memfile(
@@ -197,6 +243,58 @@ class TestCompositingOrder:
             canvas = render_raster_layers(spec, dataset_opener=opener).canvas
 
         assert tuple(canvas[8, 8].tolist()) == (200, 200, 200)
+
+    def test_fully_occluded_lower_layer_is_not_read(self) -> None:
+        bottom = _make_memfile(
+            bounds=(106.0, 10.0, 107.0, 11.0), crs=GEOGRAPHIC_CRS, rgb=(10, 10, 10)
+        )
+        top = _make_memfile(
+            bounds=(106.0, 10.0, 107.0, 11.0), crs=GEOGRAPHIC_CRS, rgb=(200, 200, 200)
+        )
+        layers = [
+            RenderLayerRef(layer_id="BOT", source_path="b.tif", cache_path="b.tif", order=0),
+            RenderLayerRef(layer_id="TOP", source_path="t.tif", cache_path="t.tif", order=1),
+        ]
+        spec = _spec(layers=layers, width=16, height=16)
+        read_counts: dict[str, int] = {}
+
+        with _counting_opener_for({"b.tif": bottom, "t.tif": top}, read_counts) as opener:
+            result = render_raster_layers(spec, dataset_opener=opener)
+
+        assert tuple(result.canvas[8, 8].tolist()) == (200, 200, 200)
+        assert result.painted_layer_ids == ("BOT", "TOP")
+        assert read_counts["t.tif"] > 0
+        assert read_counts.get("b.tif", 0) == 0
+
+    def test_transparent_top_layer_keeps_reading_uncovered_lower_pixels(self) -> None:
+        bottom = _make_memfile(
+            bounds=(106.0, 10.0, 107.0, 11.0), crs=GEOGRAPHIC_CRS, rgb=(10, 20, 30)
+        )
+        alpha = np.full((8, 8), 255, dtype=np.uint8)
+        alpha[:, 4:] = 0
+        top = _make_memfile(
+            bounds=(106.0, 10.0, 107.0, 11.0),
+            crs=GEOGRAPHIC_CRS,
+            rgb=(200, 210, 220),
+            width=8,
+            height=8,
+            alpha=alpha,
+        )
+        layers = [
+            RenderLayerRef(layer_id="BOT", source_path="b.tif", cache_path="b.tif", order=0),
+            RenderLayerRef(layer_id="TOP", source_path="t.tif", cache_path="t.tif", order=1),
+        ]
+        spec = _spec(layers=layers, width=8, height=8)
+        read_counts: dict[str, int] = {}
+
+        with _counting_opener_for({"b.tif": bottom, "t.tif": top}, read_counts) as opener:
+            result = render_raster_layers(spec, dataset_opener=opener)
+
+        assert tuple(result.canvas[4, 2].tolist()) == (200, 210, 220)
+        assert tuple(result.canvas[4, 6].tolist()) == (10, 20, 30)
+        assert result.painted_layer_ids == ("BOT", "TOP")
+        assert read_counts["t.tif"] > 0
+        assert read_counts["b.tif"] > 0
 
 
 class TestPartialOverlap:

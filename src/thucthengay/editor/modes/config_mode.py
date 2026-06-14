@@ -611,6 +611,7 @@ class ConfigMode(QWidget):
             ),
             ("Export Defaults", "export.date_format", "date_format"),
             ("Export Defaults", "export.time_format", "time_format"),
+            ("Export Defaults", "export.final_render_dpi", "final_render_dpi"),
             ("Export Defaults", "export.map_background_color", "map_background_color"),
         ]
         grouped: dict[str, list[tuple[str, str]]] = {}

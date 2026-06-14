@@ -94,6 +94,7 @@ class TargetExportConfig(BaseModel):
     )
     date_format: str = "yyyy-MM-dd"
     time_format: str = "HH:mm:ss"
+    final_render_dpi: int = Field(default=200, ge=1, le=1200)
     map_background_color: str = Field(
         default="#FFFFFF",
         validation_alias=AliasChoices(
@@ -133,6 +134,7 @@ class ExportDefaultsConfig(BaseModel):
 
     date_format: str = "yyyy-MM-dd"
     time_format: str = "HH:mm:ss"
+    final_render_dpi: int = Field(default=200, ge=1, le=1200)
     map_background_color: str = Field(
         default="#FFFFFF",
         validation_alias=AliasChoices(
@@ -419,7 +421,12 @@ def _export_with_project_defaults(
     export_defaults: dict[str, Any],
 ) -> dict[str, Any]:
     normalized = dict(export)
-    for field_name in ("date_format", "time_format", "map_background_color"):
+    for field_name in (
+        "date_format",
+        "time_format",
+        "final_render_dpi",
+        "map_background_color",
+    ):
         if field_name not in normalized and field_name in export_defaults:
             normalized[field_name] = export_defaults[field_name]
     return normalized

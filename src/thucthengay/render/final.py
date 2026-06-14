@@ -49,10 +49,12 @@ def render_final_png(
     workspace_root: str | Path,
     render: FinalRenderFunction = render_map,
     is_cancelled: CancelCallback | None = None,
+    dpi: int = FINAL_RENDER_DPI,
     timestamp: datetime | None = None,
 ) -> FinalRenderResult:
     """Render a final JPEG under ``workspace_root/renders`` and append its log."""
     root = Path(workspace_root).expanduser().resolve()
+    dpi = max(1, int(dpi))
     spec_hash = render_spec_hash(spec)
     log_rel_path = _render_log_rel_path(spec.composition_id)
     log_path = root / log_rel_path
@@ -63,7 +65,7 @@ def render_final_png(
         _validate_canvas_matches_spec(render_result.canvas, spec)
         output_rel_path = _final_image_rel_path(spec.composition_id, spec_hash)
         output_path = root / output_rel_path
-        _atomic_write_jpeg(output_path, render_result.canvas)
+        _atomic_write_jpeg(output_path, render_result.canvas, dpi=dpi)
         entry = _entry(
             spec=spec,
             status=FinalRenderStatus.SUCCESS,
@@ -115,6 +117,7 @@ def is_final_render_current(
     output_path: str | None,
     log_path: str | None,
     spec: RenderSpec,
+    dpi: int = FINAL_RENDER_DPI,
 ) -> FinalRenderCurrentness:
     """Check whether a persisted final render artifact still matches ``spec``."""
     if not output_path or not log_path:
@@ -152,7 +155,7 @@ def is_final_render_current(
         return FinalRenderCurrentness(current=False, reason="spec_hash_mismatch")
     if latest.width != spec.output_width or latest.height != spec.output_height:
         return FinalRenderCurrentness(current=False, reason="output_size_mismatch")
-    if not _image_has_expected_dpi(resolved_output):
+    if not _image_has_expected_dpi(resolved_output, expected_dpi=max(1, int(dpi))):
         return FinalRenderCurrentness(current=False, reason="output_dpi_mismatch")
 
     return FinalRenderCurrentness(current=True, reason=None)
@@ -251,7 +254,7 @@ def _failure_issue(spec: RenderSpec, detail: str) -> Issue:
     )
 
 
-def _atomic_write_jpeg(path: Path, canvas: np.ndarray) -> None:
+def _atomic_write_jpeg(path: Path, canvas: np.ndarray, *, dpi: int) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     temp_path: Path | None = None
     try:
@@ -266,7 +269,7 @@ def _atomic_write_jpeg(path: Path, canvas: np.ndarray) -> None:
         Image.fromarray(_as_rgb_uint8(canvas)).save(
             temp_path,
             format="JPEG",
-            dpi=(FINAL_RENDER_DPI, FINAL_RENDER_DPI),
+            dpi=(dpi, dpi),
             optimize=True,
             quality=FINAL_RENDER_JPEG_QUALITY,
             subsampling=0,
@@ -302,15 +305,18 @@ def _as_rgb_uint8(canvas: np.ndarray) -> np.ndarray:
     return canvas
 
 
-def _image_has_expected_dpi(path: Path) -> bool:
+def _image_has_expected_dpi(path: Path, *, expected_dpi: int) -> bool:
     try:
         with Image.open(path) as image:
-            dpi = image.info.get("dpi")
+            image_dpi = image.info.get("dpi")
     except OSError:
         return False
-    if not isinstance(dpi, tuple) or len(dpi) < 2:
+    if not isinstance(image_dpi, tuple) or len(image_dpi) < 2:
         return False
-    return round(float(dpi[0])) == FINAL_RENDER_DPI and round(float(dpi[1])) == FINAL_RENDER_DPI
+    return (
+        round(float(image_dpi[0])) == expected_dpi
+        and round(float(image_dpi[1])) == expected_dpi
+    )
 
 
 def _is_workspace_render_artifact_path(value: str) -> bool:

@@ -8,6 +8,7 @@ from pathlib import Path
 from pptx import Presentation
 from pydantic import ValidationError
 
+from thucthengay.export.compare_text import resolve_compare_text_panes
 from thucthengay.export.pptx_slide_copy import (
     copy_only_slide,
     find_shape_by_element_id,
@@ -65,7 +66,7 @@ def export_combined_pptx(
         return _blocked(issues)
     if not included:
         return _blocked([_no_exportable_compositions_issue()])
-    placeholder_issues = _placeholder_issues(included, target_map)
+    placeholder_issues = _placeholder_issues(workspace_service, included, target_map)
     if placeholder_issues:
         return _blocked(issues + placeholder_issues)
 
@@ -99,6 +100,7 @@ def export_combined_pptx(
                     composition,
                     target,
                     slide_number,
+                    workspace_service=workspace_service,
                 )
                 replace_text(
                     slide,
@@ -156,6 +158,7 @@ def _issues_for_selected(
 
 
 def _placeholder_issues(
+    workspace_service: WorkspaceService,
     compositions: list[Composition],
     target_map: dict[str, TargetConfig],
 ) -> list[Issue]:
@@ -187,7 +190,15 @@ def _placeholder_issues(
         render_path = _try_resolved_render_path(composition, target, target_map, slide_number)
         if render_path is not None:
             issues.append(render_path)
-        issues.extend(_template_placeholder_issues(composition, target, template, slide_number))
+        issues.extend(
+            _template_placeholder_issues(
+                composition,
+                target,
+                template,
+                slide_number,
+                workspace_service=workspace_service,
+            )
+        )
     return issues
 
 
@@ -196,6 +207,8 @@ def _template_placeholder_issues(
     target: TargetConfig,
     template: TemplateMetadata,
     slide_number: int,
+    *,
+    workspace_service: WorkspaceService,
 ) -> list[Issue]:
     source = Presentation(template.template_pptx)
     if len(source.slides) != 1:
@@ -264,6 +277,7 @@ def _template_placeholder_issues(
                 composition,
                 target,
                 slide_number,
+                workspace_service=workspace_service,
             )
             if resolution.problems:
                 if placeholder.required:
@@ -290,13 +304,18 @@ def _placeholder_text_resolution(
     composition: Composition,
     target: TargetConfig,
     slide_number: int,
+    *,
+    workspace_service: WorkspaceService,
 ) -> TxtLineResolution:
     template = placeholder.value if placeholder.value is not None else f"{{{placeholder.field}}}"
+    pane_a, pane_b = resolve_compare_text_panes(workspace_service, composition)
     return resolve_export_text(
         template,
         composition,
         target,
         slide_number=slide_number,
+        pane_a_composition=pane_a,
+        pane_b_composition=pane_b,
         supported_fields=SUPPORTED_TEXT_FIELDS,
         unknown_issue_id="export.pptx_placeholder_unknown",
         unresolved_issue_id="export.pptx_placeholder_unresolved",
@@ -304,7 +323,7 @@ def _placeholder_text_resolution(
 
 
 def _should_fit_shape_to_text(placeholder: TemplatePlaceholder) -> bool:
-    return placeholder.field in {"time", "time_label"}
+    return placeholder.field in {"time", "time_label", "time_label_pane_A", "time_label_pane_B"}
 
 
 def _template_metadata(target: TargetConfig) -> TemplateMetadata:

@@ -80,8 +80,10 @@ class AppShell(QMainWindow):
         self.setCentralWidget(self.mode_tabs)
         self.setup_mode.set_recent_projects(self.preferences_service.preferences.recent_projects)
         self._restore_setup_parameters()
+        self._restore_download_parameters()
         for row in self.setup_mode.path_rows:
             row.validationChanged.connect(self._persist_setup_parameters)
+        self._connect_download_parameter_persistence()
         saved_window_size = self.preferences_service.preferences.ui.window_size
         if saved_window_size and len(saved_window_size) == 2:
             self.resize(saved_window_size[0], saved_window_size[1])
@@ -326,6 +328,33 @@ class AppShell(QMainWindow):
             config_path=self.setup_mode.config_row.path_field.full_text,
             imagery_folder=self.setup_mode.imagery_row.path_field.full_text,
             workspace_folder=self.setup_mode.workspace_row.path_field.full_text,
+        )
+
+    def _restore_download_parameters(self) -> None:
+        self.download_mode.apply_recent_parameters(self.preferences_service.preferences.download)
+
+    def _connect_download_parameter_persistence(self) -> None:
+        self.download_mode.geojson_files.pathsChanged.connect(self._persist_download_parameters)
+        self.download_mode.image_folders.pathsChanged.connect(self._persist_download_parameters)
+        self.download_mode.output_row.validationChanged.connect(self._persist_download_parameters)
+        self.download_mode.overwrite_checkbox.toggled.connect(self._persist_download_parameters)
+        self.download_mode.dry_run_checkbox.toggled.connect(self._persist_download_parameters)
+        self.download_mode.include_boundary_checkbox.toggled.connect(
+            self._persist_download_parameters
+        )
+        self.download_mode.preserve_tree_checkbox.toggled.connect(
+            self._persist_download_parameters
+        )
+        self.download_mode.write_manifest_checkbox.toggled.connect(
+            self._persist_download_parameters
+        )
+        self.download_mode.cloud_filter_checkbox.toggled.connect(self._persist_download_parameters)
+        self.download_mode.cloud_filter_spin.valueChanged.connect(self._persist_download_parameters)
+        self.download_mode.scan_workers_spin.valueChanged.connect(self._persist_download_parameters)
+
+    def _persist_download_parameters(self, *_args: object) -> None:
+        self.preferences_service.update_download_parameters(
+            **self.download_mode.preference_payload()
         )
 
     def closeEvent(self, event) -> None:  # noqa: ANN001, N802

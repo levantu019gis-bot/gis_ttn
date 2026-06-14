@@ -422,6 +422,7 @@ def test_load_project_config_applies_shared_defaults_with_target_overrides(
                 "export": {
                     "date_format": "dd.MM.yy",
                     "time_format": "HH.mm/dd.MM.yy",
+                    "final_render_dpi": 300,
                     "map_background_color": "#AABBCC",
                 },
             },
@@ -442,6 +443,7 @@ def test_load_project_config_applies_shared_defaults_with_target_overrides(
     }
     assert loaded_target.export.date_format == "dd.MM.yy"
     assert loaded_target.export.time_format == "HH:mm"
+    assert loaded_target.export.final_render_dpi == 300
     assert loaded_target.export.map_background_color == "#AABBCC"
 
 

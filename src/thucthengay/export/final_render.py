@@ -42,7 +42,7 @@ def ensure_final_renders_for_export(
     *,
     render: FinalRenderFunction | None = None,
     is_cancelled: CancelCallback | None = None,
-    final_dpi: int = DEFAULT_FINAL_RENDER_DPI,
+    final_dpi: int | None = None,
     on_progress: FinalRenderProgressCallback | None = None,
 ) -> ExportFinalRenderResult:
     """Ensure every included composition has a current final image for export."""
@@ -78,12 +78,13 @@ def build_export_final_render_spec(
     composition: Composition,
     target: TargetConfig,
     *,
-    final_dpi: int = DEFAULT_FINAL_RENDER_DPI,
+    final_dpi: int | None = None,
     compare_compositions: list[Composition] | None = None,
 ) -> RenderSpec:
     """Build the canonical final ``RenderSpec`` used by export preparation."""
     template = _template_metadata(target)
-    width, height = final_render_output_size(template, final_dpi=final_dpi)
+    dpi = _target_final_render_dpi(target, override=final_dpi)
+    width, height = final_render_output_size(template, final_dpi=dpi)
     return build_render_spec(
         composition=composition,
         target=target,
@@ -161,7 +162,7 @@ def final_render_currentness_issue(
     workspace_service: WorkspaceService,
     composition: Composition,
     target: TargetConfig | None,
-    final_dpi: int = DEFAULT_FINAL_RENDER_DPI,
+    final_dpi: int | None = None,
 ) -> Issue | None:
     """Return a blocking issue when an existing final render is not current."""
     if not composition.artifacts.final_render_path:
@@ -206,6 +207,7 @@ def final_render_currentness_issue(
         output_path=composition.artifacts.final_render_path,
         log_path=composition.artifacts.render_log_path,
         spec=spec,
+        dpi=_target_final_render_dpi(target, override=final_dpi),
     )
     if currentness.current:
         return None
@@ -224,7 +226,7 @@ def _ensure_composition_final_render(
     *,
     render: FinalRenderFunction | None,
     is_cancelled: CancelCallback | None,
-    final_dpi: int,
+    final_dpi: int | None,
 ) -> ExportFinalRenderRow:
     if target is None:
         return _row(
@@ -298,6 +300,7 @@ def _ensure_composition_final_render(
     kwargs = {
         "workspace_root": workspace_service.paths.root,
         "is_cancelled": is_cancelled,
+        "dpi": _target_final_render_dpi(target, override=final_dpi),
     }
     if render is not None:
         kwargs["render"] = render
@@ -349,6 +352,14 @@ def _template_metadata(target: TargetConfig) -> TemplateMetadata:
     except (KeyError, ValidationError) as error:
         msg = "target is missing derived template_metadata"
         raise ValueError(msg) from error
+
+
+def _target_final_render_dpi(
+    target: TargetConfig,
+    *,
+    override: int | None,
+) -> int:
+    return max(1, int(override if override is not None else target.export.final_render_dpi))
 
 
 def _resolved_compare_compositions_for_render(

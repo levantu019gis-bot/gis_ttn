@@ -4,6 +4,7 @@ from datetime import date, time
 from pathlib import Path
 
 import numpy as np
+from PIL import Image
 
 from thucthengay.export import (
     ExportFinalRenderStatus,
@@ -32,7 +33,7 @@ from thucthengay.render import RasterRenderResult, RenderError, RenderSpec
 from thucthengay.workspace import WorkspaceService
 
 
-def _target(target_id: str = "alpha") -> TargetConfig:
+def _target(target_id: str = "alpha", *, final_render_dpi: int = 200) -> TargetConfig:
     template = TemplateMetadata(
         template_pptx=f"templates/{target_id}.pptx",
         slide_index=0,
@@ -57,6 +58,7 @@ def _target(target_id: str = "alpha") -> TargetConfig:
         export={
             "template_pptx_file": f"templates/{target_id}.pptx",
             "txt_line_template": "{slide_number}|{target_id}|{capture_date}|{time_label}",
+            "final_render_dpi": final_render_dpi,
             "placeholders": [
                 {
                     "field": "map",
@@ -170,6 +172,26 @@ def test_final_render_output_size_prefers_map_placeholder_image_dimensions() -> 
     )
 
     assert final_render_output_size(template) == (3306, 2340)
+
+
+def test_export_final_render_uses_target_configured_dpi(tmp_path: Path) -> None:
+    target = _target(final_render_dpi=144)
+    service = _workspace(tmp_path, _composition())
+    captured_sizes: list[tuple[int, int]] = []
+
+    def capture_render(spec: RenderSpec, is_cancelled=None) -> RasterRenderResult:
+        captured_sizes.append((spec.output_width, spec.output_height))
+        return _success_render(spec, is_cancelled=is_cancelled)
+
+    result = ensure_final_renders_for_export(service, [target], render=capture_render)
+
+    assert result.summary.rendered_count == 1
+    assert captured_sizes == [(288, 144)]
+    assert result.rows[0].final_render_path is not None
+    with Image.open(service.paths.root / result.rows[0].final_render_path) as image:
+        dpi = image.info["dpi"]
+        assert round(dpi[0]) == 144
+        assert round(dpi[1]) == 144
 
 
 def test_export_final_render_resolves_workspace_relative_layer_paths(

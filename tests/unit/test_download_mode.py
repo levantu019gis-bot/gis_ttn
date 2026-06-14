@@ -38,6 +38,86 @@ def test_app_shell_adds_download_tab_next_to_config(tmp_path: Path) -> None:
     assert shell.mode_tabs.widget(3) is shell.download_mode
 
 
+def test_app_shell_restores_recent_download_parameters(tmp_path: Path) -> None:
+    qapp()
+    geojson = tmp_path / "area.geojson"
+    source_a = tmp_path / "source-a"
+    source_b = tmp_path / "source-b"
+    output = tmp_path / "output"
+    geojson.write_text('{"type":"FeatureCollection","features":[]}', encoding="utf-8")
+    source_a.mkdir()
+    source_b.mkdir()
+    output.mkdir()
+    preferences = PreferencesService(tmp_path / "preferences.json")
+    preferences.update_download_parameters(
+        geojson_files=[str(geojson)],
+        image_folders=[str(source_a), str(source_b)],
+        output_folder=output,
+        overwrite=True,
+        dry_run=True,
+        include_boundary_touch=False,
+        preserve_source_tree=False,
+        write_manifest=False,
+        cloud_filter_enabled=True,
+        max_cloud_percent=55.5,
+        scan_workers=7,
+    )
+
+    shell = AppShell(preferences_service=PreferencesService(tmp_path / "preferences.json"))
+    request = shell.download_mode.selected_request()
+
+    assert isinstance(request, SatelliteDownloadRequest)
+    assert request.geojson_files == [geojson.resolve()]
+    assert request.image_folders == [source_a.resolve(), source_b.resolve()]
+    assert request.output_dir == output.resolve()
+    assert request.overwrite is True
+    assert request.dry_run is True
+    assert request.include_boundary_touch is False
+    assert request.preserve_source_tree is False
+    assert request.write_manifest is False
+    assert shell.download_mode.cloud_filter_checkbox.isChecked()
+    assert shell.download_mode.cloud_filter_spin.value() == 55.5
+    assert request.scan_workers == 7
+
+
+def test_app_shell_persists_download_parameter_changes(tmp_path: Path) -> None:
+    qapp()
+    geojson = tmp_path / "area.geojson"
+    source = tmp_path / "source"
+    output = tmp_path / "output"
+    geojson.write_text('{"type":"FeatureCollection","features":[]}', encoding="utf-8")
+    source.mkdir()
+    output.mkdir()
+    preferences_file = tmp_path / "preferences.json"
+    shell = AppShell(preferences_service=PreferencesService(preferences_file))
+
+    shell.download_mode.geojson_files.add_path(geojson)
+    shell.download_mode.image_folders.add_path(source)
+    shell.download_mode.output_row.set_path(output)
+    shell.download_mode.overwrite_checkbox.setChecked(True)
+    shell.download_mode.dry_run_checkbox.setChecked(True)
+    shell.download_mode.include_boundary_checkbox.setChecked(False)
+    shell.download_mode.preserve_tree_checkbox.setChecked(False)
+    shell.download_mode.write_manifest_checkbox.setChecked(False)
+    shell.download_mode.cloud_filter_checkbox.setChecked(True)
+    shell.download_mode.cloud_filter_spin.setValue(42.5)
+    shell.download_mode.scan_workers_spin.setValue(9)
+
+    reloaded = PreferencesService(preferences_file)
+    download = reloaded.preferences.download
+    assert download.geojson_files == [str(geojson.resolve())]
+    assert download.image_folders == [str(source.resolve())]
+    assert download.output_folder == str(output.resolve())
+    assert download.overwrite is True
+    assert download.dry_run is True
+    assert download.include_boundary_touch is False
+    assert download.preserve_source_tree is False
+    assert download.write_manifest is False
+    assert download.cloud_filter_enabled is True
+    assert download.max_cloud_percent == 42.5
+    assert download.scan_workers == 9
+
+
 def test_download_mode_disables_action_until_required_inputs_are_valid(tmp_path: Path) -> None:
     qapp()
     mode = DownloadMode()

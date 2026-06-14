@@ -540,6 +540,7 @@ _DEFAULT_CONFIG_SEED: dict[str, Any] = {
     "export": {
         "date_format": "dd.MM.yy",
         "time_format": "HH.mm/dd.MM.yy",
+        "final_render_dpi": 200,
         "map_background_color": "#000000",
     },
 }
@@ -888,7 +889,12 @@ def _remove_target_default_owned_fields(target: dict[str, Any]) -> None:
         grid.pop("label_format", None)
     export = target.get("export")
     if isinstance(export, dict):
-        for field_name in ("date_format", "time_format", "map_background_color"):
+        for field_name in (
+            "date_format",
+            "time_format",
+            "final_render_dpi",
+            "map_background_color",
+        ):
             export.pop(field_name, None)
 
 

@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import Iterable
 from pathlib import Path
 
+from thucthengay.export.compare_text import resolve_compare_text_panes
 from thucthengay.export.txt_values import resolve_txt_line
 from thucthengay.models import (
     Composition,
@@ -39,18 +40,21 @@ def export_txt_report(
     if not included:
         return _blocked([_no_exportable_compositions_issue()])
 
-    issues = _pre_write_issues(included, target_map)
+    issues = _pre_write_issues(workspace_service, included, target_map)
     if issues:
         return _blocked(issues)
 
     exported: list[ExportedTxtLine] = []
     for line_number, composition in enumerate(included, start=1):
         target = target_map[composition.target_id]
+        pane_a, pane_b = resolve_compare_text_panes(workspace_service, composition)
         resolution = resolve_txt_line(
             target.export.template_txt_value or "",
             composition,
             target,
             slide_number=line_number,
+            pane_a_composition=pane_a,
+            pane_b_composition=pane_b,
         )
         if resolution.problems:
             issues.extend(
@@ -92,6 +96,7 @@ def export_txt_report(
 
 
 def _pre_write_issues(
+    workspace_service: WorkspaceService,
     compositions: list[Composition],
     target_map: dict[str, TargetConfig],
 ) -> list[Issue]:
@@ -136,11 +141,14 @@ def _pre_write_issues(
                 )
             )
             continue
+        pane_a, pane_b = resolve_compare_text_panes(workspace_service, composition)
         resolution = resolve_txt_line(
             target.export.template_txt_value,
             composition,
             target,
             slide_number=line_number,
+            pane_a_composition=pane_a,
+            pane_b_composition=pane_b,
         )
         issues.extend(
             _problem_issue(problem.issue_id, problem.field, composition)
@@ -154,10 +162,10 @@ def _problem_issue(issue_id: str, field: str, composition: Composition) -> Issue
         message = f"TXT template dung placeholder chua ho tro: {field}."
         remediation = "Sua template_txt_value de chi dung cac placeholder da ho tro."
     elif issue_id == "export.txt_time_label_unresolved":
-        message = "TXT template can time_label nhung khong co layer visible hop le co thoi gian."
+        message = f"TXT template can {field} nhung khong co layer visible hop le co thoi gian."
         remediation = (
             "Quay lai Review/Edit Metadata de sua capture_time va metadata_status cua layer "
-            "visible, hoac danh dau placeholder la optional bang `{time_label?}`."
+            f"visible, hoac danh dau placeholder la optional bang `{{{field}?}}`."
         )
     else:
         message = f"TXT template khong resolve duoc placeholder: {field}."

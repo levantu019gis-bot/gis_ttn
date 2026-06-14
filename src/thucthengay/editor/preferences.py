@@ -69,6 +69,24 @@ class ExportPreferences(BaseModel):
     overwrite_policy: Literal["overwrite", "timestamp_suffix"] = "overwrite"
 
 
+class DownloadPreferences(BaseModel):
+    """Download tab inputs remembered between application launches."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    geojson_files: list[str] = Field(default_factory=list)
+    image_folders: list[str] = Field(default_factory=list)
+    output_folder: str | None = None
+    overwrite: bool = False
+    dry_run: bool = False
+    include_boundary_touch: bool = True
+    preserve_source_tree: bool = True
+    write_manifest: bool = True
+    cloud_filter_enabled: bool = False
+    max_cloud_percent: float = Field(default=90.0, ge=0.0, le=100.0)
+    scan_workers: int = Field(default=4, ge=1, le=16)
+
+
 class UserPreferences(BaseModel):
     """Versioned user preferences persisted in the OS app-data folder."""
 
@@ -80,6 +98,7 @@ class UserPreferences(BaseModel):
     ui: UiPreferences = Field(default_factory=UiPreferences)
     preview: PreviewPreferences = Field(default_factory=PreviewPreferences)
     export: ExportPreferences = Field(default_factory=ExportPreferences)
+    download: DownloadPreferences = Field(default_factory=DownloadPreferences)
 
 
 class PreferencesService:
@@ -199,6 +218,37 @@ class PreferencesService:
         stem = output_stem.strip() or "report"
         export = self._preferences.export.model_copy(update={"output_stem": stem})
         self._preferences = self._preferences.model_copy(update={"export": export})
+        return self.save()
+
+    def update_download_parameters(
+        self,
+        *,
+        geojson_files: list[str] | tuple[str, ...],
+        image_folders: list[str] | tuple[str, ...],
+        output_folder: str | Path | None,
+        overwrite: bool,
+        dry_run: bool,
+        include_boundary_touch: bool,
+        preserve_source_tree: bool,
+        write_manifest: bool,
+        cloud_filter_enabled: bool,
+        max_cloud_percent: float,
+        scan_workers: int,
+    ) -> bool:
+        download = DownloadPreferences(
+            geojson_files=[_normalized_path_text(path) for path in geojson_files if path.strip()],
+            image_folders=[_normalized_path_text(path) for path in image_folders if path.strip()],
+            output_folder=_optional_normalized_path_text(output_folder),
+            overwrite=overwrite,
+            dry_run=dry_run,
+            include_boundary_touch=include_boundary_touch,
+            preserve_source_tree=preserve_source_tree,
+            write_manifest=write_manifest,
+            cloud_filter_enabled=cloud_filter_enabled,
+            max_cloud_percent=max_cloud_percent,
+            scan_workers=scan_workers,
+        )
+        self._preferences = self._preferences.model_copy(update={"download": download})
         return self.save()
 
     def _find_recent_by_workspace(self, workspace_folder: str) -> RecentProjectEntry | None:

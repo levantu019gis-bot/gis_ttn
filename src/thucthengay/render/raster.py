@@ -51,6 +51,13 @@ class RasterRenderResult:
     painted_layer_ids: tuple[str, ...] = ()
 
 
+@dataclass(frozen=True)
+class _LayerReadResult:
+    written: bool
+    no_overlap: bool = False
+    fully_occluded: bool = False
+
+
 class RenderError(Exception):
     """Raised when rendering cannot produce any output; carries structured issues."""
 
@@ -217,10 +224,12 @@ def _read_layer_into(
     dataset: DatasetReader,
     geo_bbox: tuple[float, float, float, float],
     canvas: np.ndarray,
-) -> bool:
+    covered_mask: np.ndarray,
+) -> _LayerReadResult:
     """Read ``dataset`` into the ``canvas`` region corresponding to its overlap.
 
-    Returns ``True`` if pixels were written, ``False`` if no overlap.
+    Returns a structured result so callers can distinguish no-overlap from
+    occlusion by already-painted higher layers.
     """
     raster_crs = normalize_crs_key(dataset.crs)
     use_vrt = raster_crs != GEOGRAPHIC_CRS
@@ -239,7 +248,7 @@ def _read_layer_into(
     try:
         resolution = geographic_window_to_raster_window(geo_bbox, src)
         if resolution is None:
-            return False
+            return _LayerReadResult(written=False, no_overlap=True)
 
         canvas_h, canvas_w = canvas.shape[:2]
         row0, row1, col0, col1 = _geo_to_pixel(
@@ -248,13 +257,36 @@ def _read_layer_into(
         out_h = row1 - row0
         out_w = col1 - col0
         if out_h <= 0 or out_w <= 0:
-            return False
+            return _LayerReadResult(written=False, no_overlap=True)
+
+        covered_slice = covered_mask[row0:row1, col0:col1]
+        if covered_slice.all():
+            return _LayerReadResult(written=False, fully_occluded=True)
+
+        (
+            read_window,
+            read_row0,
+            read_row1,
+            read_col0,
+            read_col1,
+        ) = _uncovered_read_window(
+            resolution.window,
+            covered_slice=covered_slice,
+            row0=row0,
+            col0=col0,
+            out_h=out_h,
+            out_w=out_w,
+        )
+        read_out_h = read_row1 - read_row0
+        read_out_w = read_col1 - read_col0
+        if read_out_h <= 0 or read_out_w <= 0:
+            return _LayerReadResult(written=False, fully_occluded=True)
 
         read_bands, alpha_index = _resolve_band_indexes(src)
         data = src.read(
             indexes=read_bands,
-            window=resolution.window,
-            out_shape=(len(read_bands), out_h, out_w),
+            window=read_window,
+            out_shape=(len(read_bands), read_out_h, read_out_w),
             resampling=Resampling.bilinear,
             masked=True,
         )
@@ -263,9 +295,9 @@ def _read_layer_into(
         alpha_mask = _read_alpha_mask(
             src,
             alpha_index=alpha_index,
-            window=resolution.window,
-            out_h=out_h,
-            out_w=out_w,
+            window=read_window,
+            out_h=read_out_h,
+            out_w=read_out_w,
         )
         if alpha_mask is not None:
             mask = np.logical_or(mask, alpha_mask)
@@ -277,13 +309,60 @@ def _read_layer_into(
 
         valid = ~mask
         if not valid.any():
-            return False
-        target = canvas[row0:row1, col0:col1, :]
-        target[valid, :] = np.transpose(rgb, (1, 2, 0))[valid, :]
-        return True
+            return _LayerReadResult(written=False)
+        target = canvas[read_row0:read_row1, read_col0:read_col1, :]
+        target_covered = covered_mask[read_row0:read_row1, read_col0:read_col1]
+        drawable = np.logical_and(valid, ~target_covered)
+        if not drawable.any():
+            return _LayerReadResult(written=False, fully_occluded=True)
+        target[drawable, :] = np.transpose(rgb, (1, 2, 0))[drawable, :]
+        target_covered[drawable] = True
+        return _LayerReadResult(written=True)
     finally:
         if use_vrt:
             src.close()
+
+
+def _uncovered_read_window(
+    window,
+    *,
+    covered_slice: np.ndarray,
+    row0: int,
+    col0: int,
+    out_h: int,
+    out_w: int,
+):
+    uncovered_rows, uncovered_cols = np.where(~covered_slice)
+    if uncovered_rows.size == 0 or uncovered_cols.size == 0:
+        return window, row0, row0, col0, col0
+
+    local_row0 = int(uncovered_rows.min())
+    local_row1 = int(uncovered_rows.max()) + 1
+    local_col0 = int(uncovered_cols.min())
+    local_col1 = int(uncovered_cols.max()) + 1
+
+    read_window = window.round_offsets(op="floor").round_lengths(op="ceil")
+    if (
+        local_row0 == 0
+        and local_row1 == out_h
+        and local_col0 == 0
+        and local_col1 == out_w
+    ):
+        return read_window, row0, row0 + out_h, col0, col0 + out_w
+
+    read_window = rasterio.windows.Window(
+        col_off=window.col_off + (local_col0 / out_w) * window.width,
+        row_off=window.row_off + (local_row0 / out_h) * window.height,
+        width=((local_col1 - local_col0) / out_w) * window.width,
+        height=((local_row1 - local_row0) / out_h) * window.height,
+    ).round_offsets(op="floor").round_lengths(op="ceil")
+    return (
+        read_window,
+        row0 + local_row0,
+        row0 + local_row1,
+        col0 + local_col0,
+        col0 + local_col1,
+    )
 
 
 def render_raster_layers(
@@ -344,8 +423,9 @@ def render_raster_layers_result(
 ) -> RasterRenderResult:
     """Composite visible raster layers into a single uint8 RGB canvas.
 
-    Layers are drawn in ``spec.visible_layers`` order (lower ``order`` first);
-    later layers overwrite earlier pixels where they cover.
+    Layers are composited as if drawn in ``spec.visible_layers`` order (lower
+    ``order`` first). Internally the renderer walks from top to bottom and skips
+    lower pixels already covered by valid pixels from higher layers.
     Per-layer IO/CRS failures are collected as ``Issue``s; rendering proceeds
     on remaining layers. If *no* layer is successfully drawn AND at least one
     issue was recorded, ``RenderError`` is raised.
@@ -398,10 +478,11 @@ def render_raster_layers_result(
     canvas[..., 1] = bg[1]
     canvas[..., 2] = bg[2]
 
-    painted_layer_ids: list[str] = []
+    covered_mask = np.zeros((spec.output_height, spec.output_width), dtype=bool)
+    painted_layer_ids: set[str] = set()
     skipped_no_overlap = 0
 
-    for layer in spec.visible_layers:
+    for layer in reversed(spec.visible_layers):
         if is_cancelled is not None and is_cancelled():
             issues.append(
                 _issue(
@@ -428,9 +509,15 @@ def render_raster_layers_result(
                         )
                     )
                     continue
-                if _read_layer_into(dataset=dataset, geo_bbox=geo_bbox, canvas=canvas):
-                    painted_layer_ids.append(layer.layer_id)
-                else:
+                layer_result = _read_layer_into(
+                    dataset=dataset,
+                    geo_bbox=geo_bbox,
+                    canvas=canvas,
+                    covered_mask=covered_mask,
+                )
+                if layer_result.written or layer_result.fully_occluded:
+                    painted_layer_ids.add(layer.layer_id)
+                elif layer_result.no_overlap:
                     skipped_no_overlap += 1
         except (RasterioCRSError, PyprojCRSError, ProjError) as exc:
             issues.append(
@@ -466,7 +553,11 @@ def render_raster_layers_result(
                 )
             )
 
-    if spec.visible_layers and not painted_layer_ids and not issues and skipped_no_overlap:
+    ordered_painted_layer_ids = tuple(
+        layer.layer_id for layer in spec.visible_layers if layer.layer_id in painted_layer_ids
+    )
+
+    if spec.visible_layers and not ordered_painted_layer_ids and not issues and skipped_no_overlap:
         issues.append(
             _render_issue(
                 "render.raster.no_overlap",
@@ -477,11 +568,11 @@ def render_raster_layers_result(
             )
         )
 
-    if not painted_layer_ids and issues:
+    if not ordered_painted_layer_ids and issues:
         raise RenderError(issues)
 
     return RasterRenderResult(
         canvas=canvas,
         issues=tuple(issues),
-        painted_layer_ids=tuple(painted_layer_ids),
+        painted_layer_ids=ordered_painted_layer_ids,
     )

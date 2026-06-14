@@ -104,6 +104,42 @@ def test_final_render_writes_jpeg_and_success_log(tmp_path: Path) -> None:
     assert entry["timestamp"] == "2026-05-26T08:30:00Z"
 
 
+def test_final_render_uses_configured_dpi_for_jpeg_and_currentness(
+    tmp_path: Path,
+) -> None:
+    configured_dpi = 144
+    spec = _spec(width=120, height=68)
+
+    result = render_final_png(
+        spec,
+        workspace_root=tmp_path,
+        render=_success_render,
+        dpi=configured_dpi,
+    )
+
+    assert result.output_path is not None
+    with Image.open(tmp_path / result.output_path) as image:
+        dpi = image.info["dpi"]
+        assert round(dpi[0]) == configured_dpi
+        assert round(dpi[1]) == configured_dpi
+    assert (
+        is_final_render_current(
+            workspace_root=tmp_path,
+            output_path=result.output_path,
+            log_path=result.log_path,
+            spec=spec,
+        ).reason
+        == "output_dpi_mismatch"
+    )
+    assert is_final_render_current(
+        workspace_root=tmp_path,
+        output_path=result.output_path,
+        log_path=result.log_path,
+        spec=spec,
+        dpi=configured_dpi,
+    ) == FinalRenderCurrentness(current=True, reason=None)
+
+
 def test_render_spec_hash_includes_temporal_compare_state() -> None:
     base = _spec()
     compare = base.model_copy(

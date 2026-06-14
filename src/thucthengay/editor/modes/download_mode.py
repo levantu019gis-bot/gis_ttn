@@ -24,6 +24,7 @@ from thucthengay.download import (
     SatelliteDownloadResult,
     resolve_download_request,
 )
+from thucthengay.editor.preferences import DownloadPreferences
 from thucthengay.editor.widgets.multi_path_list import MultiPathListWidget
 from thucthengay.editor.widgets.path_picker import PathKind, PathPickerRow
 from thucthengay.jobs import ProgressEvent
@@ -155,6 +156,42 @@ class DownloadMode(QWidget):
         self.download_button.clicked.connect(self._emit_download_requested)
         self.cancel_button.clicked.connect(self.cancelRequested.emit)
         self._update_action_state()
+
+    def apply_recent_parameters(self, preferences: DownloadPreferences) -> None:
+        """Restore Download tab inputs from persisted user preferences."""
+        self.geojson_files.clear_paths()
+        self.geojson_files.add_paths(tuple(preferences.geojson_files))
+        self.image_folders.clear_paths()
+        self.image_folders.add_paths(tuple(preferences.image_folders))
+        if preferences.output_folder:
+            self.output_row.set_path(preferences.output_folder)
+        else:
+            self.output_row.clear()
+        self.overwrite_checkbox.setChecked(preferences.overwrite)
+        self.dry_run_checkbox.setChecked(preferences.dry_run)
+        self.include_boundary_checkbox.setChecked(preferences.include_boundary_touch)
+        self.preserve_tree_checkbox.setChecked(preferences.preserve_source_tree)
+        self.write_manifest_checkbox.setChecked(preferences.write_manifest)
+        self.cloud_filter_checkbox.setChecked(preferences.cloud_filter_enabled)
+        self.cloud_filter_spin.setValue(preferences.max_cloud_percent)
+        self.scan_workers_spin.setValue(preferences.scan_workers)
+        self._update_action_state()
+
+    def preference_payload(self) -> dict[str, object]:
+        """Return the current Download tab inputs in PreferencesService format."""
+        return {
+            "geojson_files": _path_texts(self.geojson_files),
+            "image_folders": _path_texts(self.image_folders),
+            "output_folder": self.output_row.path_field.full_text or None,
+            "overwrite": self.overwrite_checkbox.isChecked(),
+            "dry_run": self.dry_run_checkbox.isChecked(),
+            "include_boundary_touch": self.include_boundary_checkbox.isChecked(),
+            "preserve_source_tree": self.preserve_tree_checkbox.isChecked(),
+            "write_manifest": self.write_manifest_checkbox.isChecked(),
+            "cloud_filter_enabled": self.cloud_filter_checkbox.isChecked(),
+            "max_cloud_percent": self.cloud_filter_spin.value(),
+            "scan_workers": self.scan_workers_spin.value(),
+        }
 
     def selected_request(self) -> SatelliteDownloadRequest | None:
         """Return a validated request for the current form state."""
@@ -379,6 +416,14 @@ def _cloud_filename_formats(max_cloud_percent: float) -> list[DownloadFilenameFo
             name="generic_cloud_tiff",
             max_cloud_percent=max_cloud_percent,
         ),
+    ]
+
+
+def _path_texts(widget: MultiPathListWidget) -> list[str]:
+    return [
+        row.path_field.full_text
+        for row in widget.row_widgets()
+        if row.path_field.full_text.strip()
     ]
 
 

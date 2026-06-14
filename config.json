@@ -37,6 +37,7 @@
     "export": {
       "date_format": "dd.MM.yy",
       "time_format": "HH.mm/dd.MM.yy",
+      "final_render_dpi": 200,
       "map_background_color": "#3a3756"
     }
   },
@@ -573,8 +574,8 @@
       "name": "Đá Bắc/Cụm Song Tử",
       "alias": "Đá Bắc/Cụm Song Tử",
       "coordinate": [
-        114.39332500344567,
-        11.465329424418355
+        114.39524898,
+        11.47376362
       ],
       "scale": 50000,
       "grid": {
