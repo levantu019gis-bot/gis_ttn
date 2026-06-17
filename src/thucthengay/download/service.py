@@ -7,6 +7,7 @@ from pathlib import Path
 from thucthengay.download.models import (
     DEFAULT_DOWNLOAD_EXTENSIONS,
     DownloadImageFolder,
+    DownloadOutputStructure,
     ResolvedSatelliteDownloadRequest,
     SatelliteDownloadRequest,
 )
@@ -30,6 +31,7 @@ def resolve_download_request(
     image_folders = _resolve_image_folders(request.image_folders, base_dir)
     output_dir = _resolve_path(request.output_dir, base_dir).resolve()
     extensions = _normalize_extensions(request.extensions)
+    output_structure = _normalize_output_structure(request.output_structure)
     _validate_output_location(output_dir, image_folders)
 
     return ResolvedSatelliteDownloadRequest(
@@ -44,6 +46,7 @@ def resolve_download_request(
         preserve_source_tree=bool(request.preserve_source_tree),
         write_manifest=bool(request.write_manifest),
         scan_workers=_normalize_scan_workers(request.scan_workers),
+        output_structure=output_structure,
     )
 
 
@@ -158,6 +161,19 @@ def _normalize_scan_workers(raw_value: int) -> int:
             field_name="scan_workers",
         )
     return min(value, 16)
+
+
+def _normalize_output_structure(
+    raw_value: DownloadOutputStructure | str,
+) -> DownloadOutputStructure:
+    try:
+        return DownloadOutputStructure(raw_value)
+    except ValueError as error:
+        allowed = ", ".join(item.value for item in DownloadOutputStructure)
+        raise SatelliteDownloadConfigError(
+            f"`output_structure` khong hop le. Gia tri hop le: {allowed}.",
+            field_name="output_structure",
+        ) from error
 
 
 def _resolve_path(raw_path: str | Path, base_dir: Path | None) -> Path:

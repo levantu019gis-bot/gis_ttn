@@ -30,14 +30,31 @@ class DownloadImageFolder:
     path: Path
 
 
+class DownloadOutputStructure(StrEnum):
+    """Supported satellite download output directory layouts."""
+
+    GEOJSON_SOURCE = "geojson_source"
+    GEOJSON_SOURCE_GEOMETRY = "geojson_source_geometry"
+
+
 @dataclass(frozen=True)
 class DownloadGeoJsonArea:
-    """Prepared AOI loaded from one explicit GeoJSON file."""
+    """Prepared AOI geometry loaded from one explicit GeoJSON file."""
 
     name: str
     path: Path
     crs: str
     geometry: Any
+    geometry_name: str
+
+
+@dataclass(frozen=True)
+class DownloadMatchedGeometry:
+    """One GeoJSON geometry branch intersected by a source image."""
+
+    geojson_name: str
+    geojson_path: Path
+    geometry_name: str
 
 
 @dataclass(frozen=True)
@@ -56,6 +73,7 @@ class DownloadRasterMetadata:
 
     crs: str
     bounds: tuple[float, float, float, float]
+    footprint: Any | None = None
 
 
 @dataclass(frozen=True)
@@ -67,6 +85,7 @@ class DownloadImageMatch:
     raster: DownloadRasterMetadata
     matched_geojson_names: tuple[str, ...]
     matched_geojson_paths: tuple[Path, ...]
+    matched_geometries: tuple[DownloadMatchedGeometry, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -146,6 +165,7 @@ class SatelliteDownloadRequest:
     preserve_source_tree: bool = True
     write_manifest: bool = True
     scan_workers: int = 4
+    output_structure: DownloadOutputStructure | str = DownloadOutputStructure.GEOJSON_SOURCE
 
 
 @dataclass(frozen=True)
@@ -163,6 +183,7 @@ class ResolvedSatelliteDownloadRequest:
     preserve_source_tree: bool
     write_manifest: bool
     scan_workers: int = 4
+    output_structure: DownloadOutputStructure = DownloadOutputStructure.GEOJSON_SOURCE
 
 
 @dataclass(frozen=True)

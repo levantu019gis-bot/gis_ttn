@@ -5,6 +5,7 @@ from __future__ import annotations
 import csv
 import shutil
 from collections.abc import Callable
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
@@ -13,7 +14,9 @@ from thucthengay.download.models import (
     DownloadFilenameMetadata,
     DownloadImageFolder,
     DownloadManifestRow,
+    DownloadMatchedGeometry,
     DownloadOutputResult,
+    DownloadOutputStructure,
     DownloadStats,
     PreparedDownloadImage,
     ResolvedSatelliteDownloadRequest,
@@ -41,6 +44,13 @@ MANIFEST_FIELDNAMES = (
 )
 
 
+@dataclass(frozen=True)
+class _OutputTarget:
+    geojson_name: str
+    geometry_name: str | None
+    manifest_geojson: str
+
+
 def write_download_outputs(
     request: ResolvedSatelliteDownloadRequest,
     filter_result: DownloadFilenameFilterResult,
@@ -58,11 +68,7 @@ def write_download_outputs(
     failed_count = len(filter_result.failed_images)
 
     for prepared in filter_result.accepted_matches:
-        for geojson_name, geojson_path in zip(
-            prepared.match.matched_geojson_names,
-            prepared.match.matched_geojson_paths,
-            strict=True,
-        ):
+        for output_target in _output_targets(prepared, geojson_names, request.output_structure):
             if should_cancel is not None and should_cancel():
                 return _result(
                     request,
@@ -74,12 +80,12 @@ def write_download_outputs(
                     cancelled=True,
                 )
             source_folder = _resolved_source_folder(prepared, source_folders)
-            branch_name = _resolved_geojson_name(geojson_name, geojson_path, geojson_names)
             destination = destination_for(
                 request,
                 prepared,
                 source_folder=source_folder,
-                geojson_name=branch_name,
+                geojson_name=output_target.geojson_name,
+                geometry_name=output_target.geometry_name,
             )
             try:
                 status = _copy_file(
@@ -96,7 +102,7 @@ def write_download_outputs(
                         status="failed",
                         source_folder=source_folder,
                         destination_path=destination,
-                        matched_geojson=branch_name,
+                        matched_geojson=output_target.manifest_geojson,
                         error=str(error),
                     )
                 )
@@ -122,7 +128,7 @@ def write_download_outputs(
                     status=status,
                     source_folder=source_folder,
                     destination_path=destination,
-                    matched_geojson=branch_name,
+                    matched_geojson=output_target.manifest_geojson,
                     error="",
                 )
             )
@@ -212,12 +218,69 @@ def _result(
     )
 
 
+def _output_targets(
+    prepared: PreparedDownloadImage,
+    geojson_names: dict[Path, str],
+    output_structure: DownloadOutputStructure,
+) -> tuple[_OutputTarget, ...]:
+    if output_structure == DownloadOutputStructure.GEOJSON_SOURCE_GEOMETRY:
+        if not prepared.match.matched_geometries:
+            return tuple(
+                _OutputTarget(
+                    geojson_name=_resolved_geojson_name(geojson_name, geojson_path, geojson_names),
+                    geometry_name="geometry_001",
+                    manifest_geojson=(
+                        f"{_resolved_geojson_name(geojson_name, geojson_path, geojson_names)}"
+                        "/geometry_001"
+                    ),
+                )
+                for geojson_name, geojson_path in zip(
+                    prepared.match.matched_geojson_names,
+                    prepared.match.matched_geojson_paths,
+                    strict=True,
+                )
+            )
+        return tuple(
+            _geometry_output_target(geometry, geojson_names)
+            for geometry in prepared.match.matched_geometries
+        )
+    return tuple(
+        _OutputTarget(
+            geojson_name=_resolved_geojson_name(geojson_name, geojson_path, geojson_names),
+            geometry_name=None,
+            manifest_geojson=_resolved_geojson_name(geojson_name, geojson_path, geojson_names),
+        )
+        for geojson_name, geojson_path in zip(
+            prepared.match.matched_geojson_names,
+            prepared.match.matched_geojson_paths,
+            strict=True,
+        )
+    )
+
+
+def _geometry_output_target(
+    geometry: DownloadMatchedGeometry,
+    geojson_names: dict[Path, str],
+) -> _OutputTarget:
+    geojson_name = _resolved_geojson_name(
+        geometry.geojson_name,
+        geometry.geojson_path,
+        geojson_names,
+    )
+    return _OutputTarget(
+        geojson_name=geojson_name,
+        geometry_name=geometry.geometry_name,
+        manifest_geojson=f"{geojson_name}/{geometry.geometry_name}",
+    )
+
+
 def destination_for(
     request: ResolvedSatelliteDownloadRequest,
     prepared: PreparedDownloadImage,
     *,
     source_folder: DownloadImageFolder,
     geojson_name: str,
+    geometry_name: str | None = None,
 ) -> Path:
     """Return the output path for one accepted image and matched GeoJSON branch."""
 
@@ -229,6 +292,9 @@ def destination_for(
             leaf = Path(source_path.name)
     else:
         leaf = Path(source_path.name)
+    if request.output_structure == DownloadOutputStructure.GEOJSON_SOURCE_GEOMETRY:
+        geometry_branch = safe_name(geometry_name or "geometry_001")
+        return request.output_dir / geojson_name / source_folder.name / geometry_branch / leaf
     return request.output_dir / geojson_name / source_folder.name / leaf
 
 

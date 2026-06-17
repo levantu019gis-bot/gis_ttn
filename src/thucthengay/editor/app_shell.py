@@ -348,6 +348,9 @@ class AppShell(QMainWindow):
         self.download_mode.write_manifest_checkbox.toggled.connect(
             self._persist_download_parameters
         )
+        self.download_mode.output_structure_combo.currentIndexChanged.connect(
+            self._persist_download_parameters
+        )
         self.download_mode.cloud_filter_checkbox.toggled.connect(self._persist_download_parameters)
         self.download_mode.cloud_filter_spin.valueChanged.connect(self._persist_download_parameters)
         self.download_mode.scan_workers_spin.valueChanged.connect(self._persist_download_parameters)

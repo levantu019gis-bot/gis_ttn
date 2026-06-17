@@ -138,6 +138,98 @@ def test_match_source_images_records_one_image_for_multiple_geojsons(tmp_path: P
     assert result.matches[0].matched_geojson_paths == (area_a.resolve(), area_b.resolve())
 
 
+def test_match_source_images_records_geometry_names_for_output_branches(
+    tmp_path: Path,
+) -> None:
+    source = tmp_path / "images"
+    source.mkdir()
+    raster = source / "scene.tif"
+    write_geotiff(raster)
+    area = tmp_path / "all_processed.geojson"
+    area.write_text(
+        json.dumps(
+            {
+                "type": "FeatureCollection",
+                "features": [
+                    {
+                        "type": "Feature",
+                        "properties": {"name": "Target A"},
+                        "geometry": {
+                            "type": "Polygon",
+                            "coordinates": [square(106.05, 10.85, 106.08, 10.88)],
+                        },
+                    },
+                    {
+                        "type": "Feature",
+                        "properties": {},
+                        "geometry": {
+                            "type": "Polygon",
+                            "coordinates": [square(106.07, 10.87, 106.09, 10.89)],
+                        },
+                    },
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    result = match_source_images(
+        resolve_download_request(
+            SatelliteDownloadRequest(
+                geojson_files=[area],
+                image_folders=[source],
+                output_dir=tmp_path / "out",
+            )
+        )
+    )
+
+    assert len(result.matches) == 1
+    assert result.matches[0].matched_geojson_names == ("all_processed",)
+    assert [item.geometry_name for item in result.matches[0].matched_geometries] == [
+        "Target_A",
+        "geometry_002",
+    ]
+
+
+def test_match_source_images_uses_yaml_sidecar_footprint_without_opening_raster(
+    tmp_path: Path,
+) -> None:
+    source = tmp_path / "images"
+    source.mkdir()
+    raster = source / "scene.tif"
+    raster.write_text("not a geotiff", encoding="utf-8")
+    (source / "scene.yaml").write_text(
+        "\n".join(
+            [
+                "cloud_percent: 12",
+                "the_geom: POLYGON ((0 0, 1 0, 0 1, 0 0))",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    inside = tmp_path / "inside.geojson"
+    bbox_only = tmp_path / "bbox_only.geojson"
+    write_feature_collection(inside, [square(0.10, 0.10, 0.20, 0.20)])
+    write_feature_collection(bbox_only, [square(0.80, 0.80, 0.90, 0.90)])
+
+    result = match_source_images(
+        resolve_download_request(
+            SatelliteDownloadRequest(
+                geojson_files=[inside, bbox_only],
+                image_folders=[source],
+                output_dir=tmp_path / "out",
+            )
+        )
+    )
+
+    assert result.failed_images == ()
+    assert len(result.matches) == 1
+    assert result.matches[0].path == raster.resolve()
+    assert result.matches[0].raster.crs == "EPSG:4326"
+    assert result.matches[0].raster.footprint is not None
+    assert result.matches[0].matched_geojson_names == ("inside",)
+
+
 def test_match_source_images_records_failed_raster_and_continues(tmp_path: Path) -> None:
     source = tmp_path / "images"
     source.mkdir()

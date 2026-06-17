@@ -656,10 +656,10 @@
       "name": "Bãi cạn Đinh Ba, Núi Cầu",
       "alias": "Bãi cạn Đinh Ba, Núi Cầu",
       "coordinate": [
-        114.45282341,
-        11.45046684
+        114.6893194,
+        11.42751808
       ],
-      "scale": 10000,
+      "scale": 102820,
       "grid": {
         "interval": {
           "minutes": 1

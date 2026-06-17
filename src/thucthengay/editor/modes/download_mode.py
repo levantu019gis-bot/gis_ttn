@@ -5,6 +5,7 @@ from __future__ import annotations
 from PySide6.QtCore import Signal
 from PySide6.QtWidgets import (
     QCheckBox,
+    QComboBox,
     QDoubleSpinBox,
     QGroupBox,
     QHBoxLayout,
@@ -18,6 +19,7 @@ from PySide6.QtWidgets import (
 
 from thucthengay.download import (
     DownloadFilenameFormatRule,
+    DownloadOutputStructure,
     DownloadRunStatus,
     SatelliteDownloadConfigError,
     SatelliteDownloadRequest,
@@ -62,9 +64,17 @@ class DownloadMode(QWidget):
             dialog_caption="Chon folder output",
         )
         self.output_row.setObjectName("downloadOutputFolder")
-        self.output_hint = QLabel(
-            "Anh copy ve se nam trong output/ten_geojson/ten_folder_anh/..."
+        self.output_structure_combo = QComboBox()
+        self.output_structure_combo.setObjectName("downloadOutputStructure")
+        self.output_structure_combo.addItem(
+            "GeoJSON / folder anh",
+            DownloadOutputStructure.GEOJSON_SOURCE.value,
         )
+        self.output_structure_combo.addItem(
+            "GeoJSON / folder anh / geometry",
+            DownloadOutputStructure.GEOJSON_SOURCE_GEOMETRY.value,
+        )
+        self.output_hint = QLabel(_output_hint_text(self._output_structure_value()))
         self.output_hint.setObjectName("downloadOutputStructureHint")
         self.output_hint.setWordWrap(True)
 
@@ -149,6 +159,9 @@ class DownloadMode(QWidget):
         self.include_boundary_checkbox.toggled.connect(self._update_action_state)
         self.preserve_tree_checkbox.toggled.connect(self._update_action_state)
         self.write_manifest_checkbox.toggled.connect(self._update_action_state)
+        self.output_structure_combo.currentIndexChanged.connect(
+            self._handle_output_structure_changed
+        )
         self.cloud_filter_checkbox.toggled.connect(self.cloud_filter_spin.setEnabled)
         self.cloud_filter_checkbox.toggled.connect(self._update_action_state)
         self.cloud_filter_spin.valueChanged.connect(self._update_action_state)
@@ -172,6 +185,7 @@ class DownloadMode(QWidget):
         self.include_boundary_checkbox.setChecked(preferences.include_boundary_touch)
         self.preserve_tree_checkbox.setChecked(preferences.preserve_source_tree)
         self.write_manifest_checkbox.setChecked(preferences.write_manifest)
+        self._select_output_structure(preferences.output_structure)
         self.cloud_filter_checkbox.setChecked(preferences.cloud_filter_enabled)
         self.cloud_filter_spin.setValue(preferences.max_cloud_percent)
         self.scan_workers_spin.setValue(preferences.scan_workers)
@@ -188,6 +202,7 @@ class DownloadMode(QWidget):
             "include_boundary_touch": self.include_boundary_checkbox.isChecked(),
             "preserve_source_tree": self.preserve_tree_checkbox.isChecked(),
             "write_manifest": self.write_manifest_checkbox.isChecked(),
+            "output_structure": self._output_structure_value().value,
             "cloud_filter_enabled": self.cloud_filter_checkbox.isChecked(),
             "max_cloud_percent": self.cloud_filter_spin.value(),
             "scan_workers": self.scan_workers_spin.value(),
@@ -213,6 +228,13 @@ class DownloadMode(QWidget):
         layout.addWidget(self.geojson_files)
         layout.addWidget(self.image_folders)
         layout.addWidget(self.output_row)
+        output_structure_row = QHBoxLayout()
+        output_structure_row.setContentsMargins(0, 0, 0, 0)
+        output_structure_row.setSpacing(8)
+        output_structure_row.addWidget(QLabel("Cau truc output"))
+        output_structure_row.addWidget(self.output_structure_combo)
+        output_structure_row.addStretch(1)
+        layout.addLayout(output_structure_row)
         layout.addWidget(self.output_hint)
         return group
 
@@ -327,6 +349,7 @@ class DownloadMode(QWidget):
             include_boundary_touch=self.include_boundary_checkbox.isChecked(),
             preserve_source_tree=self.preserve_tree_checkbox.isChecked(),
             write_manifest=self.write_manifest_checkbox.isChecked(),
+            output_structure=self._output_structure_value(),
             filename_formats=_cloud_filename_formats(
                 self.cloud_filter_spin.value()
             )
@@ -361,7 +384,7 @@ class DownloadMode(QWidget):
         if ready:
             self.download_button.setToolTip("San sang download anh ve tinh.")
             self.status_label.setText(
-                "San sang. Ket qua se nam trong output/ten_geojson/ten_folder_anh/..."
+                f"San sang. {_output_hint_text(self._output_structure_value())}"
             )
             self.status_label.setProperty("state", "valid")
             return
@@ -382,6 +405,7 @@ class DownloadMode(QWidget):
         self.geojson_files.setEnabled(enabled)
         self.image_folders.setEnabled(enabled)
         self.output_row.setEnabled(enabled)
+        self.output_structure_combo.setEnabled(enabled)
         self.overwrite_checkbox.setEnabled(enabled)
         self.dry_run_checkbox.setEnabled(enabled)
         self.include_boundary_checkbox.setEnabled(enabled)
@@ -390,6 +414,26 @@ class DownloadMode(QWidget):
         self.cloud_filter_checkbox.setEnabled(enabled)
         self.cloud_filter_spin.setEnabled(enabled and self.cloud_filter_checkbox.isChecked())
         self.scan_workers_spin.setEnabled(enabled)
+
+    def _handle_output_structure_changed(self, *_args: object) -> None:
+        self.output_hint.setText(_output_hint_text(self._output_structure_value()))
+        self._update_action_state()
+
+    def _output_structure_value(self) -> DownloadOutputStructure:
+        value = self.output_structure_combo.currentData()
+        try:
+            return DownloadOutputStructure(value)
+        except ValueError:
+            return DownloadOutputStructure.GEOJSON_SOURCE
+
+    def _select_output_structure(self, value: str) -> None:
+        index = self.output_structure_combo.findData(value)
+        if index < 0:
+            index = self.output_structure_combo.findData(
+                DownloadOutputStructure.GEOJSON_SOURCE.value
+            )
+        self.output_structure_combo.setCurrentIndex(max(0, index))
+        self.output_hint.setText(_output_hint_text(self._output_structure_value()))
 
 
 def _cloud_filename_formats(max_cloud_percent: float) -> list[DownloadFilenameFormatRule]:
@@ -417,6 +461,15 @@ def _cloud_filename_formats(max_cloud_percent: float) -> list[DownloadFilenameFo
             max_cloud_percent=max_cloud_percent,
         ),
     ]
+
+
+def _output_hint_text(output_structure: DownloadOutputStructure) -> str:
+    if output_structure == DownloadOutputStructure.GEOJSON_SOURCE_GEOMETRY:
+        return (
+            "Anh copy ve se nam trong "
+            "output/ten_geojson/ten_folder_anh/ten_geometry/..."
+        )
+    return "Anh copy ve se nam trong output/ten_geojson/ten_folder_anh/..."
 
 
 def _path_texts(widget: MultiPathListWidget) -> list[str]:

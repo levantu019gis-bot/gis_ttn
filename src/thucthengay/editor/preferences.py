@@ -82,6 +82,7 @@ class DownloadPreferences(BaseModel):
     include_boundary_touch: bool = True
     preserve_source_tree: bool = True
     write_manifest: bool = True
+    output_structure: Literal["geojson_source", "geojson_source_geometry"] = "geojson_source"
     cloud_filter_enabled: bool = False
     max_cloud_percent: float = Field(default=90.0, ge=0.0, le=100.0)
     scan_workers: int = Field(default=4, ge=1, le=16)
@@ -234,6 +235,7 @@ class PreferencesService:
         cloud_filter_enabled: bool,
         max_cloud_percent: float,
         scan_workers: int,
+        output_structure: str = "geojson_source",
     ) -> bool:
         download = DownloadPreferences(
             geojson_files=[_normalized_path_text(path) for path in geojson_files if path.strip()],
@@ -244,6 +246,7 @@ class PreferencesService:
             include_boundary_touch=include_boundary_touch,
             preserve_source_tree=preserve_source_tree,
             write_manifest=write_manifest,
+            output_structure=output_structure,
             cloud_filter_enabled=cloud_filter_enabled,
             max_cloud_percent=max_cloud_percent,
             scan_workers=scan_workers,

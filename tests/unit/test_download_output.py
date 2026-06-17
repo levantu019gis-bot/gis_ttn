@@ -9,6 +9,8 @@ from thucthengay.download import (
     DownloadFilenameMetadata,
     DownloadImageFolder,
     DownloadImageMatch,
+    DownloadMatchedGeometry,
+    DownloadOutputStructure,
     DownloadRasterMetadata,
     DownloadStats,
     FailedDownloadImage,
@@ -98,6 +100,77 @@ def test_duplicate_safe_names_use_suffixes_and_manifest_remains_traceable(tmp_pa
     assert manifest_rows[0]["matched_geojson"] == "all_processed"
     assert manifest_rows[1]["source_path"] == str(raster_b)
     assert manifest_rows[1]["matched_geojson"] == "all_processed_2"
+
+
+def test_output_tree_can_group_by_geojson_source_folder_and_geometry(tmp_path: Path) -> None:
+    source = tmp_path / "input" / "20260613"
+    raster = source / "nested" / "scene.tif"
+    raster.parent.mkdir(parents=True)
+    raster.write_bytes(b"scene")
+    geojson = tmp_path / "all_processed.geojson"
+    request = make_request(
+        tmp_path,
+        source,
+        geojson_files=(geojson,),
+        output_structure=DownloadOutputStructure.GEOJSON_SOURCE_GEOMETRY,
+        preserve_source_tree=True,
+    )
+    match = make_match(
+        raster,
+        source,
+        ("all_processed",),
+        (geojson,),
+        matched_geometries=(
+            DownloadMatchedGeometry(
+                geojson_name="all_processed",
+                geojson_path=geojson,
+                geometry_name="Target_A",
+            ),
+            DownloadMatchedGeometry(
+                geojson_name="all_processed",
+                geojson_path=geojson,
+                geometry_name="geometry_002",
+            ),
+        ),
+    )
+
+    result = write_download_outputs(
+        request,
+        DownloadFilenameFilterResult(
+            accepted_matches=(PreparedDownloadImage(match=match, metadata=metadata()),),
+            skipped_cloud_images=(),
+            failed_images=(),
+            warnings=(),
+            stats=DownloadStats(total_images=1, scanned_images=1, matched_images=1),
+        ),
+    )
+
+    expected_a = (
+        tmp_path
+        / "out"
+        / "all_processed"
+        / "20260613"
+        / "Target_A"
+        / "nested"
+        / "scene.tif"
+    )
+    expected_b = (
+        tmp_path
+        / "out"
+        / "all_processed"
+        / "20260613"
+        / "geometry_002"
+        / "nested"
+        / "scene.tif"
+    )
+    assert expected_a.read_bytes() == b"scene"
+    assert expected_b.read_bytes() == b"scene"
+    assert [row.destination_path for row in result.rows] == [expected_a, expected_b]
+    assert [row.matched_geojson for row in result.rows] == [
+        "all_processed/Target_A",
+        "all_processed/geometry_002",
+    ]
+    assert result.stats.downloaded_images == 2
 
 
 def test_skipped_existing_and_dry_run_do_not_overwrite_or_create_files(
@@ -235,6 +308,7 @@ def make_request(
     dry_run: bool = False,
     preserve_source_tree: bool = True,
     overwrite: bool = False,
+    output_structure: DownloadOutputStructure = DownloadOutputStructure.GEOJSON_SOURCE,
 ) -> ResolvedSatelliteDownloadRequest:
     return ResolvedSatelliteDownloadRequest(
         geojson_files=geojson_files or (tmp_path / "all_processed.geojson",),
@@ -247,6 +321,7 @@ def make_request(
         include_boundary_touch=True,
         preserve_source_tree=preserve_source_tree,
         write_manifest=True,
+        output_structure=output_structure,
     )
 
 
@@ -255,6 +330,7 @@ def make_match(
     source: Path,
     geojson_names: tuple[str, ...],
     geojson_paths: tuple[Path, ...],
+    matched_geometries: tuple[DownloadMatchedGeometry, ...] = (),
 ) -> DownloadImageMatch:
     return DownloadImageMatch(
         source_folder=DownloadImageFolder(name=source.name, path=source),
@@ -262,6 +338,7 @@ def make_match(
         raster=DownloadRasterMetadata(crs="EPSG:4326", bounds=(0.0, 0.0, 1.0, 1.0)),
         matched_geojson_names=geojson_names,
         matched_geojson_paths=geojson_paths,
+        matched_geometries=matched_geometries,
     )
 
 

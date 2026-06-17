@@ -8,6 +8,7 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 from PySide6.QtWidgets import QApplication
 
 from thucthengay.download import (
+    DownloadOutputStructure,
     DownloadRunStatus,
     DownloadStats,
     SatelliteDownloadRequest,
@@ -58,6 +59,7 @@ def test_app_shell_restores_recent_download_parameters(tmp_path: Path) -> None:
         include_boundary_touch=False,
         preserve_source_tree=False,
         write_manifest=False,
+        output_structure=DownloadOutputStructure.GEOJSON_SOURCE_GEOMETRY.value,
         cloud_filter_enabled=True,
         max_cloud_percent=55.5,
         scan_workers=7,
@@ -75,6 +77,7 @@ def test_app_shell_restores_recent_download_parameters(tmp_path: Path) -> None:
     assert request.include_boundary_touch is False
     assert request.preserve_source_tree is False
     assert request.write_manifest is False
+    assert request.output_structure == DownloadOutputStructure.GEOJSON_SOURCE_GEOMETRY
     assert shell.download_mode.cloud_filter_checkbox.isChecked()
     assert shell.download_mode.cloud_filter_spin.value() == 55.5
     assert request.scan_workers == 7
@@ -99,6 +102,11 @@ def test_app_shell_persists_download_parameter_changes(tmp_path: Path) -> None:
     shell.download_mode.include_boundary_checkbox.setChecked(False)
     shell.download_mode.preserve_tree_checkbox.setChecked(False)
     shell.download_mode.write_manifest_checkbox.setChecked(False)
+    shell.download_mode.output_structure_combo.setCurrentIndex(
+        shell.download_mode.output_structure_combo.findData(
+            DownloadOutputStructure.GEOJSON_SOURCE_GEOMETRY.value
+        )
+    )
     shell.download_mode.cloud_filter_checkbox.setChecked(True)
     shell.download_mode.cloud_filter_spin.setValue(42.5)
     shell.download_mode.scan_workers_spin.setValue(9)
@@ -113,6 +121,7 @@ def test_app_shell_persists_download_parameter_changes(tmp_path: Path) -> None:
     assert download.include_boundary_touch is False
     assert download.preserve_source_tree is False
     assert download.write_manifest is False
+    assert download.output_structure == DownloadOutputStructure.GEOJSON_SOURCE_GEOMETRY.value
     assert download.cloud_filter_enabled is True
     assert download.max_cloud_percent == 42.5
     assert download.scan_workers == 9
@@ -166,7 +175,34 @@ def test_download_mode_builds_request_from_multiple_geojsons_and_folders(
     assert request.include_boundary_touch is True
     assert request.preserve_source_tree is True
     assert request.write_manifest is True
+    assert request.output_structure == DownloadOutputStructure.GEOJSON_SOURCE
     assert request.scan_workers == 4
+
+
+def test_download_mode_builds_geometry_output_structure_request(tmp_path: Path) -> None:
+    qapp()
+    geojson = tmp_path / "a.geojson"
+    source = tmp_path / "source"
+    output = tmp_path / "output"
+    geojson.write_text('{"type":"FeatureCollection","features":[]}', encoding="utf-8")
+    source.mkdir()
+    output.mkdir()
+
+    mode = DownloadMode()
+    mode.geojson_files.add_path(geojson)
+    mode.image_folders.add_path(source)
+    mode.output_row.set_path(output)
+    mode.output_structure_combo.setCurrentIndex(
+        mode.output_structure_combo.findData(
+            DownloadOutputStructure.GEOJSON_SOURCE_GEOMETRY.value
+        )
+    )
+
+    request = mode.selected_request()
+
+    assert isinstance(request, SatelliteDownloadRequest)
+    assert request.output_structure == DownloadOutputStructure.GEOJSON_SOURCE_GEOMETRY
+    assert "ten_geometry" in mode.output_hint.text()
 
 
 def test_download_mode_builds_cloud_filter_and_workers_from_options(
