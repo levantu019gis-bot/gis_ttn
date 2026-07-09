@@ -424,6 +424,7 @@ def test_load_project_config_applies_shared_defaults_with_target_overrides(
                     "time_format": "HH.mm/dd.MM.yy",
                     "final_render_dpi": 300,
                     "map_background_color": "#AABBCC",
+                    "managed_source_root": "managed/sources",
                 },
             },
             "targets": [target],
@@ -445,6 +446,9 @@ def test_load_project_config_applies_shared_defaults_with_target_overrides(
     assert loaded_target.export.time_format == "HH:mm"
     assert loaded_target.export.final_render_dpi == 300
     assert loaded_target.export.map_background_color == "#AABBCC"
+    assert loaded_target.export.managed_source_root == str(
+        (tmp_path / "managed" / "sources").resolve()
+    )
 
 
 def test_load_project_config_resolves_historical_registry_database_path(

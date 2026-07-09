@@ -77,10 +77,10 @@
         111.50678145,
         17.08697955
       ],
-      "scale": 51315,
+      "scale": 57684,
       "grid": {
         "interval": {
-          "minutes": 2
+          "minutes": 5
         }
       },
       "export": {

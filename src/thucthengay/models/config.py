@@ -103,6 +103,7 @@ class TargetExportConfig(BaseModel):
             "map_background",
         ),
     )
+    managed_source_root: str | None = None
 
     @field_validator("map_background_color", mode="before")
     @classmethod
@@ -143,6 +144,7 @@ class ExportDefaultsConfig(BaseModel):
             "map_background",
         ),
     )
+    managed_source_root: str | None = None
 
     @field_validator("map_background_color", mode="before")
     @classmethod
@@ -426,6 +428,7 @@ def _export_with_project_defaults(
         "time_format",
         "final_render_dpi",
         "map_background_color",
+        "managed_source_root",
     ):
         if field_name not in normalized and field_name in export_defaults:
             normalized[field_name] = export_defaults[field_name]

@@ -1,0 +1,2533 @@
+{
+  "schema_version": "1.0",
+  "defaults": {
+    "grid": {
+      "label_format": "dms_full",
+      "style": {
+        "supported_label_formats": [
+          "dms_full",
+          "dms_short"
+        ],
+        "epsilon": "1e-10",
+        "max_frame_ticks_per_axis": 2000,
+        "reference_width": 3306,
+        "reference_height": 2340,
+        "reference_outer_frame": [
+          244,
+          144,
+          3272,
+          2286
+        ],
+        "reference_frame_gap": 42,
+        "surround_outer_stroke_width": 6,
+        "surround_inner_stroke_width": 4,
+        "surround_tick_length": 14,
+        "surround_tick_stroke_width": 4,
+        "reference_label_font_size": 72,
+        "default_label_font": "fonts/arial-bold/Arial Bold/Arial Bold.ttf",
+        "frame_color": "#000000",
+        "label_color": "#000000",
+        "label_font_size": 24,
+        "tick_length_px": 8,
+        "temporal_compare_pane_gap_px": 8,
+        "temporal_compare_gap_color": "#FFFFFF",
+        "max_frame_ticks": ""
+      }
+    },
+    "export": {
+      "date_format": "dd.MM.yy",
+      "time_format": "HH.mm/dd.MM.yy",
+      "final_render_dpi": 200,
+      "map_background_color": "#3a3756",
+      "managed_source_root": "D:/Managed_Satellite_Images"
+    }
+  },
+  "historical_registry": {
+    "enabled": true,
+    "database_path": "history/target-history.sqlite"
+  },
+  "historical_loading": {
+    "enabled": true,
+    "target_scope": "targets_with_current_matches",
+    "image_selection": {
+      "mode": "latest_date"
+    }
+  },
+  "filename_patterns": [
+    {
+      "name": "PlanetScope PSScene",
+      "pattern": "*_yyyyMMdd_HHmmss_*_*_cloud_cloud-percent"
+    },
+    {
+      "name": "PlanetScope simple",
+      "pattern": "yyyyMMdd_HHmmss_*"
+    }
+  ],
+  "targets": [
+    {
+      "id": "CCHQ_HAO_GIANG_1",
+      "enabled": true,
+      "group": {
+        "key": "1",
+        "title": "Nhóm 1"
+      },
+      "sort_order": 1,
+      "name": "CCHQ HAO GIANG 1",
+      "alias": "CCHQ HAO GIANG 1",
+      "coordinate": [
+        116.67967874,
+        23.34361945
+      ],
+      "scale": 50000,
+      "grid": {
+        "interval": {
+          "minutes": 5
+        }
+      },
+      "export": {
+        "template_pptx_file": "data/templates/target_003.template.pptx",
+        "template_txt_value": "xx",
+        "placeholders": [
+          {
+            "field": "map_image",
+            "kind": "map_image"
+          },
+          {
+            "field": "title",
+            "value": "Hiện trạng CCHQ HAO GIANG 1 ngày {capture_date}",
+            "kind": "text"
+          },
+          {
+            "field": "time_label_pane_A",
+            "value": "{time_label_pane_A}",
+            "kind": "text"
+          },
+          {
+            "field": "time_label_pane_B",
+            "value": "{time_label_pane_B}",
+            "kind": "text"
+          },
+          {
+            "field": "comment_label_pane_A",
+            "value": "Tổng: ... tàu quân sự",
+            "kind": "text"
+          },
+          {
+            "field": "comment_label_pane_B",
+            "value": "Không phát hiện tàu quân sự",
+            "kind": "text"
+          }
+        ]
+      },
+      "metadata": {
+        "geojson_geometry": {
+          "coordinates": [
+            [
+              [
+                116.67349844255779,
+                23.348952615983933
+              ],
+              [
+                116.67349844255779,
+                23.338286287962646
+              ],
+              [
+                116.68585903617117,
+                23.338286287962646
+              ],
+              [
+                116.68585903617117,
+                23.348952615983933
+              ],
+              [
+                116.67349844255779,
+                23.348952615983933
+              ]
+            ]
+          ],
+          "type": "Polygon"
+        }
+      }
+    },
+    {
+      "id": "CCHQ_HAO_GIANG_2",
+      "enabled": true,
+      "group": {
+        "key": "1",
+        "title": "Nhóm 1"
+      },
+      "sort_order": 2,
+      "name": "CCHQ HAO GIANG 2",
+      "alias": "CCHQ HAO GIANG 2",
+      "coordinate": [
+        116.65421564,
+        23.33759129
+      ],
+      "scale": 50000,
+      "grid": {
+        "interval": {
+          "minutes": 5
+        }
+      },
+      "export": {
+        "template_pptx_file": "data/templates/target_003.template.pptx",
+        "template_txt_value": "xx",
+        "placeholders": [
+          {
+            "field": "map_image",
+            "kind": "map_image"
+          },
+          {
+            "field": "title",
+            "value": "Hiện trạng CCHQ HAO GIANG 1 ngày {capture_date}",
+            "kind": "text"
+          },
+          {
+            "field": "time_label_pane_A",
+            "value": "{time_label_pane_A}",
+            "kind": "text"
+          },
+          {
+            "field": "time_label_pane_B",
+            "value": "{time_label_pane_B}",
+            "kind": "text"
+          },
+          {
+            "field": "comment_label_pane_A",
+            "value": "Tổng: ... tàu quân sự",
+            "kind": "text"
+          },
+          {
+            "field": "comment_label_pane_B",
+            "value": "Không phát hiện tàu quân sự",
+            "kind": "text"
+          }
+        ]
+      },
+      "metadata": {
+        "geojson_geometry": {
+          "coordinates": [
+            [
+              [
+                116.64654176499124,
+                23.343306552889715
+              ],
+              [
+                116.64654176499124,
+                23.33187603048917
+              ],
+              [
+                116.66188951490119,
+                23.33187603048917
+              ],
+              [
+                116.66188951490119,
+                23.343306552889715
+              ],
+              [
+                116.64654176499124,
+                23.343306552889715
+              ]
+            ]
+          ],
+          "type": "Polygon"
+        }
+      }
+    },
+    {
+      "id": "CCHQ_TU_MINH",
+      "enabled": true,
+      "group": {
+        "key": "1",
+        "title": "Nhóm 1"
+      },
+      "sort_order": 3,
+      "name": "CCHQ TU MINH",
+      "alias": "CCHQ TU MINH",
+      "coordinate": [
+        118.0730075,
+        24.450723
+      ],
+      "scale": 50000,
+      "grid": {
+        "interval": {
+          "minutes": 5
+        }
+      },
+      "export": {
+        "template_pptx_file": "data/templates/target_003.template.pptx",
+        "template_txt_value": "xx",
+        "placeholders": [
+          {
+            "field": "map_image",
+            "kind": "map_image"
+          },
+          {
+            "field": "title",
+            "value": "Hiện trạng CCHQ HAO GIANG 1 ngày {capture_date}",
+            "kind": "text"
+          },
+          {
+            "field": "time_label_pane_A",
+            "value": "{time_label_pane_A}",
+            "kind": "text"
+          },
+          {
+            "field": "time_label_pane_B",
+            "value": "{time_label_pane_B}",
+            "kind": "text"
+          },
+          {
+            "field": "comment_label_pane_A",
+            "value": "Tổng: ... tàu quân sự",
+            "kind": "text"
+          },
+          {
+            "field": "comment_label_pane_B",
+            "value": "Không phát hiện tàu quân sự",
+            "kind": "text"
+          }
+        ]
+      },
+      "metadata": {
+        "geojson_geometry": {
+          "type": "Polygon",
+          "coordinates": [
+            [
+              [
+                118.064821,
+                24.443577
+              ],
+              [
+                118.081194,
+                24.443577
+              ],
+              [
+                118.081194,
+                24.457869
+              ],
+              [
+                118.064821,
+                24.457869
+              ],
+              [
+                118.064821,
+                24.443577
+              ]
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "id": "CCHQ_TIEU_THANH",
+      "enabled": true,
+      "group": {
+        "key": "1",
+        "title": "Nhóm 1"
+      },
+      "sort_order": 4,
+      "name": "CCHQ TIEU THANH",
+      "alias": "CCHQ TIEU THANH",
+      "coordinate": [
+        119.68763,
+        26.6114925
+      ],
+      "scale": 50000,
+      "grid": {
+        "interval": {
+          "minutes": 5
+        }
+      },
+      "export": {
+        "template_pptx_file": "data/templates/target_003.template.pptx",
+        "template_txt_value": "xx",
+        "placeholders": [
+          {
+            "field": "map_image",
+            "kind": "map_image"
+          },
+          {
+            "field": "title",
+            "value": "Hiện trạng CCHQ HAO GIANG 1 ngày {capture_date}",
+            "kind": "text"
+          },
+          {
+            "field": "time_label_pane_A",
+            "value": "{time_label_pane_A}",
+            "kind": "text"
+          },
+          {
+            "field": "time_label_pane_B",
+            "value": "{time_label_pane_B}",
+            "kind": "text"
+          },
+          {
+            "field": "comment_label_pane_A",
+            "value": "Tổng: ... tàu quân sự",
+            "kind": "text"
+          },
+          {
+            "field": "comment_label_pane_B",
+            "value": "Không phát hiện tàu quân sự",
+            "kind": "text"
+          }
+        ]
+      },
+      "metadata": {
+        "geojson_geometry": {
+          "type": "Polygon",
+          "coordinates": [
+            [
+              [
+                119.675069,
+                26.602368
+              ],
+              [
+                119.700191,
+                26.602368
+              ],
+              [
+                119.700191,
+                26.620617
+              ],
+              [
+                119.675069,
+                26.620617
+              ],
+              [
+                119.675069,
+                26.602368
+              ]
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "id": "CCHQ_PHUC_DINH",
+      "enabled": true,
+      "group": {
+        "key": "1",
+        "title": "Nhóm 1"
+      },
+      "sort_order": 5,
+      "name": "CCHQ PHUC DINH",
+      "alias": "CCHQ PHUC DINH",
+      "coordinate": [
+        120.384192,
+        27.237951
+      ],
+      "scale": 50000,
+      "grid": {
+        "interval": {
+          "minutes": 5
+        }
+      },
+      "export": {
+        "template_pptx_file": "data/templates/target_003.template.pptx",
+        "template_txt_value": "xx",
+        "placeholders": [
+          {
+            "field": "map_image",
+            "kind": "map_image"
+          },
+          {
+            "field": "title",
+            "value": "Hiện trạng CCHQ HAO GIANG 1 ngày {capture_date}",
+            "kind": "text"
+          },
+          {
+            "field": "time_label_pane_A",
+            "value": "{time_label_pane_A}",
+            "kind": "text"
+          },
+          {
+            "field": "time_label_pane_B",
+            "value": "{time_label_pane_B}",
+            "kind": "text"
+          },
+          {
+            "field": "comment_label_pane_A",
+            "value": "Tổng: ... tàu quân sự",
+            "kind": "text"
+          },
+          {
+            "field": "comment_label_pane_B",
+            "value": "Không phát hiện tàu quân sự",
+            "kind": "text"
+          }
+        ]
+      },
+      "metadata": {
+        "geojson_geometry": {
+          "type": "Polygon",
+          "coordinates": [
+            [
+              [
+                120.374323,
+                27.230672
+              ],
+              [
+                120.394061,
+                27.230672
+              ],
+              [
+                120.394061,
+                27.24523
+              ],
+              [
+                120.374323,
+                27.24523
+              ],
+              [
+                120.374323,
+                27.230672
+              ]
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "id": "CCHQ_NGOC_HOAN",
+      "enabled": true,
+      "group": {
+        "key": "1",
+        "title": "Nhóm 1"
+      },
+      "sort_order": 6,
+      "name": "CCHQ NGOC HOAN",
+      "alias": "CCHQ NGOC HOAN",
+      "coordinate": [
+        121.1571405,
+        28.0638435
+      ],
+      "scale": 50000,
+      "grid": {
+        "interval": {
+          "minutes": 5
+        }
+      },
+      "export": {
+        "template_pptx_file": "data/templates/target_003.template.pptx",
+        "template_txt_value": "xx",
+        "placeholders": [
+          {
+            "field": "map_image",
+            "kind": "map_image"
+          },
+          {
+            "field": "title",
+            "value": "Hiện trạng CCHQ HAO GIANG 1 ngày {capture_date}",
+            "kind": "text"
+          },
+          {
+            "field": "time_label_pane_A",
+            "value": "{time_label_pane_A}",
+            "kind": "text"
+          },
+          {
+            "field": "time_label_pane_B",
+            "value": "{time_label_pane_B}",
+            "kind": "text"
+          },
+          {
+            "field": "comment_label_pane_A",
+            "value": "Tổng: ... tàu quân sự",
+            "kind": "text"
+          },
+          {
+            "field": "comment_label_pane_B",
+            "value": "Không phát hiện tàu quân sự",
+            "kind": "text"
+          }
+        ]
+      },
+      "metadata": {
+        "geojson_geometry": {
+          "type": "Polygon",
+          "coordinates": [
+            [
+              [
+                121.113963,
+                28.019310000000004
+              ],
+              [
+                121.20031800000001,
+                28.019310000000004
+              ],
+              [
+                121.20031800000001,
+                28.108377000000004
+              ],
+              [
+                121.113963,
+                28.108377000000004
+              ],
+              [
+                121.113963,
+                28.019310000000004
+              ]
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "id": "CCHQ_DINH_HAI_1",
+      "enabled": true,
+      "group": {
+        "key": "1",
+        "title": "Nhóm 1"
+      },
+      "sort_order": 7,
+      "name": "CCHQ DINH HAI 1",
+      "alias": "CCHQ DINH HAI 1",
+      "coordinate": [
+        122.0653323,
+        30.00783209
+      ],
+      "scale": 50000,
+      "grid": {
+        "interval": {
+          "minutes": 5
+        }
+      },
+      "export": {
+        "template_pptx_file": "data/templates/target_003.template.pptx",
+        "template_txt_value": "xx",
+        "placeholders": [
+          {
+            "field": "map_image",
+            "kind": "map_image"
+          },
+          {
+            "field": "title",
+            "value": "Hiện trạng CCHQ HAO GIANG 1 ngày {capture_date}",
+            "kind": "text"
+          },
+          {
+            "field": "time_label_pane_A",
+            "value": "{time_label_pane_A}",
+            "kind": "text"
+          },
+          {
+            "field": "time_label_pane_B",
+            "value": "{time_label_pane_B}",
+            "kind": "text"
+          },
+          {
+            "field": "comment_label_pane_A",
+            "value": "Tổng: ... tàu quân sự",
+            "kind": "text"
+          },
+          {
+            "field": "comment_label_pane_B",
+            "value": "Không phát hiện tàu quân sự",
+            "kind": "text"
+          }
+        ]
+      },
+      "metadata": {
+        "geojson_geometry": {
+          "coordinates": [
+            [
+              [
+                122.05003481870733,
+                30.013184693975333
+              ],
+              [
+                122.05003481870733,
+                30.002479476303307
+              ],
+              [
+                122.08062977572564,
+                30.002479476303307
+              ],
+              [
+                122.08062977572564,
+                30.013184693975333
+              ],
+              [
+                122.05003481870733,
+                30.013184693975333
+              ]
+            ]
+          ],
+          "type": "Polygon"
+        }
+      }
+    },
+    {
+      "id": "CCHQ_DINH_HAI_2",
+      "enabled": true,
+      "group": {
+        "key": "1",
+        "title": "Nhóm 1"
+      },
+      "sort_order": 8,
+      "name": "CCHQ DINH HAI 2",
+      "alias": "CCHQ DINH HAI 2",
+      "coordinate": [
+        122.11201099,
+        29.99804642
+      ],
+      "scale": 50000,
+      "grid": {
+        "interval": {
+          "minutes": 5
+        }
+      },
+      "export": {
+        "template_pptx_file": "data/templates/target_003.template.pptx",
+        "template_txt_value": "xx",
+        "placeholders": [
+          {
+            "field": "map_image",
+            "kind": "map_image"
+          },
+          {
+            "field": "title",
+            "value": "Hiện trạng CCHQ HAO GIANG 1 ngày {capture_date}",
+            "kind": "text"
+          },
+          {
+            "field": "time_label_pane_A",
+            "value": "{time_label_pane_A}",
+            "kind": "text"
+          },
+          {
+            "field": "time_label_pane_B",
+            "value": "{time_label_pane_B}",
+            "kind": "text"
+          },
+          {
+            "field": "comment_label_pane_A",
+            "value": "Tổng: ... tàu quân sự",
+            "kind": "text"
+          },
+          {
+            "field": "comment_label_pane_B",
+            "value": "Không phát hiện tàu quân sự",
+            "kind": "text"
+          }
+        ]
+      },
+      "metadata": {
+        "geojson_geometry": {
+          "coordinates": [
+            [
+              [
+                122.10579941764371,
+                30.005712178808523
+              ],
+              [
+                122.10579941764371,
+                29.99038065574362
+              ],
+              [
+                122.11822255416547,
+                29.99038065574362
+              ],
+              [
+                122.11822255416547,
+                30.005712178808523
+              ],
+              [
+                122.10579941764371,
+                30.005712178808523
+              ]
+            ]
+          ],
+          "type": "Polygon"
+        }
+      }
+    },
+    {
+      "id": "CCHQ_DINH_HAI_3",
+      "enabled": true,
+      "group": {
+        "key": "1",
+        "title": "Nhóm 1"
+      },
+      "sort_order": 9,
+      "name": "CCHQ DINH HAI 3",
+      "alias": "CCHQ DINH HAI 3",
+      "coordinate": [
+        122.00707722,
+        30.01922461
+      ],
+      "scale": 50000,
+      "grid": {
+        "interval": {
+          "minutes": 5
+        }
+      },
+      "export": {
+        "template_pptx_file": "data/templates/target_003.template.pptx",
+        "template_txt_value": "xx",
+        "placeholders": [
+          {
+            "field": "map_image",
+            "kind": "map_image"
+          },
+          {
+            "field": "title",
+            "value": "Hiện trạng CCHQ HAO GIANG 1 ngày {capture_date}",
+            "kind": "text"
+          },
+          {
+            "field": "time_label_pane_A",
+            "value": "{time_label_pane_A}",
+            "kind": "text"
+          },
+          {
+            "field": "time_label_pane_B",
+            "value": "{time_label_pane_B}",
+            "kind": "text"
+          },
+          {
+            "field": "comment_label_pane_A",
+            "value": "Tổng: ... tàu quân sự",
+            "kind": "text"
+          },
+          {
+            "field": "comment_label_pane_B",
+            "value": "Không phát hiện tàu quân sự",
+            "kind": "text"
+          }
+        ]
+      },
+      "metadata": {
+        "geojson_geometry": {
+          "coordinates": [
+            [
+              [
+                121.98687495448382,
+                30.04376775561356
+              ],
+              [
+                121.98687495448382,
+                29.994681473987043
+              ],
+              [
+                122.02727948919068,
+                29.994681473987043
+              ],
+              [
+                122.02727948919068,
+                30.04376775561356
+              ],
+              [
+                121.98687495448382,
+                30.04376775561356
+              ]
+            ]
+          ],
+          "type": "Polygon"
+        }
+      }
+    },
+    {
+      "id": "CCHQ_DUONG_PHO",
+      "enabled": true,
+      "group": {
+        "key": "1",
+        "title": "Nhóm 1"
+      },
+      "sort_order": 10,
+      "name": "CCHQ DUONG PHO",
+      "alias": "CCHQ DUONG PHO",
+      "coordinate": [
+        121.552291,
+        31.311075
+      ],
+      "scale": 50000,
+      "grid": {
+        "interval": {
+          "minutes": 5
+        }
+      },
+      "export": {
+        "template_pptx_file": "data/templates/target_003.template.pptx",
+        "template_txt_value": "xx",
+        "placeholders": [
+          {
+            "field": "map_image",
+            "kind": "map_image"
+          },
+          {
+            "field": "title",
+            "value": "Hiện trạng CCHQ HAO GIANG 1 ngày {capture_date}",
+            "kind": "text"
+          },
+          {
+            "field": "time_label_pane_A",
+            "value": "{time_label_pane_A}",
+            "kind": "text"
+          },
+          {
+            "field": "time_label_pane_B",
+            "value": "{time_label_pane_B}",
+            "kind": "text"
+          },
+          {
+            "field": "comment_label_pane_A",
+            "value": "Tổng: ... tàu quân sự",
+            "kind": "text"
+          },
+          {
+            "field": "comment_label_pane_B",
+            "value": "Không phát hiện tàu quân sự",
+            "kind": "text"
+          }
+        ]
+      },
+      "metadata": {
+        "geojson_geometry": {
+          "type": "Polygon",
+          "coordinates": [
+            [
+              [
+                121.542444,
+                31.30313200000002
+              ],
+              [
+                121.562138,
+                31.30313200000002
+              ],
+              [
+                121.562138,
+                31.319018
+              ],
+              [
+                121.542444,
+                31.319018
+              ],
+              [
+                121.542444,
+                31.30313200000002
+              ]
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "id": "CCHQ_BAO_SON",
+      "enabled": true,
+      "group": {
+        "key": "1",
+        "title": "Nhóm 1"
+      },
+      "sort_order": 11,
+      "name": "CCHQ BAO SON",
+      "alias": "CCHQ BAO SON",
+      "coordinate": [
+        121.5044515,
+        31.388294
+      ],
+      "scale": 50000,
+      "grid": {
+        "interval": {
+          "minutes": 5
+        }
+      },
+      "export": {
+        "template_pptx_file": "data/templates/target_003.template.pptx",
+        "template_txt_value": "xx",
+        "placeholders": [
+          {
+            "field": "map_image",
+            "kind": "map_image"
+          },
+          {
+            "field": "title",
+            "value": "Hiện trạng CCHQ HAO GIANG 1 ngày {capture_date}",
+            "kind": "text"
+          },
+          {
+            "field": "time_label_pane_A",
+            "value": "{time_label_pane_A}",
+            "kind": "text"
+          },
+          {
+            "field": "time_label_pane_B",
+            "value": "{time_label_pane_B}",
+            "kind": "text"
+          },
+          {
+            "field": "comment_label_pane_A",
+            "value": "Tổng: ... tàu quân sự",
+            "kind": "text"
+          },
+          {
+            "field": "comment_label_pane_B",
+            "value": "Không phát hiện tàu quân sự",
+            "kind": "text"
+          }
+        ]
+      },
+      "metadata": {
+        "geojson_geometry": {
+          "type": "Polygon",
+          "coordinates": [
+            [
+              [
+                121.482504,
+                31.367903999999996
+              ],
+              [
+                121.526399,
+                31.367903999999996
+              ],
+              [
+                121.526399,
+                31.40868399999998
+              ],
+              [
+                121.482504,
+                31.40868399999998
+              ],
+              [
+                121.482504,
+                31.367903999999996
+              ]
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "id": "CCHQ_PHO_DONG",
+      "enabled": true,
+      "group": {
+        "key": "1",
+        "title": "Nhóm 1"
+      },
+      "sort_order": 12,
+      "name": "CCHQ PHO DONG",
+      "alias": "CCHQ PHO DONG",
+      "coordinate": [
+        121.70417256,
+        31.2949022
+      ],
+      "scale": 50000,
+      "grid": {
+        "interval": {
+          "minutes": 5
+        }
+      },
+      "export": {
+        "template_pptx_file": "data/templates/target_003.template.pptx",
+        "template_txt_value": "xx",
+        "placeholders": [
+          {
+            "field": "map_image",
+            "kind": "map_image"
+          },
+          {
+            "field": "title",
+            "value": "Hiện trạng CCHQ HAO GIANG 1 ngày {capture_date}",
+            "kind": "text"
+          },
+          {
+            "field": "time_label_pane_A",
+            "value": "{time_label_pane_A}",
+            "kind": "text"
+          },
+          {
+            "field": "time_label_pane_B",
+            "value": "{time_label_pane_B}",
+            "kind": "text"
+          },
+          {
+            "field": "comment_label_pane_A",
+            "value": "Tổng: ... tàu quân sự",
+            "kind": "text"
+          },
+          {
+            "field": "comment_label_pane_B",
+            "value": "Không phát hiện tàu quân sự",
+            "kind": "text"
+          }
+        ]
+      },
+      "metadata": {
+        "geojson_geometry": {
+          "coordinates": [
+            [
+              [
+                121.66626833207931,
+                31.327955573915048
+              ],
+              [
+                121.66626833207931,
+                31.261848827467574
+              ],
+              [
+                121.7420767961354,
+                31.261848827467574
+              ],
+              [
+                121.7420767961354,
+                31.327955573915048
+              ],
+              [
+                121.66626833207931,
+                31.327955573915048
+              ]
+            ]
+          ],
+          "type": "Polygon"
+        }
+      }
+    },
+    {
+      "id": "CCHQ_MA_CONG",
+      "enabled": true,
+      "group": {
+        "key": "1",
+        "title": "Nhóm 1"
+      },
+      "sort_order": 13,
+      "name": "CCHQ MA CONG",
+      "alias": "CCHQ MA CONG",
+      "coordinate": [
+        119.567354,
+        23.5499225
+      ],
+      "scale": 50000,
+      "grid": {
+        "interval": {
+          "minutes": 5
+        }
+      },
+      "export": {
+        "template_pptx_file": "data/templates/target_003.template.pptx",
+        "template_txt_value": "xx",
+        "placeholders": [
+          {
+            "field": "map_image",
+            "kind": "map_image"
+          },
+          {
+            "field": "title",
+            "value": "Hiện trạng CCHQ HAO GIANG 1 ngày {capture_date}",
+            "kind": "text"
+          },
+          {
+            "field": "time_label_pane_A",
+            "value": "{time_label_pane_A}",
+            "kind": "text"
+          },
+          {
+            "field": "time_label_pane_B",
+            "value": "{time_label_pane_B}",
+            "kind": "text"
+          },
+          {
+            "field": "comment_label_pane_A",
+            "value": "Tổng: ... tàu quân sự",
+            "kind": "text"
+          },
+          {
+            "field": "comment_label_pane_B",
+            "value": "Không phát hiện tàu quân sự",
+            "kind": "text"
+          }
+        ]
+      },
+      "metadata": {
+        "geojson_geometry": {
+          "type": "Polygon",
+          "coordinates": [
+            [
+              [
+                119.556924,
+                23.540259
+              ],
+              [
+                119.577784,
+                23.540259
+              ],
+              [
+                119.577784,
+                23.559586
+              ],
+              [
+                119.556924,
+                23.559586
+              ],
+              [
+                119.556924,
+                23.540259
+              ]
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "id": "CCHQ_TA_DOANH",
+      "enabled": true,
+      "group": {
+        "key": "1",
+        "title": "Nhóm 1"
+      },
+      "sort_order": 14,
+      "name": "CCHQ TA DOANH",
+      "alias": "CCHQ TA DOANH",
+      "coordinate": [
+        120.268927,
+        22.6945445
+      ],
+      "scale": 50000,
+      "grid": {
+        "interval": {
+          "minutes": 5
+        }
+      },
+      "export": {
+        "template_pptx_file": "data/templates/target_003.template.pptx",
+        "template_txt_value": "xx",
+        "placeholders": [
+          {
+            "field": "map_image",
+            "kind": "map_image"
+          },
+          {
+            "field": "title",
+            "value": "Hiện trạng CCHQ HAO GIANG 1 ngày {capture_date}",
+            "kind": "text"
+          },
+          {
+            "field": "time_label_pane_A",
+            "value": "{time_label_pane_A}",
+            "kind": "text"
+          },
+          {
+            "field": "time_label_pane_B",
+            "value": "{time_label_pane_B}",
+            "kind": "text"
+          },
+          {
+            "field": "comment_label_pane_A",
+            "value": "Tổng: ... tàu quân sự",
+            "kind": "text"
+          },
+          {
+            "field": "comment_label_pane_B",
+            "value": "Không phát hiện tàu quân sự",
+            "kind": "text"
+          }
+        ]
+      },
+      "metadata": {
+        "geojson_geometry": {
+          "type": "Polygon",
+          "coordinates": [
+            [
+              [
+                120.23674,
+                22.663401
+              ],
+              [
+                120.301114,
+                22.663401
+              ],
+              [
+                120.301114,
+                22.725688
+              ],
+              [
+                120.23674,
+                22.725688
+              ],
+              [
+                120.23674,
+                22.663401
+              ]
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "id": "CCHQ_KY_TAN",
+      "enabled": true,
+      "group": {
+        "key": "1",
+        "title": "Nhóm 1"
+      },
+      "sort_order": 15,
+      "name": "CCHQ KY TAN",
+      "alias": "CCHQ KY TAN",
+      "coordinate": [
+        120.2734585,
+        22.6023625
+      ],
+      "scale": 50000,
+      "grid": {
+        "interval": {
+          "minutes": 5
+        }
+      },
+      "export": {
+        "template_pptx_file": "data/templates/target_003.template.pptx",
+        "template_txt_value": "xx",
+        "placeholders": [
+          {
+            "field": "map_image",
+            "kind": "map_image"
+          },
+          {
+            "field": "title",
+            "value": "Hiện trạng CCHQ HAO GIANG 1 ngày {capture_date}",
+            "kind": "text"
+          },
+          {
+            "field": "time_label_pane_A",
+            "value": "{time_label_pane_A}",
+            "kind": "text"
+          },
+          {
+            "field": "time_label_pane_B",
+            "value": "{time_label_pane_B}",
+            "kind": "text"
+          },
+          {
+            "field": "comment_label_pane_A",
+            "value": "Tổng: ... tàu quân sự",
+            "kind": "text"
+          },
+          {
+            "field": "comment_label_pane_B",
+            "value": "Không phát hiện tàu quân sự",
+            "kind": "text"
+          }
+        ]
+      },
+      "metadata": {
+        "geojson_geometry": {
+          "type": "Polygon",
+          "coordinates": [
+            [
+              [
+                120.242954,
+                22.5771
+              ],
+              [
+                120.303963,
+                22.5771
+              ],
+              [
+                120.303963,
+                22.627625
+              ],
+              [
+                120.242954,
+                22.627625
+              ],
+              [
+                120.242954,
+                22.5771
+              ]
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "id": "SBLD_TAN_GIANG",
+      "enabled": true,
+      "group": {
+        "key": "2",
+        "title": "Nhóm 2"
+      },
+      "sort_order": 16,
+      "name": "SBLD TAN GIANG",
+      "alias": "SBLD TAN GIANG",
+      "coordinate": [
+        118.58739293,
+        24.7968224
+      ],
+      "scale": 50000,
+      "grid": {
+        "interval": {
+          "minutes": 5
+        }
+      },
+      "export": {
+        "template_pptx_file": "data/templates/target_003.template.pptx",
+        "template_txt_value": "xx",
+        "placeholders": [
+          {
+            "field": "map_image",
+            "kind": "map_image"
+          },
+          {
+            "field": "title",
+            "value": "Hiện trạng CCHQ HAO GIANG 1 ngày {capture_date}",
+            "kind": "text"
+          },
+          {
+            "field": "time_label_pane_A",
+            "value": "{time_label_pane_A}",
+            "kind": "text"
+          },
+          {
+            "field": "time_label_pane_B",
+            "value": "{time_label_pane_B}",
+            "kind": "text"
+          },
+          {
+            "field": "comment_label_pane_A",
+            "value": "Tổng: ... tàu quân sự",
+            "kind": "text"
+          },
+          {
+            "field": "comment_label_pane_B",
+            "value": "Không phát hiện tàu quân sự",
+            "kind": "text"
+          }
+        ]
+      },
+      "metadata": {
+        "geojson_geometry": {
+          "coordinates": [
+            [
+              [
+                118.56270486833279,
+                24.818285776066105
+              ],
+              [
+                118.56270486833279,
+                24.77535902772192
+              ],
+              [
+                118.61208098642095,
+                24.77535902772192
+              ],
+              [
+                118.61208098642095,
+                24.818285776066105
+              ],
+              [
+                118.56270486833279,
+                24.818285776066105
+              ]
+            ]
+          ],
+          "type": "Polygon"
+        }
+      }
+    },
+    {
+      "id": "CCKQ_DONG_BINH",
+      "enabled": true,
+      "group": {
+        "key": "2",
+        "title": "Nhóm 2"
+      },
+      "sort_order": 17,
+      "name": "CCKQ DONG BINH",
+      "alias": "CCKQ DONG BINH",
+      "coordinate": [
+        114.909326,
+        27.253941
+      ],
+      "scale": 50000,
+      "grid": {
+        "interval": {
+          "minutes": 5
+        }
+      },
+      "export": {
+        "template_pptx_file": "data/templates/target_003.template.pptx",
+        "template_txt_value": "xx",
+        "placeholders": [
+          {
+            "field": "map_image",
+            "kind": "map_image"
+          },
+          {
+            "field": "title",
+            "value": "Hiện trạng CCHQ HAO GIANG 1 ngày {capture_date}",
+            "kind": "text"
+          },
+          {
+            "field": "time_label_pane_A",
+            "value": "{time_label_pane_A}",
+            "kind": "text"
+          },
+          {
+            "field": "time_label_pane_B",
+            "value": "{time_label_pane_B}",
+            "kind": "text"
+          },
+          {
+            "field": "comment_label_pane_A",
+            "value": "Tổng: ... tàu quân sự",
+            "kind": "text"
+          },
+          {
+            "field": "comment_label_pane_B",
+            "value": "Không phát hiện tàu quân sự",
+            "kind": "text"
+          }
+        ]
+      },
+      "metadata": {
+        "geojson_geometry": {
+          "type": "Polygon",
+          "coordinates": [
+            [
+              [
+                114.902736,
+                27.247774
+              ],
+              [
+                114.915916,
+                27.247774
+              ],
+              [
+                114.915916,
+                27.260108
+              ],
+              [
+                114.902736,
+                27.260108
+              ],
+              [
+                114.902736,
+                27.247774
+              ]
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "id": "CCKQ_DONG_DUONG",
+      "enabled": true,
+      "group": {
+        "key": "2",
+        "title": "Nhóm 2"
+      },
+      "sort_order": 18,
+      "name": "CCKQ DONG DUONG",
+      "alias": "CCKQ DONG DUONG",
+      "coordinate": [
+        120.353611,
+        29.2673845
+      ],
+      "scale": 50000,
+      "grid": {
+        "interval": {
+          "minutes": 5
+        }
+      },
+      "export": {
+        "template_pptx_file": "data/templates/target_003.template.pptx",
+        "template_txt_value": "xx",
+        "placeholders": [
+          {
+            "field": "map_image",
+            "kind": "map_image"
+          },
+          {
+            "field": "title",
+            "value": "Hiện trạng CCHQ HAO GIANG 1 ngày {capture_date}",
+            "kind": "text"
+          },
+          {
+            "field": "time_label_pane_A",
+            "value": "{time_label_pane_A}",
+            "kind": "text"
+          },
+          {
+            "field": "time_label_pane_B",
+            "value": "{time_label_pane_B}",
+            "kind": "text"
+          },
+          {
+            "field": "comment_label_pane_A",
+            "value": "Tổng: ... tàu quân sự",
+            "kind": "text"
+          },
+          {
+            "field": "comment_label_pane_B",
+            "value": "Không phát hiện tàu quân sự",
+            "kind": "text"
+          }
+        ]
+      },
+      "metadata": {
+        "geojson_geometry": {
+          "type": "Polygon",
+          "coordinates": [
+            [
+              [
+                120.345159,
+                29.262434
+              ],
+              [
+                120.362063,
+                29.262434
+              ],
+              [
+                120.362063,
+                29.272335
+              ],
+              [
+                120.345159,
+                29.272335
+              ],
+              [
+                120.345159,
+                29.262434
+              ]
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "id": "CCKQ_DAI_SON",
+      "enabled": true,
+      "group": {
+        "key": "2",
+        "title": "Nhóm 2"
+      },
+      "sort_order": 19,
+      "name": "CCKQ DAI SON",
+      "alias": "CCKQ DAI SON",
+      "coordinate": [
+        122.1448855,
+        30.2892565
+      ],
+      "scale": 50000,
+      "grid": {
+        "interval": {
+          "minutes": 5
+        }
+      },
+      "export": {
+        "template_pptx_file": "data/templates/target_003.template.pptx",
+        "template_txt_value": "xx",
+        "placeholders": [
+          {
+            "field": "map_image",
+            "kind": "map_image"
+          },
+          {
+            "field": "title",
+            "value": "Hiện trạng CCHQ HAO GIANG 1 ngày {capture_date}",
+            "kind": "text"
+          },
+          {
+            "field": "time_label_pane_A",
+            "value": "{time_label_pane_A}",
+            "kind": "text"
+          },
+          {
+            "field": "time_label_pane_B",
+            "value": "{time_label_pane_B}",
+            "kind": "text"
+          },
+          {
+            "field": "comment_label_pane_A",
+            "value": "Tổng: ... tàu quân sự",
+            "kind": "text"
+          },
+          {
+            "field": "comment_label_pane_B",
+            "value": "Không phát hiện tàu quân sự",
+            "kind": "text"
+          }
+        ]
+      },
+      "metadata": {
+        "geojson_geometry": {
+          "type": "Polygon",
+          "coordinates": [
+            [
+              [
+                122.136206,
+                30.27403
+              ],
+              [
+                122.153565,
+                30.27403
+              ],
+              [
+                122.153565,
+                30.304483
+              ],
+              [
+                122.136206,
+                30.304483
+              ],
+              [
+                122.136206,
+                30.27403
+              ]
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "id": "SBLD_AN_KHANH",
+      "enabled": true,
+      "group": {
+        "key": "2",
+        "title": "Nhóm 2"
+      },
+      "sort_order": 20,
+      "name": "SBLD AN KHANH",
+      "alias": "SBLD AN KHANH",
+      "coordinate": [
+        117.0421885,
+        30.588353
+      ],
+      "scale": 50000,
+      "grid": {
+        "interval": {
+          "minutes": 5
+        }
+      },
+      "export": {
+        "template_pptx_file": "data/templates/target_003.template.pptx",
+        "template_txt_value": "xx",
+        "placeholders": [
+          {
+            "field": "map_image",
+            "kind": "map_image"
+          },
+          {
+            "field": "title",
+            "value": "Hiện trạng CCHQ HAO GIANG 1 ngày {capture_date}",
+            "kind": "text"
+          },
+          {
+            "field": "time_label_pane_A",
+            "value": "{time_label_pane_A}",
+            "kind": "text"
+          },
+          {
+            "field": "time_label_pane_B",
+            "value": "{time_label_pane_B}",
+            "kind": "text"
+          },
+          {
+            "field": "comment_label_pane_A",
+            "value": "Tổng: ... tàu quân sự",
+            "kind": "text"
+          },
+          {
+            "field": "comment_label_pane_B",
+            "value": "Không phát hiện tàu quân sự",
+            "kind": "text"
+          }
+        ]
+      },
+      "metadata": {
+        "geojson_geometry": {
+          "type": "Polygon",
+          "coordinates": [
+            [
+              [
+                117.011641,
+                30.570995
+              ],
+              [
+                117.072736,
+                30.570995
+              ],
+              [
+                117.072736,
+                30.605711
+              ],
+              [
+                117.011641,
+                30.605711
+              ],
+              [
+                117.011641,
+                30.570995
+              ]
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "id": "CCKQ_LUC_AN",
+      "enabled": true,
+      "group": {
+        "key": "2",
+        "title": "Nhóm 2"
+      },
+      "sort_order": 21,
+      "name": "CCKQ LUC AN",
+      "alias": "CCKQ LUC AN",
+      "coordinate": [
+        116.2740585,
+        31.627469
+      ],
+      "scale": 50000,
+      "grid": {
+        "interval": {
+          "minutes": 5
+        }
+      },
+      "export": {
+        "template_pptx_file": "data/templates/target_003.template.pptx",
+        "template_txt_value": "xx",
+        "placeholders": [
+          {
+            "field": "map_image",
+            "kind": "map_image"
+          },
+          {
+            "field": "title",
+            "value": "Hiện trạng CCHQ HAO GIANG 1 ngày {capture_date}",
+            "kind": "text"
+          },
+          {
+            "field": "time_label_pane_A",
+            "value": "{time_label_pane_A}",
+            "kind": "text"
+          },
+          {
+            "field": "time_label_pane_B",
+            "value": "{time_label_pane_B}",
+            "kind": "text"
+          },
+          {
+            "field": "comment_label_pane_A",
+            "value": "Tổng: ... tàu quân sự",
+            "kind": "text"
+          },
+          {
+            "field": "comment_label_pane_B",
+            "value": "Không phát hiện tàu quân sự",
+            "kind": "text"
+          }
+        ]
+      },
+      "metadata": {
+        "geojson_geometry": {
+          "type": "Polygon",
+          "coordinates": [
+            [
+              [
+                116.256551,
+                31.61688
+              ],
+              [
+                116.291566,
+                31.61688
+              ],
+              [
+                116.291566,
+                31.638058
+              ],
+              [
+                116.256551,
+                31.638058
+              ],
+              [
+                116.256551,
+                31.61688
+              ]
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "id": "CCKQ_LUC_HOP",
+      "enabled": true,
+      "group": {
+        "key": "2",
+        "title": "Nhóm 2"
+      },
+      "sort_order": 22,
+      "name": "CCKQ LUC HOP",
+      "alias": "CCKQ LUC HOP",
+      "coordinate": [
+        118.7930805,
+        32.380122
+      ],
+      "scale": 50000,
+      "grid": {
+        "interval": {
+          "minutes": 5
+        }
+      },
+      "export": {
+        "template_pptx_file": "data/templates/target_003.template.pptx",
+        "template_txt_value": "xx",
+        "placeholders": [
+          {
+            "field": "map_image",
+            "kind": "map_image"
+          },
+          {
+            "field": "title",
+            "value": "Hiện trạng CCHQ HAO GIANG 1 ngày {capture_date}",
+            "kind": "text"
+          },
+          {
+            "field": "time_label_pane_A",
+            "value": "{time_label_pane_A}",
+            "kind": "text"
+          },
+          {
+            "field": "time_label_pane_B",
+            "value": "{time_label_pane_B}",
+            "kind": "text"
+          },
+          {
+            "field": "comment_label_pane_A",
+            "value": "Tổng: ... tàu quân sự",
+            "kind": "text"
+          },
+          {
+            "field": "comment_label_pane_B",
+            "value": "Không phát hiện tàu quân sự",
+            "kind": "text"
+          }
+        ]
+      },
+      "metadata": {
+        "geojson_geometry": {
+          "type": "Polygon",
+          "coordinates": [
+            [
+              [
+                118.769053,
+                32.364929
+              ],
+              [
+                118.817108,
+                32.364929
+              ],
+              [
+                118.817108,
+                32.395315
+              ],
+              [
+                118.769053,
+                32.395315
+              ],
+              [
+                118.769053,
+                32.364929
+              ]
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "id": "CCKQ_BON_NGUU",
+      "enabled": true,
+      "group": {
+        "key": "2",
+        "title": "Nhóm 2"
+      },
+      "sort_order": 23,
+      "name": "CCKQ BON NGUU",
+      "alias": "CCKQ BON NGUU",
+      "coordinate": [
+        119.779022,
+        31.9137025
+      ],
+      "scale": 50000,
+      "grid": {
+        "interval": {
+          "minutes": 5
+        }
+      },
+      "export": {
+        "template_pptx_file": "data/templates/target_003.template.pptx",
+        "template_txt_value": "xx",
+        "placeholders": [
+          {
+            "field": "map_image",
+            "kind": "map_image"
+          },
+          {
+            "field": "title",
+            "value": "Hiện trạng CCHQ HAO GIANG 1 ngày {capture_date}",
+            "kind": "text"
+          },
+          {
+            "field": "time_label_pane_A",
+            "value": "{time_label_pane_A}",
+            "kind": "text"
+          },
+          {
+            "field": "time_label_pane_B",
+            "value": "{time_label_pane_B}",
+            "kind": "text"
+          },
+          {
+            "field": "comment_label_pane_A",
+            "value": "Tổng: ... tàu quân sự",
+            "kind": "text"
+          },
+          {
+            "field": "comment_label_pane_B",
+            "value": "Không phát hiện tàu quân sự",
+            "kind": "text"
+          }
+        ]
+      },
+      "metadata": {
+        "geojson_geometry": {
+          "type": "Polygon",
+          "coordinates": [
+            [
+              [
+                119.752942,
+                31.893614
+              ],
+              [
+                119.805102,
+                31.893614
+              ],
+              [
+                119.805102,
+                31.933791
+              ],
+              [
+                119.752942,
+                31.933791
+              ],
+              [
+                119.752942,
+                31.893614
+              ]
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "id": "KKC_OnChau",
+      "enabled": true,
+      "group": {
+        "key": "2",
+        "title": "Nhóm 2"
+      },
+      "sort_order": 24,
+      "name": "KKC_OnChau",
+      "alias": "KKC_OnChau",
+      "coordinate": [
+        120.63415353,
+        27.43836683
+      ],
+      "scale": 50000,
+      "grid": {
+        "interval": {
+          "minutes": 5
+        }
+      },
+      "export": {
+        "template_pptx_file": "data/templates/target_003.template.pptx",
+        "template_txt_value": "xx",
+        "placeholders": [
+          {
+            "field": "map_image",
+            "kind": "map_image"
+          },
+          {
+            "field": "title",
+            "value": "Hiện trạng CCHQ HAO GIANG 1 ngày {capture_date}",
+            "kind": "text"
+          },
+          {
+            "field": "time_label_pane_A",
+            "value": "{time_label_pane_A}",
+            "kind": "text"
+          },
+          {
+            "field": "time_label_pane_B",
+            "value": "{time_label_pane_B}",
+            "kind": "text"
+          },
+          {
+            "field": "comment_label_pane_A",
+            "value": "Tổng: ... tàu quân sự",
+            "kind": "text"
+          },
+          {
+            "field": "comment_label_pane_B",
+            "value": "Không phát hiện tàu quân sự",
+            "kind": "text"
+          }
+        ]
+      },
+      "metadata": {
+        "geojson_geometry": {
+          "coordinates": [
+            [
+              [
+                120.62331546830495,
+                27.447374966291818
+              ],
+              [
+                120.62331546830495,
+                27.429358690309527
+              ],
+              [
+                120.64499159934275,
+                27.429358690309527
+              ],
+              [
+                120.64499159934275,
+                27.447374966291818
+              ],
+              [
+                120.62331546830495,
+                27.447374966291818
+              ]
+            ]
+          ],
+          "type": "Polygon"
+        }
+      }
+    },
+    {
+      "id": "BaiBienTuongSon_NinhBa_ChietGiang_TQ",
+      "enabled": true,
+      "group": {
+        "key": "khac",
+        "title": "Nhóm khác"
+      },
+      "sort_order": 25,
+      "name": "BaiBienTuongSon_NinhBa_ChietGiang_TQ",
+      "alias": "BaiBienTuongSon_NinhBa_ChietGiang_TQ",
+      "coordinate": [
+        121.99807981,
+        29.13280865
+      ],
+      "scale": 50000,
+      "grid": {
+        "interval": {
+          "minutes": 5
+        }
+      },
+      "export": {
+        "template_pptx_file": "data/templates/target_003.template.pptx",
+        "template_txt_value": "xx",
+        "placeholders": [
+          {
+            "field": "map_image",
+            "kind": "map_image"
+          },
+          {
+            "field": "title",
+            "value": "Hiện trạng CCHQ HAO GIANG 1 ngày {capture_date}",
+            "kind": "text"
+          },
+          {
+            "field": "time_label_pane_A",
+            "value": "{time_label_pane_A}",
+            "kind": "text"
+          },
+          {
+            "field": "time_label_pane_B",
+            "value": "{time_label_pane_B}",
+            "kind": "text"
+          },
+          {
+            "field": "comment_label_pane_A",
+            "value": "Tổng: ... tàu quân sự",
+            "kind": "text"
+          },
+          {
+            "field": "comment_label_pane_B",
+            "value": "Không phát hiện tàu quân sự",
+            "kind": "text"
+          }
+        ]
+      },
+      "metadata": {
+        "geojson_geometry": {
+          "type": "Polygon",
+          "coordinates": [
+            [
+              [
+                121.94964416571847,
+                29.084078017776587
+              ],
+              [
+                122.04651544994007,
+                29.084078017776587
+              ],
+              [
+                122.04651544994007,
+                29.181539288690765
+              ],
+              [
+                121.94964416571847,
+                29.181539288690765
+              ],
+              [
+                121.94964416571847,
+                29.084078017776587
+              ]
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "id": "KhuHuanLuyenDanhChiemDaovaDoBoChienThuat_DaoNanri_PhucKien",
+      "enabled": true,
+      "group": {
+        "key": "khac",
+        "title": "Nhóm khác"
+      },
+      "sort_order": 26,
+      "name": "KhuHuanLuyenDanhChiemDaovaDoBoChienThuat_DaoNanri_PhucKien",
+      "alias": "KhuHuanLuyenDanhChiemDaovaDoBoChienThuat_DaoNanri_PhucKien",
+      "coordinate": [
+        119.51218206,
+        25.21918938
+      ],
+      "scale": 50000,
+      "grid": {
+        "interval": {
+          "minutes": 5
+        }
+      },
+      "export": {
+        "template_pptx_file": "data/templates/target_003.template.pptx",
+        "template_txt_value": "xx",
+        "placeholders": [
+          {
+            "field": "map_image",
+            "kind": "map_image"
+          },
+          {
+            "field": "title",
+            "value": "Hiện trạng CCHQ HAO GIANG 1 ngày {capture_date}",
+            "kind": "text"
+          },
+          {
+            "field": "time_label_pane_A",
+            "value": "{time_label_pane_A}",
+            "kind": "text"
+          },
+          {
+            "field": "time_label_pane_B",
+            "value": "{time_label_pane_B}",
+            "kind": "text"
+          },
+          {
+            "field": "comment_label_pane_A",
+            "value": "Tổng: ... tàu quân sự",
+            "kind": "text"
+          },
+          {
+            "field": "comment_label_pane_B",
+            "value": "Không phát hiện tàu quân sự",
+            "kind": "text"
+          }
+        ]
+      },
+      "metadata": {
+        "geojson_geometry": {
+          "type": "Polygon",
+          "coordinates": [
+            [
+              [
+                119.48245373959914,
+                25.198372714138834
+              ],
+              [
+                119.54191037059122,
+                25.198372714138834
+              ],
+              [
+                119.54191037059122,
+                25.24000605576184
+              ],
+              [
+                119.48245373959914,
+                25.24000605576184
+              ],
+              [
+                119.48245373959914,
+                25.198372714138834
+              ]
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "id": "KhuHuanLuyenTacChienDoBo_VinhDaiThanh_daoDongSon_PhucKien",
+      "enabled": true,
+      "group": {
+        "key": "khac",
+        "title": "Nhóm khác"
+      },
+      "sort_order": 27,
+      "name": "KhuHuanLuyenTacChienDoBo_VinhDaiThanh_daoDongSon_PhucKien",
+      "alias": "KhuHuanLuyenTacChienDoBo_VinhDaiThanh_daoDongSon_PhucKien",
+      "coordinate": [
+        117.43432828,
+        23.62183706
+      ],
+      "scale": 50000,
+      "grid": {
+        "interval": {
+          "minutes": 5
+        }
+      },
+      "export": {
+        "template_pptx_file": "data/templates/target_003.template.pptx",
+        "template_txt_value": "xx",
+        "placeholders": [
+          {
+            "field": "map_image",
+            "kind": "map_image"
+          },
+          {
+            "field": "title",
+            "value": "Hiện trạng CCHQ HAO GIANG 1 ngày {capture_date}",
+            "kind": "text"
+          },
+          {
+            "field": "time_label_pane_A",
+            "value": "{time_label_pane_A}",
+            "kind": "text"
+          },
+          {
+            "field": "time_label_pane_B",
+            "value": "{time_label_pane_B}",
+            "kind": "text"
+          },
+          {
+            "field": "comment_label_pane_A",
+            "value": "Tổng: ... tàu quân sự",
+            "kind": "text"
+          },
+          {
+            "field": "comment_label_pane_B",
+            "value": "Không phát hiện tàu quân sự",
+            "kind": "text"
+          }
+        ]
+      },
+      "metadata": {
+        "geojson_geometry": {
+          "type": "Polygon",
+          "coordinates": [
+            [
+              [
+                117.4023551148085,
+                23.57818175063323
+              ],
+              [
+                117.4663014484762,
+                23.57818175063323
+              ],
+              [
+                117.4663014484762,
+                23.665492364062434
+              ],
+              [
+                117.4023551148085,
+                23.665492364062434
+              ],
+              [
+                117.4023551148085,
+                23.57818175063323
+              ]
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "id": "KhuHuanLuyenTacChienDoBo_VinhDaiThanh_PhucKien",
+      "enabled": true,
+      "group": {
+        "key": "khac",
+        "title": "Nhóm khác"
+      },
+      "sort_order": 28,
+      "name": "KhuHuanLuyenTacChienDoBo_VinhDaiThanh_PhucKien",
+      "alias": "KhuHuanLuyenTacChienDoBo_VinhDaiThanh_PhucKien",
+      "coordinate": [
+        117.17705287,
+        23.59502964
+      ],
+      "scale": 50000,
+      "grid": {
+        "interval": {
+          "minutes": 5
+        }
+      },
+      "export": {
+        "template_pptx_file": "data/templates/target_003.template.pptx",
+        "template_txt_value": "xx",
+        "placeholders": [
+          {
+            "field": "map_image",
+            "kind": "map_image"
+          },
+          {
+            "field": "title",
+            "value": "Hiện trạng CCHQ HAO GIANG 1 ngày {capture_date}",
+            "kind": "text"
+          },
+          {
+            "field": "time_label_pane_A",
+            "value": "{time_label_pane_A}",
+            "kind": "text"
+          },
+          {
+            "field": "time_label_pane_B",
+            "value": "{time_label_pane_B}",
+            "kind": "text"
+          },
+          {
+            "field": "comment_label_pane_A",
+            "value": "Tổng: ... tàu quân sự",
+            "kind": "text"
+          },
+          {
+            "field": "comment_label_pane_B",
+            "value": "Không phát hiện tàu quân sự",
+            "kind": "text"
+          }
+        ]
+      },
+      "metadata": {
+        "geojson_geometry": {
+          "type": "Polygon",
+          "coordinates": [
+            [
+              [
+                117.10616206393709,
+                23.54812518874604
+              ],
+              [
+                117.24794366780192,
+                23.54812518874604
+              ],
+              [
+                117.24794366780192,
+                23.641934088863213
+              ],
+              [
+                117.10616206393709,
+                23.641934088863213
+              ],
+              [
+                117.10616206393709,
+                23.54812518874604
+              ]
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "id": "VinhKeThach_SanVi_QuangDong_TQ",
+      "enabled": true,
+      "group": {
+        "key": "khac",
+        "title": "Nhóm khác"
+      },
+      "sort_order": 29,
+      "name": "VinhKeThach_SanVi_QuangDong_TQ",
+      "alias": "VinhKeThach_SanVi_QuangDong_TQ",
+      "coordinate": [
+        115.41348399,
+        22.68762293
+      ],
+      "scale": 50000,
+      "grid": {
+        "interval": {
+          "minutes": 5
+        }
+      },
+      "export": {
+        "template_pptx_file": "data/templates/target_003.template.pptx",
+        "template_txt_value": "xx",
+        "placeholders": [
+          {
+            "field": "map_image",
+            "kind": "map_image"
+          },
+          {
+            "field": "title",
+            "value": "Hiện trạng CCHQ HAO GIANG 1 ngày {capture_date}",
+            "kind": "text"
+          },
+          {
+            "field": "time_label_pane_A",
+            "value": "{time_label_pane_A}",
+            "kind": "text"
+          },
+          {
+            "field": "time_label_pane_B",
+            "value": "{time_label_pane_B}",
+            "kind": "text"
+          },
+          {
+            "field": "comment_label_pane_A",
+            "value": "Tổng: ... tàu quân sự",
+            "kind": "text"
+          },
+          {
+            "field": "comment_label_pane_B",
+            "value": "Không phát hiện tàu quân sự",
+            "kind": "text"
+          }
+        ]
+      },
+      "metadata": {
+        "geojson_geometry": {
+          "type": "Polygon",
+          "coordinates": [
+            [
+              [
+                115.37784726214787,
+                22.664138788736544
+              ],
+              [
+                115.44912072517792,
+                22.664138788736544
+              ],
+              [
+                115.44912072517792,
+                22.711107074268583
+              ],
+              [
+                115.37784726214787,
+                22.711107074268583
+              ],
+              [
+                115.37784726214787,
+                22.664138788736544
+              ]
+            ]
+          ]
+        }
+      }
+    }
+  ]
+}

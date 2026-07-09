@@ -15,3 +15,5 @@ examples/
 
 *.tif
 *.sqlite
+DL/
+history/

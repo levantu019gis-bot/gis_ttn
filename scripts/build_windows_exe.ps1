@@ -23,9 +23,18 @@ if (-not (Get-Command conda -ErrorAction SilentlyContinue)) {
 
 Set-Location $ProjectRoot
 
-$CondaPrefix = (& conda run -n $EnvName python -c "import os; print(os.environ['CONDA_PREFIX'])").Trim()
-if ($LASTEXITCODE -ne 0 -or -not $CondaPrefix) {
-    Write-Error "Could not inspect conda environment '$EnvName'."
+$EnvListJson = (& conda env list --json)
+if ($LASTEXITCODE -ne 0 -or -not $EnvListJson) {
+    Write-Error "Could not inspect conda environments."
+}
+
+$EnvList = $EnvListJson | ConvertFrom-Json
+$CondaPrefix = $EnvList.envs |
+    Where-Object { (Split-Path -Leaf $_) -eq $EnvName } |
+    Select-Object -First 1
+
+if (-not $CondaPrefix) {
+    Write-Error "Could not find conda environment '$EnvName'. Run: conda env create -f environment.yml"
 }
 
 & conda run -n $EnvName python -c "import PyInstaller"

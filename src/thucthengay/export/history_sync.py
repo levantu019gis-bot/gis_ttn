@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 
+from thucthengay.export.managed_sources import managed_source_composition
 from thucthengay.history import HistoryRecordError, HistoryService
 from thucthengay.models import (
     Composition,
@@ -109,8 +110,16 @@ def sync_export_history(
                 )
                 continue
             try:
-                result = service.record_exported_composition(
+                managed_composition, managed_issues = managed_source_composition(
+                    workspace_service,
+                    target,
                     history_composition,
+                )
+                if managed_issues:
+                    issues.extend(managed_issues)
+                    continue
+                result = service.record_exported_composition(
+                    managed_composition,
                     target=target,
                     workspace_path=workspace_service.paths.root,
                 )

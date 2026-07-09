@@ -438,6 +438,12 @@ def _resolve_historical_registry_path(
 
 
 def _resolve_runtime_target_assets(config_file: Path, target: TargetConfig) -> None:
+    managed_source_root = target.export.managed_source_root
+    if isinstance(managed_source_root, str) and managed_source_root.strip():
+        target.export.managed_source_root = str(
+            resolve_config_asset_path(config_file, managed_source_root)
+        )
+
     font_value = target.grid.style.get("default_label_font")
     if not isinstance(font_value, str) or not font_value.strip():
         return

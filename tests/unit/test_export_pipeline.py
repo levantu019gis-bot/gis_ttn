@@ -121,6 +121,46 @@ def test_run_full_export_records_single_pane_history_after_final_preflight(
     assert event_rows == [("alpha__20260525",)]
 
 
+def test_run_full_export_copies_sources_to_managed_root_before_history_sync(
+    tmp_path: Path,
+) -> None:
+    map_id = _write_template(tmp_path / "templates" / "alpha.pptx")
+    target = _target(tmp_path / "templates" / "alpha.pptx", map_id)
+    managed_root = tmp_path / "managed-sources"
+    target = target.model_copy(
+        update={
+            "export": target.export.model_copy(
+                update={"managed_source_root": str(managed_root)}
+            )
+        }
+    )
+    service = WorkspaceService(tmp_path / "workspace")
+    service.initialize(config_path="config.json")
+    (service.paths.root / "alpha.tif").write_bytes(b"exported source")
+    service.write_composition(_composition())
+    history = HistoryService(tmp_path / "history" / "target-history.sqlite")
+
+    result = run_full_export(
+        service,
+        [target],
+        output_stem="report",
+        render=_success_render,
+        history_service=history,
+    )
+
+    assert result.ok is True
+    managed_files = list((managed_root / "alpha" / "20260525").glob("alpha__*.tif"))
+    assert len(managed_files) == 1
+    assert managed_files[0].read_bytes() == b"exported source"
+    with sqlite3.connect(history.database_path) as connection:
+        rows = connection.execute(
+            "SELECT source_path, cache_path, capture_date, capture_time FROM image_asset"
+        ).fetchall()
+    assert rows == [
+        (str(managed_files[0]), None, "2026-05-25", "08:30:00"),
+    ]
+
+
 def test_run_full_export_history_sync_is_idempotent_for_repeated_export(
     tmp_path: Path,
 ) -> None:

@@ -138,6 +138,7 @@ def test_project_config_applies_shared_target_defaults() -> None:
                     "date_format": "dd.MM.yy",
                     "time_format": "HH.mm/dd.MM.yy",
                     "map_background_color": "#AABBCC",
+                    "managed_source_root": "managed/sources",
                 },
             },
             "targets": [data],
@@ -155,6 +156,7 @@ def test_project_config_applies_shared_target_defaults() -> None:
     assert target.export.date_format == "dd.MM.yy"
     assert target.export.time_format == "HH:mm"
     assert target.export.map_background_color == "#AABBCC"
+    assert target.export.managed_source_root == "managed/sources"
 
 
 def test_historical_registry_config_requires_database_path_when_enabled() -> None:

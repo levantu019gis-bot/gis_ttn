@@ -610,11 +610,25 @@ class ReviewEditMode(QWidget):
             previous_blocked = False
             if selection_model is not None and not emit:
                 previous_blocked = selection_model.blockSignals(True)
+            previous_selected_id = (
+                self.selected_composition.composition_id
+                if self.selected_composition is not None
+                else None
+            )
             try:
                 self.tree_view.setCurrentIndex(index)
             finally:
                 if selection_model is not None and not emit:
                     selection_model.blockSignals(previous_blocked)
+            if (
+                emit
+                and previous_selected_id != composition_id
+                and (
+                    self.selected_composition is None
+                    or self.selected_composition.composition_id != composition_id
+                )
+            ):
+                self._select_composition_index(index, QModelIndex())
         else:
             self.tree_view.clearSelection()
 
@@ -1706,7 +1720,9 @@ class ReviewEditMode(QWidget):
         map_frame_size = self._map_frame_size_for_composition(composition)
         if map_frame_size is not None:
             self.gis_canvas.set_map_frame_size(*map_frame_size)
+        previous_compare_state = composition.temporal_compare
         composition = self._load_temporal_compare_controls(composition)
+        compare_state_synced = composition.temporal_compare != previous_compare_state
         self.selected_composition = composition
         self.gis_canvas.set_composition(composition)
         self._load_canvas_compare_context(composition)
@@ -1720,7 +1736,7 @@ class ReviewEditMode(QWidget):
         self._update_review_action_state()
         if target_preview_needs_render:
             self._request_target_preview(composition)
-        if not composition.needs_revalidation:
+        if not composition.needs_revalidation or compare_state_synced:
             self._request_canvas_render(composition)
 
     def _load_canvas_compare_context(self, composition: Composition) -> None:
@@ -1839,15 +1855,19 @@ class ReviewEditMode(QWidget):
             )
             self.compare_orientation_combo.setCurrentIndex(max(0, orientation_index))
             self.compare_enabled_checkbox.setChecked(self._compare_enabled_global)
+            pane_a_fallback, pane_b_fallback = _default_compare_pane_indices(
+                options,
+                composition.composition_id,
+            )
             self._select_compare_composition(
                 self.compare_pane_a_combo,
                 state.pane_a_composition_id,
-                0,
+                pane_a_fallback,
             )
             self._select_compare_composition(
                 self.compare_pane_b_combo,
                 state.pane_b_composition_id,
-                1,
+                pane_b_fallback,
             )
             enough_options = len(options) >= 2
             effective_checked = self._compare_enabled_global and enough_options
@@ -2078,6 +2098,27 @@ def _compare_composition_source_label(composition: Composition) -> str:
     if len(source_values) == 1:
         return "Historical" if "historical" in source_values else "Current"
     return "Mixed"
+
+
+def _default_compare_pane_indices(
+    options: list[Composition],
+    composition_id: str,
+) -> tuple[int, int]:
+    if not options:
+        return 0, 0
+    current_index = next(
+        (
+            index
+            for index, option in enumerate(options)
+            if option.composition_id == composition_id
+        ),
+        0,
+    )
+    if len(options) == 1:
+        return current_index, current_index
+    if current_index + 1 < len(options):
+        return current_index, current_index + 1
+    return current_index, current_index - 1
 
 
 def _render_spec_error_message(error: RenderSpecError | ValidationError) -> str:

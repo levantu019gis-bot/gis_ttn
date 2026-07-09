@@ -2715,6 +2715,47 @@ def test_review_edit_compare_mode_is_global_across_composition_selection(
     assert service.read_composition("alpha__20260525").temporal_compare.enabled is False
 
 
+def test_review_edit_compare_skip_advances_default_panes_to_next_composition(
+    tmp_path: Path,
+) -> None:
+    qapp()
+    service = WorkspaceService(tmp_path / "workspace")
+    service.initialize(config_path="config.json")
+    for day in (25, 26, 27):
+        service.write_composition(
+            composition(
+                f"alpha__202605{day}",
+                "alpha",
+                date(2026, 5, day),
+                needs_revalidation=False,
+            )
+        )
+
+    render_requests: list[str] = []
+    mode = ReviewEditMode()
+    mode._request_canvas_render = (  # noqa: SLF001
+        lambda composition: render_requests.append(composition.composition_id)
+    )
+    mode.load_workspace(service, targets=[target_config("alpha", sort_order=1, name="Alpha")])
+    mode._apply_queue_filter(QueueFilter.UNREVIEWED)  # noqa: SLF001
+    mode.tree_view.setCurrentIndex(mode.tree_model.index_for_composition_id("alpha__20260525"))
+
+    mode.compare_enabled_checkbox.setChecked(True)
+    mode.compare_pane_a_combo.setCurrentIndex(0)
+    mode.compare_pane_b_combo.setCurrentIndex(1)
+
+    mode.skip_button.click()
+
+    assert mode.tree_model.composition_id_for_index(mode.tree_view.currentIndex()) == (
+        "alpha__20260526"
+    )
+    updated = service.read_composition("alpha__20260526")
+    assert updated.temporal_compare.enabled is True
+    assert updated.temporal_compare.pane_a_composition_id == "alpha__20260526"
+    assert updated.temporal_compare.pane_b_composition_id == "alpha__20260527"
+    assert render_requests[-1] == "alpha__20260526"
+
+
 def test_review_edit_compare_pane_view_persists_to_selected_compare_state(
     tmp_path: Path,
 ) -> None:
