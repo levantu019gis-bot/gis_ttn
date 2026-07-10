@@ -935,6 +935,7 @@ class ReviewEditMode(QWidget):
             previous_state=self._canvas_tile_state,
             settings=TilePreviewSettings(
                 tile_pixels=tile_config.tile_pixels,
+                max_decode_workers=tile_config.max_decode_workers,
                 tile_width_degrees=tile_config.tile_width_degrees,
                 tile_height_degrees=tile_config.tile_height_degrees,
                 partial_repaint_threshold_px=tile_config.partial_repaint_threshold_px,
@@ -968,6 +969,7 @@ class ReviewEditMode(QWidget):
                     previous_state=self._canvas_tile_state,
                     settings=TilePreviewSettings(
                         tile_pixels=tile_config.tile_pixels,
+                        max_decode_workers=tile_config.max_decode_workers,
                         tile_width_degrees=tile_config.tile_width_degrees,
                         tile_height_degrees=tile_config.tile_height_degrees,
                         partial_repaint_threshold_px=tile_config.partial_repaint_threshold_px,

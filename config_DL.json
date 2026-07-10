@@ -43,7 +43,8 @@
     },
     "render_preview": {
       "tile_preview": {
-        "enabled": true
+        "enabled": true,
+        "max_decode_workers": 4
       }
     }
   },

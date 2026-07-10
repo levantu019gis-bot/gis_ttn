@@ -166,6 +166,7 @@ class TilePreviewConfig(BaseModel):
 
     enabled: bool = False
     max_cache_bytes: int = Field(default=512 * 1024 * 1024, ge=0)
+    max_decode_workers: int = Field(default=1, ge=1, le=16)
     tile_pixels: int = Field(default=256, ge=1, le=2048)
     tile_width_degrees: float = Field(default=0.05, gt=0)
     tile_height_degrees: float = Field(default=0.05, gt=0)

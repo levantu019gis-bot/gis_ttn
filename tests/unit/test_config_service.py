@@ -430,6 +430,7 @@ def test_load_project_config_applies_shared_defaults_with_target_overrides(
                     "tile_preview": {
                         "enabled": True,
                         "max_cache_bytes": 123456,
+                        "max_decode_workers": 3,
                         "tile_pixels": 384,
                         "tile_width_degrees": 0.02,
                         "tile_height_degrees": 0.03,
@@ -463,6 +464,7 @@ def test_load_project_config_applies_shared_defaults_with_target_overrides(
     tile_preview = result.config.defaults.render_preview.tile_preview
     assert tile_preview.enabled is True
     assert tile_preview.max_cache_bytes == 123456
+    assert tile_preview.max_decode_workers == 3
     assert tile_preview.tile_pixels == 384
     assert tile_preview.tile_width_degrees == 0.02
     assert tile_preview.tile_height_degrees == 0.03

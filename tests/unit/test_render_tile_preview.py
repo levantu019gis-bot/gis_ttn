@@ -37,6 +37,7 @@ def test_render_tile_preview_decodes_tiles_and_reuses_cache(tmp_path: Path) -> N
     render_cache = MapRenderCache()
     settings = TilePreviewSettings(
         tile_pixels=64,
+        max_decode_workers=2,
         tile_width_degrees=0.2,
         tile_height_degrees=0.2,
         partial_repaint_threshold_px=64,
@@ -58,6 +59,7 @@ def test_render_tile_preview_decodes_tiles_and_reuses_cache(tmp_path: Path) -> N
     assert tile_cache.entry_count > 0
     first_summary = first_diagnostics.summary()
     assert first_summary.counters["tile_preview.decode.jobs"] > 0
+    assert first_summary.counters["tile_preview.decode.workers"] == 2
     assert first_summary.cache_misses["tile_preview"] > 0
 
     second_diagnostics = RenderDiagnostics()

@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 from collections.abc import Iterator
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from contextlib import nullcontext
 from dataclasses import dataclass, field
+from time import perf_counter
 
 import numpy as np
 
@@ -27,6 +29,7 @@ from thucthengay.render.tile_compositor import (
 )
 from thucthengay.render.tile_scheduler import (
     TileDecodeJob,
+    TileDecodeResult,
     TileScheduler,
     decode_tile_job,
 )
@@ -37,6 +40,7 @@ class TilePreviewSettings:
     """Runtime settings for the Review/Edit tile preview path."""
 
     tile_pixels: int = 256
+    max_decode_workers: int = 1
     tile_width_degrees: float = 0.05
     tile_height_degrees: float = 0.05
     partial_repaint_threshold_px: int = 96
@@ -74,6 +78,12 @@ class _PaneContext:
 class _PaneJob:
     pane_key: str
     job: TileDecodeJob
+
+
+@dataclass(frozen=True)
+class _TimedTileDecodeResult:
+    result: TileDecodeResult
+    elapsed_ms: float
 
 
 def render_tile_preview_map(
@@ -192,11 +202,13 @@ def _iter_normal_tile_preview_frames(
         total=total,
         done=total == 0,
     )
-    for job in jobs:
-        if _is_cancelled(is_cancelled):
-            break
-        with diagnostics.time("tile_preview.decode") if diagnostics is not None else nullcontext():
-            tile_scheduler.apply_result(decode_tile_job(job, is_cancelled=is_cancelled))
+    for result in _iter_decode_results(
+        jobs,
+        max_workers=settings.max_decode_workers,
+        is_cancelled=is_cancelled,
+        diagnostics=diagnostics,
+    ):
+        tile_scheduler.apply_result(result)
         decoded += 1
         yield _normal_progress_frame(
             spec,
@@ -266,13 +278,13 @@ def _iter_compare_tile_preview_frames(
         total=total,
         done=total == 0,
     )
-    for pane_job in pane_jobs:
-        if _is_cancelled(is_cancelled):
-            break
-        with diagnostics.time("tile_preview.decode") if diagnostics is not None else nullcontext():
-            tile_scheduler.apply_result(
-                decode_tile_job(pane_job.job, is_cancelled=is_cancelled)
-            )
+    for result in _iter_decode_results(
+        tuple(pane_job.job for pane_job in pane_jobs),
+        max_workers=settings.max_decode_workers,
+        is_cancelled=is_cancelled,
+        diagnostics=diagnostics,
+    ):
+        tile_scheduler.apply_result(result)
         decoded += 1
         yield _compare_progress_frame(
             spec,
@@ -450,6 +462,70 @@ def _queue_jobs(
         for _job in jobs:
             diagnostics.record_cache_miss("tile_preview")
     return jobs
+
+
+def _iter_decode_results(
+    jobs: tuple[TileDecodeJob, ...],
+    *,
+    max_workers: int,
+    is_cancelled: CancelCallback | None,
+    diagnostics: RenderDiagnostics | None,
+) -> Iterator[TileDecodeResult]:
+    if not jobs:
+        return
+    workers = max(1, min(int(max_workers), len(jobs)))
+    if diagnostics is not None:
+        diagnostics.increment("tile_preview.decode.workers", workers)
+    if workers <= 1:
+        for job in jobs:
+            if _is_cancelled(is_cancelled):
+                break
+            timed = _decode_tile_job_timed(job, is_cancelled=is_cancelled)
+            _record_decode_timing(timed, diagnostics=diagnostics)
+            yield timed.result
+        return
+
+    executor = ThreadPoolExecutor(
+        max_workers=workers,
+        thread_name_prefix="tile-preview-decode",
+    )
+    futures = [
+        executor.submit(_decode_tile_job_timed, job, is_cancelled=is_cancelled)
+        for job in jobs
+    ]
+    try:
+        for future in as_completed(futures):
+            if _is_cancelled(is_cancelled):
+                break
+            timed = future.result()
+            _record_decode_timing(timed, diagnostics=diagnostics)
+            yield timed.result
+    finally:
+        for future in futures:
+            future.cancel()
+        executor.shutdown(wait=True, cancel_futures=True)
+
+
+def _decode_tile_job_timed(
+    job: TileDecodeJob,
+    *,
+    is_cancelled: CancelCallback | None,
+) -> _TimedTileDecodeResult:
+    started = perf_counter()
+    result = decode_tile_job(job, is_cancelled=is_cancelled)
+    return _TimedTileDecodeResult(
+        result=result,
+        elapsed_ms=(perf_counter() - started) * 1000.0,
+    )
+
+
+def _record_decode_timing(
+    timed: _TimedTileDecodeResult,
+    *,
+    diagnostics: RenderDiagnostics | None,
+) -> None:
+    if diagnostics is not None:
+        diagnostics.add_timing_ms("tile_preview.decode", timed.elapsed_ms)
 
 
 def _compose_tiles(
