@@ -57,6 +57,7 @@ class TileCacheEntry:
     pixels: np.ndarray
     bounds: GeoWindow
     nbytes: int
+    valid_mask: np.ndarray | None = None
 
 
 class TileIndex:
@@ -185,13 +186,27 @@ class TileCache:
                 pixels=entry.pixels.copy(),
                 bounds=entry.bounds,
                 nbytes=entry.nbytes,
+                valid_mask=entry.valid_mask.copy() if entry.valid_mask is not None else None,
             )
 
-    def put(self, key: TileKey, pixels: np.ndarray, bounds: GeoWindow) -> None:
-        nbytes = int(pixels.nbytes)
+    def put(
+        self,
+        key: TileKey,
+        pixels: np.ndarray,
+        bounds: GeoWindow,
+        *,
+        valid_mask: np.ndarray | None = None,
+    ) -> None:
+        mask = None if valid_mask is None else valid_mask.astype(bool, copy=True)
+        nbytes = int(pixels.nbytes + (0 if mask is None else mask.nbytes))
         if self.max_bytes <= 0 or nbytes > self.max_bytes:
             return
-        entry = TileCacheEntry(pixels=pixels.copy(), bounds=bounds, nbytes=nbytes)
+        entry = TileCacheEntry(
+            pixels=pixels.copy(),
+            bounds=bounds,
+            nbytes=nbytes,
+            valid_mask=mask,
+        )
         with self._lock:
             old = self._entries.pop(key, None)
             if old is not None:

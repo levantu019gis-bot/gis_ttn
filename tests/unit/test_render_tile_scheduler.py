@@ -122,6 +122,21 @@ def test_decode_tile_job_uses_window_and_target_out_shape() -> None:
     assert (window.width, window.height) != (dataset.width, dataset.height)
 
 
+def test_decode_tile_job_returns_valid_mask_for_nodata_pixels() -> None:
+    result = decode_tile_job(
+        _job(output_size=4),
+        opener=lambda _path: _FakeDataset(mask_left_half=True),
+    )
+
+    assert result.state == TileDecodeState.SUCCESS
+    assert result.pixels is not None
+    assert result.valid_mask is not None
+    assert result.valid_mask.shape == (4, 4)
+    assert not result.valid_mask[:, :2].any()
+    assert result.valid_mask[:, 2:].all()
+    assert np.all(result.pixels[:, :2] == 0)
+
+
 def test_decode_tile_job_cancellation_exits_without_cache_mutation() -> None:
     cache = TileCache(max_bytes=1024)
     scheduler = TileScheduler(cache=cache)
@@ -180,9 +195,16 @@ def scheduler_job(request_id, revision, coverage, output_size):  # noqa: ANN001
 
 
 class _FakeDataset:
-    def __init__(self, *, width: int = 100, height: int = 100) -> None:
+    def __init__(
+        self,
+        *,
+        width: int = 100,
+        height: int = 100,
+        mask_left_half: bool = False,
+    ) -> None:
         self.width = width
         self.height = height
+        self.mask_left_half = mask_left_half
         self.count = 3
         self.crs = GEOGRAPHIC_CRS
         self.bounds = (0.0, 0.0, 4.0, 4.0)
@@ -207,6 +229,10 @@ class _FakeDataset:
             if isinstance(out_shape, tuple) and len(out_shape) == 3
             else (out_shape[0], out_shape[1])
         )
+        mask_array = False
+        if self.mask_left_half and isinstance(indexes, tuple):
+            mask_array = np.zeros(shape, dtype=bool)
+            mask_array[..., : shape[-1] // 2] = True
         if isinstance(indexes, tuple):
-            return np.ma.array(np.full(shape, 120, dtype=np.uint8), mask=False)
+            return np.ma.array(np.full(shape, 120, dtype=np.uint8), mask=mask_array)
         return np.ma.array(np.full(shape, 255, dtype=np.uint8), mask=False)

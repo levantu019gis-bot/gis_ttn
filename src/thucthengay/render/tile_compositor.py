@@ -66,7 +66,7 @@ def compose_cached_tiles(
         if cached is None:
             missing.append(coverage)
             continue
-        if _draw_tile(canvas, viewport, coverage.bounds, cached.pixels):
+        if _draw_tile(canvas, viewport, coverage.bounds, cached.pixels, cached.valid_mask):
             used.append(coverage.key)
     return TileComposedFrame(
         canvas=canvas,
@@ -175,6 +175,7 @@ def _draw_tile(
     viewport: GeoWindow,
     tile_bounds: GeoWindow,
     pixels: np.ndarray,
+    valid_mask: np.ndarray | None,
 ) -> bool:
     overlap = _intersection(viewport, tile_bounds)
     if overlap is None:
@@ -188,11 +189,25 @@ def _draw_tile(
     tile_slice = pixels[src_row0:src_row1, src_col0:src_col1]
     if tile_slice.size == 0:
         return False
-    canvas[dst_row0:dst_row1, dst_col0:dst_col1] = _resize_nearest(
+    resized_tile = _resize_nearest(
         tile_slice,
         height=dst_row1 - dst_row0,
         width=dst_col1 - dst_col0,
     )
+    target = canvas[dst_row0:dst_row1, dst_col0:dst_col1]
+    if valid_mask is None:
+        target[:] = resized_tile
+        return True
+
+    mask_slice = valid_mask[src_row0:src_row1, src_col0:src_col1]
+    resized_mask = _resize_nearest_mask(
+        mask_slice,
+        height=dst_row1 - dst_row0,
+        width=dst_col1 - dst_col0,
+    )
+    if not resized_mask.any():
+        return False
+    target[resized_mask] = resized_tile[resized_mask]
     return True
 
 
@@ -232,3 +247,11 @@ def _resize_nearest(pixels: np.ndarray, *, height: int, width: int) -> np.ndarra
     row_idx = np.linspace(0, pixels.shape[0] - 1, height).round().astype(int)
     col_idx = np.linspace(0, pixels.shape[1] - 1, width).round().astype(int)
     return pixels[row_idx][:, col_idx]
+
+
+def _resize_nearest_mask(mask: np.ndarray, *, height: int, width: int) -> np.ndarray:
+    if mask.shape[0] == height and mask.shape[1] == width:
+        return mask.astype(bool, copy=False)
+    row_idx = np.linspace(0, mask.shape[0] - 1, height).round().astype(int)
+    col_idx = np.linspace(0, mask.shape[1] - 1, width).round().astype(int)
+    return mask[row_idx][:, col_idx].astype(bool, copy=False)

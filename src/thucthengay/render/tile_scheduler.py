@@ -56,6 +56,7 @@ class TileDecodeResult:
     bounds: GeoWindow
     state: TileDecodeState
     pixels: np.ndarray | None = None
+    valid_mask: np.ndarray | None = None
     message: str = ""
 
 
@@ -130,7 +131,7 @@ class TileScheduler:
             return False
         if result.state != TileDecodeState.SUCCESS or result.pixels is None:
             return False
-        self.cache.put(result.key, result.pixels, result.bounds)
+        self.cache.put(result.key, result.pixels, result.bounds, valid_mask=result.valid_mask)
         return True
 
 
@@ -152,20 +153,26 @@ def decode_tile_job(
                     TileDecodeState.CANCELLED,
                     message="Tile decode cancelled.",
                 )
-            pixels = _read_dataset_tile(dataset, job, is_cancelled=is_cancelled)
+            tile = _read_dataset_tile(dataset, job, is_cancelled=is_cancelled)
             if _is_cancelled(is_cancelled):
                 return _tile_result(
                     job,
                     TileDecodeState.CANCELLED,
                     message="Tile decode cancelled.",
                 )
-            if pixels is None:
+            if tile is None:
                 return _tile_result(
                     job,
                     TileDecodeState.SKIPPED,
                     message="Tile outside raster bounds.",
                 )
-            return _tile_result(job, TileDecodeState.SUCCESS, pixels=pixels)
+            pixels, valid_mask = tile
+            return _tile_result(
+                job,
+                TileDecodeState.SUCCESS,
+                pixels=pixels,
+                valid_mask=valid_mask,
+            )
     except Exception as exc:  # noqa: BLE001 - one bad tile should not crash the scheduler.
         return _tile_result(job, TileDecodeState.ERROR, message=str(exc))
 
@@ -175,7 +182,7 @@ def _read_dataset_tile(
     job: TileDecodeJob,
     *,
     is_cancelled: CancelCallback | None,
-) -> np.ndarray | None:
+) -> tuple[np.ndarray, np.ndarray] | None:
     src = _geographic_dataset(dataset)
     close_src = src is not dataset
     try:
@@ -218,8 +225,9 @@ def _read_dataset_tile(
         else:
             rgb = _scale_to_uint8(masked_data)
         pixels = np.transpose(rgb, (1, 2, 0))
+        valid_mask = ~mask
         pixels[mask, :] = 0
-        return pixels
+        return pixels, valid_mask
     finally:
         if close_src:
             src.close()
@@ -283,6 +291,7 @@ def _tile_result(
     state: TileDecodeState,
     *,
     pixels: np.ndarray | None = None,
+    valid_mask: np.ndarray | None = None,
     message: str = "",
 ) -> TileDecodeResult:
     return TileDecodeResult(
@@ -292,6 +301,7 @@ def _tile_result(
         bounds=job.coverage.bounds,
         state=state,
         pixels=pixels,
+        valid_mask=valid_mask,
         message=message,
     )
 
