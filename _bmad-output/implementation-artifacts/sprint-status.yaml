@@ -129,3 +129,11 @@ development_status:
   11-5-compose-gis-canvas-from-cached-tiles-and-support-partial-repaint: review
   11-6-add-progressive-lod-and-reassess-gpu-path: review
   epic-11-retrospective: optional
+  epic-12: in-progress
+  12-1-add-tile-preview-feature-flag-and-safe-fallback: review
+  12-2-wire-tileindex-and-tilecache-into-review-edit-pan-zoom-state: review
+  12-3-run-tile-decode-queue-from-review-edit-workers: review
+  12-4-compose-review-edit-gis-canvas-from-cached-tiles: review
+  12-5-enable-partial-repaint-for-small-pan-movements: review
+  12-6-measure-tile-preview-performance-and-decide-progressive-gpu-next-steps: review
+  epic-12-retrospective: optional

@@ -261,6 +261,27 @@ class MapRenderCache:
         self.full_maps.clear()
 
 
+@dataclass(frozen=True)
+class TemporalComparePaneRenderPlan:
+    """Frame-safe render inputs for one temporal comparison pane."""
+
+    pane_key: str
+    spec: RenderSpec
+    rect: PixelRect
+
+
+@dataclass(frozen=True)
+class TemporalCompareRenderPlan:
+    """Frame-safe render inputs for the full temporal comparison inner map."""
+
+    spec: RenderSpec
+    layout: MapSurroundLayout
+    inner_rect: PixelRect
+    pane_a: TemporalComparePaneRenderPlan
+    pane_b: TemporalComparePaneRenderPlan
+    gap_rgb: tuple[int, int, int]
+
+
 def _cancelled_issue(spec: RenderSpec) -> Issue:
     return Issue(
         issue_id="render.cancelled",
@@ -622,6 +643,32 @@ def render_map_with_cache(
     )
 
 
+def render_map_with_raster_base(
+    spec: RenderSpec,
+    raster_result: RasterRenderResult,
+    *,
+    render_cache: MapRenderCache | None = None,
+    frame_cache: FrameOverlayCache | None = None,
+    is_cancelled: CancelCallback | None = None,
+    diagnostics: RenderDiagnostics | None = None,
+) -> RasterRenderResult:
+    """Compose a pre-rendered inner raster with the existing map-surround frame."""
+
+    if diagnostics is not None:
+        diagnostics.record_render_spec(spec)
+    with diagnostics.time("render.total") if diagnostics is not None else nullcontext():
+        return _compose_map_with_raster_base(
+            spec,
+            raster_result,
+            frame_cache=(
+                render_cache.frame_overlays if render_cache is not None else frame_cache
+            ),
+            full_cache=render_cache.full_maps if render_cache is not None else None,
+            is_cancelled=is_cancelled,
+            diagnostics=diagnostics,
+        )
+
+
 def _render_map(
     spec: RenderSpec,
     *,
@@ -644,6 +691,42 @@ def _render_map(
             full_cache=full_cache,
             diagnostics=diagnostics,
         )
+
+
+def inner_render_spec_and_layout(spec: RenderSpec) -> tuple[RenderSpec, MapSurroundLayout]:
+    """Return the frame-safe inner render spec and map-surround layout."""
+
+    return _render_layout_for_spec(spec)
+
+
+def temporal_compare_render_plan(spec: RenderSpec) -> TemporalCompareRenderPlan:
+    """Return frame-safe tile-render inputs for temporal comparison panes."""
+
+    render_spec, layout = _render_layout_for_spec(spec)
+    inner = layout.inner_map
+    comparison = render_spec.temporal_compare
+    pane_gap_px = _temporal_compare_pane_gap_px(render_spec)
+    pane_a_rect, pane_b_rect = _split_compare_inner_map(
+        inner,
+        comparison.orientation,
+        gap_px=pane_gap_px,
+    )
+    return TemporalCompareRenderPlan(
+        spec=render_spec,
+        layout=layout,
+        inner_rect=inner,
+        pane_a=TemporalComparePaneRenderPlan(
+            pane_key="A",
+            spec=_spec_for_compare_pane(render_spec, comparison.pane_a, pane_a_rect),
+            rect=pane_a_rect,
+        ),
+        pane_b=TemporalComparePaneRenderPlan(
+            pane_key="B",
+            spec=_spec_for_compare_pane(render_spec, comparison.pane_b, pane_b_rect),
+            rect=pane_b_rect,
+        ),
+        gap_rgb=_temporal_compare_gap_color(render_spec),
+    )
 
 
 def _render_map_inner(
@@ -708,6 +791,114 @@ def _render_map_inner(
 
     if is_cancelled is not None and is_cancelled():
         raise RenderError([*result.issues, _cancelled_issue(spec)])
+
+    try:
+        timer = (
+            diagnostics.time("render.canvas_allocate")
+            if diagnostics is not None
+            else nullcontext()
+        )
+        with timer:
+            canvas = np.empty((spec.output_height, spec.output_width, 3), dtype=np.uint8)
+    except MemoryError as exc:
+        raise RenderError([*result.issues, _memory_issue(spec)]) from exc
+
+    with diagnostics.time("render.composite") if diagnostics is not None else nullcontext():
+        canvas[:, :] = (255, 255, 255)
+        canvas[inner.top : inner.bottom, inner.left : inner.right, :] = bg
+        canvas[inner.top : inner.bottom, inner.left : inner.right, :] = result.canvas
+
+    try:
+        if is_cancelled is not None and is_cancelled():
+            raise RenderError([_cancelled_issue(spec)])
+        if render_spec.temporal_compare.enabled:
+            if diagnostics is not None:
+                diagnostics.record_cache_miss("frame_overlay")
+            timer = (
+                diagnostics.time("render.frame_overlay")
+                if diagnostics is not None
+                else nullcontext()
+            )
+            with timer:
+                draw_map_surround_outline(canvas, render_spec, layout, draw_inner=False)
+                _draw_temporal_compare_pane_frames(
+                    canvas,
+                    render_spec,
+                    layout,
+                    is_cancelled=is_cancelled,
+                )
+        else:
+            _apply_map_surround_frame(
+                canvas,
+                render_spec,
+                layout,
+                background=bg,
+                frame_cache=frame_cache,
+                is_cancelled=is_cancelled,
+                diagnostics=diagnostics,
+            )
+    except MemoryError as exc:
+        raise RenderError([*result.issues, _memory_issue(spec)]) from exc
+    except RenderError as exc:
+        raise RenderError([*result.issues, *exc.issues]) from exc
+
+    rendered = RasterRenderResult(
+        canvas=canvas,
+        issues=result.issues,
+        painted_layer_ids=result.painted_layer_ids,
+    )
+    if full_cache is not None and full_key is not None and (
+        is_cancelled is None or not is_cancelled()
+    ):
+        full_cache.put(full_key, rendered)
+    return rendered
+
+
+def _compose_map_with_raster_base(
+    spec: RenderSpec,
+    result: RasterRenderResult,
+    *,
+    frame_cache: FrameOverlayCache | None,
+    full_cache: FullMapCache | None,
+    is_cancelled: CancelCallback | None,
+    diagnostics: RenderDiagnostics | None,
+) -> RasterRenderResult:
+    output_pixels = spec.output_width * spec.output_height
+    if output_pixels > MAX_RENDER_PIXELS:
+        raise RenderError([_too_large_issue(spec)])
+
+    full_key = _full_map_cache_key(spec) if full_cache is not None else None
+    if full_cache is not None and full_key is not None:
+        cached_full = full_cache.get(full_key)
+        if cached_full is not None:
+            if diagnostics is not None:
+                diagnostics.record_cache_hit("full_map")
+            return cached_full
+        if diagnostics is not None:
+            diagnostics.record_cache_miss("full_map")
+
+    with diagnostics.time("render.layout") if diagnostics is not None else nullcontext():
+        render_spec, layout = _render_layout_for_spec(spec)
+    inner = layout.inner_map
+    if result.canvas.shape[:2] != (inner.height, inner.width):
+        issue = Issue(
+            issue_id="render.raster_base.size_mismatch",
+            severity=IssueSeverity.ERROR,
+            scope=IssueScope.RENDER,
+            target_id=spec.target_id,
+            composition_id=spec.composition_id,
+            message="Raster tile preview khong khop kich thuoc khung ban do.",
+            remediation="Fallback ve render preview day du de giu nguyen khung ban do.",
+        )
+        raise RenderError([*result.issues, issue])
+
+    if is_cancelled is not None and is_cancelled():
+        raise RenderError([*result.issues, _cancelled_issue(spec)])
+
+    try:
+        bg = _parse_hex_color(spec.background.color)
+    except ValueError as exc:
+        raise RenderError([*result.issues, _invalid_background_issue(spec)]) from exc
 
     try:
         timer = (

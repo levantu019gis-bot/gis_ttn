@@ -2612,3 +2612,171 @@ So that Review/Edit remains usable even when high-resolution tiles are still dec
 **Given** diagnostics show the remaining bottleneck is not raster decode/resampling
 **When** GPU/OpenGL is considered
 **Then** the decision record states whether to keep QPainter/QImage or create a later GPU-specific epic/story, with evidence from the measured metrics.
+
+## Epic 12: Wire Tile Preview Pipeline into Review/Edit UI
+
+**Goal:** Turn the Epic 11 tile-rendering foundation into an operator-visible Review/Edit preview path so pan/zoom can reuse decoded map-space tiles instead of rerendering whole frames, while preserving the existing map-frame layout contract and keeping final export on the current stable renderer.
+
+**Strategic Alignment:** This epic implements the activation portion of `SOLUTION.md` Giai đoạn 2 and Giai đoạn 3: Tile Index, Tile Cache, Tile Scheduler, Decode Queue, Compositor, and Partial Repaint. Progressive LOD remains secondary and GPU/OpenGL remains out of scope unless diagnostics after tile wiring justify a separate future epic.
+
+**Mandatory Epic Constraint:** Epic 12 is a preview-performance integration epic only. Every story must preserve the current map-frame visual/layout contract exactly: frame shape, size, aspect, outer frame, inner raster panel, coordinate labels, tick placement, label format/text, temporal-compare pane gap, pane boundaries, and spacing must not change. Final export output must remain governed by the existing final render path unless a later explicitly scoped story changes and verifies that contract.
+
+### Story 12.1: Add Tile Preview Feature Flag and Safe Fallback
+
+As a Developer,
+I want tile preview rendering to be controlled by an explicit feature flag with fallback to the current renderer,
+So that the new path can be enabled, tested, and disabled without disrupting Review/Edit operations.
+
+**Requirement References:** Epic 12, SOLUTION.md Giai đoạn 2, RPR-AR2, RPR-AR4, RPR-UX1
+
+**Acceptance Criteria:**
+
+**Given** tile preview is disabled in configuration
+**When** Review/Edit renders a map
+**Then** it uses the existing full-frame preview path and behavior remains unchanged.
+
+**Given** tile preview is enabled
+**When** a composition has a supported normal preview render state
+**Then** Review/Edit creates tile pipeline state for that composition without changing map-frame dimensions, labels, pane gaps, or final export behavior.
+
+**Given** tile preview encounters unsupported state, missing metadata, or a tile pipeline error
+**When** the canvas needs imagery
+**Then** it falls back to the current renderer and surfaces a non-blocking status message.
+
+**Given** tests run
+**When** feature flag behavior is exercised
+**Then** tests verify both disabled and enabled paths, including fallback.
+
+### Story 12.2: Wire TileIndex and TileCache into Review/Edit Pan/Zoom State
+
+As an Operator,
+I want pan/zoom changes to reuse stable tile keys and cached imagery,
+So that small viewport movements do not trigger unnecessary full-frame raster decode.
+
+**Requirement References:** Epic 12, SOLUTION.md Giai đoạn 2.1-2.3, RPR-FR5, RPR-FR6, RPR-AR4
+
+**Acceptance Criteria:**
+
+**Given** tile preview is enabled and a map viewport is displayed
+**When** the viewport changes through pan or zoom
+**Then** Review/Edit derives visible tile coverage from the existing render spec geo window and map scale.
+
+**Given** visible tiles are already in the tile cache
+**When** the viewport updates
+**Then** cached tile entries are reused immediately and are not invalidated solely by pan/zoom.
+
+**Given** raster source size or mtime changes
+**When** tile keys are derived again
+**Then** stale tile entries are not reused because the file signature differs.
+
+**Given** normal and temporal-compare preview states are evaluated
+**When** tile coverage is computed
+**Then** the implementation uses existing pane geometry as input and does not redefine frame size, labels, pane gap, or pane boundaries.
+
+### Story 12.3: Run Tile Decode Queue from Review/Edit Workers
+
+As an Operator,
+I want missing tiles decoded asynchronously while I continue reviewing,
+So that the UI stays responsive during expensive raster reads.
+
+**Requirement References:** Epic 12, SOLUTION.md Giai đoạn 2.3-2.4, RPR-FR6, RPR-FR7, RPR-AR3, RPR-UX1
+
+**Acceptance Criteria:**
+
+**Given** tile preview is enabled and visible tiles are missing
+**When** the scheduler runs
+**Then** missing tiles are queued center-first and decoded off the UI thread.
+
+**Given** a newer pan/zoom request supersedes queued work
+**When** old tile decode results complete
+**Then** stale results are rejected and do not overwrite current cache or canvas state.
+
+**Given** cancellation is requested because the selection, viewport, or mode changed
+**When** decode workers reach cancellation checkpoints
+**Then** they exit cleanly and leave cache/state consistent.
+
+**Given** raster overviews are available
+**When** tile decode reads imagery
+**Then** it reads the smallest practical raster window/decimation for that tile instead of full-frame data.
+
+### Story 12.4: Compose Review/Edit GIS Canvas from Cached Tiles
+
+As an Operator,
+I want cached tiles drawn directly into the GIS canvas at the current viewport,
+So that panning shows reused imagery immediately instead of waiting for a full preview rerender.
+
+**Requirement References:** Epic 12, SOLUTION.md Giai đoạn 2.5, RPR-FR8, RPR-AR2, RPR-AR4
+
+**Acceptance Criteria:**
+
+**Given** visible tile imagery is cached
+**When** Review/Edit repaints the GIS canvas
+**Then** it composes cached tiles at positions derived from the current viewport.
+
+**Given** some visible tiles are missing
+**When** the canvas is composed
+**Then** cached tiles are shown immediately, missing tiles are queued for decode, and the canvas status clearly indicates loading without blocking review actions.
+
+**Given** normal map preview or temporal-compare preview is displayed
+**When** tile composition is used
+**Then** frame shape, dimensions, labels, ticks, pane gaps, pane boundaries, and map-surround spacing remain exactly as defined by the existing render/frame layout.
+
+**Given** final export runs after tile preview was used
+**When** export generates final PNG/PPTX output
+**Then** output remains governed by the existing final render contract.
+
+### Story 12.5: Enable Partial Repaint for Small Pan Movements
+
+As an Operator,
+I want small pans to reuse the previous frame buffer and repaint only newly exposed areas,
+So that the map follows interaction quickly during review.
+
+**Requirement References:** Epic 12, SOLUTION.md Giai đoạn 3, RPR-FR8, RPR-FR9, RPR-AR4, RPR-UX1
+
+**Acceptance Criteria:**
+
+**Given** tile preview is enabled and a previous composed frame exists
+**When** pan delta is below the configured threshold
+**Then** Review/Edit reuses the previous buffer, shifts it by the pan offset, and queues/repaints only newly exposed tile bands where practical.
+
+**Given** zoom changes, pane layout changes, composition changes, or pan delta exceeds the threshold
+**When** the canvas updates
+**Then** the implementation falls back to full tile recomposition without corrupting tile cache state.
+
+**Given** partial repaint is active
+**When** diagnostics are enabled
+**Then** timing and cache metrics record partial/full repaint counts and perceived latency.
+
+**Given** partial repaint is used in normal or compare mode
+**When** the canvas is displayed
+**Then** only raster imagery timing/availability changes; frame geometry and labels remain unchanged.
+
+### Story 12.6: Measure Tile Preview Performance and Decide Progressive/GPU Next Steps
+
+As a Developer,
+I want before/after diagnostics for the wired tile preview pipeline,
+So that further optimization decisions are evidence-based.
+
+**Requirement References:** Epic 12, SOLUTION.md Giai đoạn 4-5, RPR-FR10, RPR-FR11, RPR-AR1, RPR-UX1
+
+**Acceptance Criteria:**
+
+**Given** tile preview wiring is stable
+**When** diagnostics are run on representative pan/zoom workflows
+**Then** the report compares baseline full-frame preview versus tile preview for CPU timing, raster read count, cache hit rate, repaint latency, and user-visible loading state.
+
+**Given** exact-resolution tiles are missing but lower-LOD cached tiles are available
+**When** progressive LOD is enabled for evaluation
+**Then** lower-LOD imagery is displayed temporarily with clear quality/loading status and replaced by exact tiles when ready.
+
+**Given** diagnostics still show raster decode/resampling as the bottleneck
+**When** GPU/OpenGL is considered
+**Then** the decision record keeps QPainter/QImage and prioritizes data/tile improvements instead.
+
+**Given** diagnostics show the remaining bottleneck is Qt/QPixmap/upload/composition after tile cache is effective
+**When** GPU/OpenGL is considered
+**Then** the decision record proposes a separate future GPU-specific epic/story with supporting evidence.
+
+**Given** Epic 12 completes
+**When** final regression tests run
+**Then** Review/Edit preview remains usable, final export remains stable, and map-frame layout invariance is verified.

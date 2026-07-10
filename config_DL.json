@@ -40,6 +40,11 @@
       "final_render_dpi": 200,
       "map_background_color": "#3a3756",
       "managed_source_root": "D:/Managed_Satellite_Images"
+    },
+    "render_preview": {
+      "tile_preview": {
+        "enabled": true
+      }
     }
   },
   "historical_registry": {
@@ -1095,8 +1100,8 @@
       "name": "CCHQ MA CONG",
       "alias": "CCHQ MA CONG",
       "coordinate": [
-        119.567354,
-        23.5499225
+        119.47659251,
+        23.69309546
       ],
       "scale": 50000,
       "grid": {

@@ -126,6 +126,14 @@ def _managed_source_path(
         if date_value is not None
         else UNKNOWN_DATE_KEY
     )
+    managed_date_dir = managed_root / target_dir / date_dir
+    try:
+        source_path.resolve().relative_to(managed_date_dir.resolve())
+    except ValueError:
+        pass
+    else:
+        return source_path
+
     source_hash = sha1(
         str(source_path).encode("utf-8"),
         usedforsecurity=False,
@@ -133,7 +141,7 @@ def _managed_source_path(
     source_stem = safe_filename_component(source_path.stem, fallback="image")
     suffix = source_path.suffix.lower() or ".tif"
     filename = f"{source_stem}__{source_hash}{suffix}"
-    return managed_root / target_dir / date_dir / filename
+    return managed_date_dir / filename
 
 
 def _copy_source(source_path: Path, destination: Path) -> None:

@@ -730,6 +730,7 @@ _HISTORICAL_RECORDS_ORDER = """
         image_asset.capture_date DESC,
         image_asset.capture_time IS NULL ASC,
         image_asset.capture_time DESC,
+        target_image_history.updated_at DESC,
         image_asset.source_path DESC
 """
 

@@ -59,6 +59,7 @@ class PreviewRenderJobResult:
     message: str
     issues: tuple[Issue, ...] = ()
     canvas: np.ndarray | None = field(default=None, compare=False)
+    tile_preview_state: object | None = field(default=None, compare=False)
 
 
 RenderFunction = Callable[..., RasterRenderResult]

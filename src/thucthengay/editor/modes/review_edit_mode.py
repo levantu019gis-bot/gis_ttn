@@ -36,6 +36,7 @@ from thucthengay.editor.models.composition_tree_model import (
 from thucthengay.editor.models.layer_stack_model import LayerStackColumn, LayerStackModel
 from thucthengay.editor.preferences import PreferencesService
 from thucthengay.editor.render_worker import RenderWorker
+from thucthengay.editor.tile_preview_worker import TilePreviewWorker
 from thucthengay.editor.widgets import (
     GisCanvasWidget,
     MetadataEditorDialog,
@@ -64,6 +65,7 @@ from thucthengay.models import (
     Issue,
     MetadataSource,
     MetadataStatus,
+    RenderPreviewConfig,
     TargetConfig,
     TemplateMetadata,
     TemporalCompareOrientation,
@@ -72,6 +74,13 @@ from thucthengay.render.core import MapRenderCache, render_map_with_cache
 from thucthengay.render.raster import render_raster_layers
 from thucthengay.render.spec import RenderSpecError, build_render_spec
 from thucthengay.render.target_preview import build_target_preview_spec
+from thucthengay.render.tile import TileCache
+from thucthengay.render.tile_preview import (
+    TilePreviewSettings,
+    TilePreviewState,
+    render_tile_preview_map,
+)
+from thucthengay.render.tile_scheduler import TileScheduler
 from thucthengay.validation import (
     ValidationContext,
     ValidationResult,
@@ -107,6 +116,12 @@ class ReviewEditMode(QWidget):
         self._render_workers: dict[str, RenderWorker] = {}
         self._render_tokens: dict[str, object] = {}
         self._canvas_render_cache = MapRenderCache()
+        self._render_preview_config = RenderPreviewConfig()
+        self._canvas_tile_cache = TileCache(
+            max_bytes=self._render_preview_config.tile_preview.max_cache_bytes
+        )
+        self._canvas_tile_scheduler = TileScheduler(cache=self._canvas_tile_cache)
+        self._canvas_tile_state = TilePreviewState()
         self._pending_canvas_view: tuple[str, str, list[float], int | None] | None = None
         self._target_render_thread: QThread | None = None
         self._target_render_worker: RenderWorker | None = None
@@ -342,17 +357,25 @@ class ReviewEditMode(QWidget):
         """Set the SQLite-backed history service used by Include/Validate."""
         self._history_service = history_service or HistoryService.disabled()
 
+    def set_render_preview_config(self, config: RenderPreviewConfig | None) -> None:
+        """Set Review/Edit preview rendering config without reloading the workspace."""
+        self._set_render_preview_config(config)
+
     def load_workspace(
         self,
         workspace_service: WorkspaceService,
         *,
         targets: list[TargetConfig] | None = None,
+        render_preview_config: RenderPreviewConfig | None = None,
     ) -> None:
         """Load composition navigation from a workspace service."""
         selected_id = self._current_or_selected_composition_id()
         self._workspace_service = workspace_service
         self._targets = list(targets) if targets is not None else None
+        if render_preview_config is not None:
+            self._set_render_preview_config(render_preview_config)
         self._canvas_render_cache.clear()
+        self._reset_tile_preview_state()
         self._compare_enabled_global = False
         self._compare_orientation_global = TemporalCompareOrientation.VERTICAL
         self._compare_global_initialized = False
@@ -362,13 +385,21 @@ class ReviewEditMode(QWidget):
         self._refresh_filter_controls()
         self._restore_selection(selected_id)
 
-    def refresh_config_targets(self, targets: list[TargetConfig]) -> None:
+    def refresh_config_targets(
+        self,
+        targets: list[TargetConfig],
+        *,
+        render_preview_config: RenderPreviewConfig | None = None,
+    ) -> None:
         """Refresh target ordering/details after Config tab saves a new config."""
         if self._workspace_service is None:
             return
         selected_id = self._current_or_selected_composition_id()
         self._targets = list(targets)
+        if render_preview_config is not None:
+            self._set_render_preview_config(render_preview_config)
         self._canvas_render_cache.clear()
+        self._reset_tile_preview_state()
         try:
             compositions = self._workspace_service.list_compositions()
         except WorkspaceError as error:
@@ -874,6 +905,9 @@ class ReviewEditMode(QWidget):
         self._start_canvas_render(request, token)
 
     def _start_canvas_render(self, request: PreviewRenderRequest, token: object) -> None:
+        if self._render_preview_config.tile_preview.enabled:
+            self._start_tile_canvas_render(request, token)
+            return
         thread = QThread(self)
         worker = RenderWorker(request, render=self._render_canvas_map)
         worker.moveToThread(thread)
@@ -890,13 +924,85 @@ class ReviewEditMode(QWidget):
         self._render_tokens[request.job_id] = token
         thread.start()
 
+    def _start_tile_canvas_render(self, request: PreviewRenderRequest, token: object) -> None:
+        tile_config = self._render_preview_config.tile_preview
+        thread = QThread(self)
+        worker = TilePreviewWorker(
+            request,
+            tile_cache=self._canvas_tile_cache,
+            tile_scheduler=self._canvas_tile_scheduler,
+            render_cache=self._canvas_render_cache,
+            previous_state=self._canvas_tile_state,
+            settings=TilePreviewSettings(
+                tile_pixels=tile_config.tile_pixels,
+                tile_width_degrees=tile_config.tile_width_degrees,
+                tile_height_degrees=tile_config.tile_height_degrees,
+                partial_repaint_threshold_px=tile_config.partial_repaint_threshold_px,
+            ),
+            fallback_to_full_render=tile_config.fallback_to_full_render,
+        )
+        worker.moveToThread(thread)
+        thread.started.connect(worker.run)
+        worker.frameReady.connect(self._handle_canvas_render_progress)
+        worker.finished.connect(self._handle_canvas_render_result)
+        worker.finished.connect(thread.quit)
+        worker.finished.connect(worker.deleteLater)
+        thread.finished.connect(thread.deleteLater)
+        thread.finished.connect(
+            lambda job_id=request.job_id: self._clear_canvas_render_worker(job_id)
+        )
+        self._render_threads[request.job_id] = thread
+        self._render_workers[request.job_id] = worker
+        self._render_tokens[request.job_id] = token
+        thread.start()
+
     def _render_canvas_map(self, spec, *, is_cancelled=None, diagnostics=None):  # noqa: ANN001
+        tile_config = self._render_preview_config.tile_preview
+        if tile_config.enabled:
+            try:
+                result, tile_state = render_tile_preview_map(
+                    spec,
+                    tile_cache=self._canvas_tile_cache,
+                    tile_scheduler=self._canvas_tile_scheduler,
+                    render_cache=self._canvas_render_cache,
+                    previous_state=self._canvas_tile_state,
+                    settings=TilePreviewSettings(
+                        tile_pixels=tile_config.tile_pixels,
+                        tile_width_degrees=tile_config.tile_width_degrees,
+                        tile_height_degrees=tile_config.tile_height_degrees,
+                        partial_repaint_threshold_px=tile_config.partial_repaint_threshold_px,
+                    ),
+                    is_cancelled=is_cancelled,
+                    diagnostics=diagnostics,
+                )
+                self._canvas_tile_state = tile_state
+                return result
+            except Exception:  # noqa: BLE001 - tile preview must safely fall back.
+                self._canvas_tile_state = TilePreviewState()
+                if not tile_config.fallback_to_full_render:
+                    raise
         return render_map_with_cache(
             spec,
             render_cache=self._canvas_render_cache,
             is_cancelled=is_cancelled,
             diagnostics=diagnostics,
         )
+
+    def _set_render_preview_config(
+        self,
+        config: RenderPreviewConfig | None,
+    ) -> None:
+        self._render_preview_config = config or RenderPreviewConfig()
+        self._canvas_tile_cache = TileCache(
+            max_bytes=self._render_preview_config.tile_preview.max_cache_bytes
+        )
+        self._canvas_tile_scheduler = TileScheduler(cache=self._canvas_tile_cache)
+        self._canvas_tile_state = TilePreviewState()
+
+    def _reset_tile_preview_state(self) -> None:
+        self._canvas_tile_cache.clear()
+        self._canvas_tile_scheduler = TileScheduler(cache=self._canvas_tile_cache)
+        self._canvas_tile_state = TilePreviewState()
 
     def _resolved_compare_compositions_for_render(
         self,
@@ -974,6 +1080,13 @@ class ReviewEditMode(QWidget):
         thread.start()
 
     @Slot(object)
+    def _handle_canvas_render_progress(self, result: PreviewRenderJobResult) -> None:
+        token = self._render_tokens.get(result.job_id)
+        if token is None:
+            return
+        self._apply_canvas_render(result, token)
+
+    @Slot(object)
     def _handle_canvas_render_result(self, result: PreviewRenderJobResult) -> None:
         token = self._render_tokens.get(result.job_id)
         if token is None:
@@ -982,6 +1095,8 @@ class ReviewEditMode(QWidget):
 
     def _apply_canvas_render(self, result: PreviewRenderJobResult, token: object) -> None:
         if result.state in {JobState.SUCCESS, JobState.WARNING} and result.canvas is not None:
+            if isinstance(result.tile_preview_state, TilePreviewState):
+                self._canvas_tile_state = result.tile_preview_state
             self.gis_canvas.apply_render_result(token, result.message, canvas=result.canvas)
         elif result.state == JobState.ERROR:
             self.gis_canvas.set_error(result.message)

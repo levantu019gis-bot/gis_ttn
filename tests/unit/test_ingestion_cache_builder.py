@@ -6,6 +6,7 @@ from pathlib import Path
 import pytest
 
 from thucthengay.ingestion import (
+    CacheImageInput,
     ImageryTargetMatch,
     RasterBounds,
     RasterMetadata,
@@ -105,6 +106,45 @@ def test_populate_workspace_cache_deduplicates_same_source_for_same_target_date(
     assert len(second.layers_by_target_date[("target_001", "20260525")]) == 1
     assert len(list((workspace.paths.cache / "target_001" / "20260525").iterdir())) == 1
     assert first.layers_by_target_date == second.layers_by_target_date
+
+
+def test_populate_workspace_cache_deduplicates_managed_copy_of_current_source(
+    tmp_path: Path,
+) -> None:
+    current_source = tmp_path / "imagery" / "20260525_101112_scene_cloud12.tif"
+    managed_source = tmp_path / "managed" / "target_001" / "20260525" / (
+        "20260525_101112_scene_cloud12__abc123.tif"
+    )
+    current_source.parent.mkdir(parents=True)
+    managed_source.parent.mkdir(parents=True)
+    current_source.write_bytes(b"same-raster-bytes")
+    managed_source.write_bytes(b"same-raster-bytes")
+    current_image = scanned_image(current_source, layer_id="current")
+    historical_layer = current_image.layer.model_copy(
+        update={
+            "layer_id": "historical",
+            "source_path": str(managed_source),
+        }
+    )
+    workspace = WorkspaceService(tmp_path / "workspace")
+    workspace.initialize(config_path="config.json")
+
+    result = populate_workspace_cache(
+        matching_result("target_001", current_image),
+        workspace,
+        additional_images=[
+            CacheImageInput(
+                target_id="target_001",
+                source_path=managed_source,
+                layer=historical_layer,
+            )
+        ],
+    )
+
+    layers = result.layers_by_target_date[("target_001", "20260525")]
+    assert len(layers) == 1
+    assert layers[0].layer_id == "current"
+    assert len(list((workspace.paths.cache / "target_001" / "20260525").iterdir())) == 1
 
 
 def test_populate_workspace_cache_can_overwrite_existing_cached_file(

@@ -159,6 +159,28 @@ class ExportDefaultsConfig(BaseModel):
         return _normalize_hex_rgb(value, field_name="map_background_color")
 
 
+class TilePreviewConfig(BaseModel):
+    """Project-level controls for the Review/Edit tile preview pipeline."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    enabled: bool = False
+    max_cache_bytes: int = Field(default=512 * 1024 * 1024, ge=0)
+    tile_pixels: int = Field(default=256, ge=1, le=2048)
+    tile_width_degrees: float = Field(default=0.05, gt=0)
+    tile_height_degrees: float = Field(default=0.05, gt=0)
+    partial_repaint_threshold_px: int = Field(default=96, ge=0)
+    fallback_to_full_render: bool = True
+
+
+class RenderPreviewConfig(BaseModel):
+    """Project-level Review/Edit preview rendering settings."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    tile_preview: TilePreviewConfig = Field(default_factory=TilePreviewConfig)
+
+
 class ProjectDefaultsConfig(BaseModel):
     """Project-level target defaults."""
 
@@ -166,6 +188,7 @@ class ProjectDefaultsConfig(BaseModel):
 
     grid: GridDefaultsConfig = Field(default_factory=GridDefaultsConfig)
     export: ExportDefaultsConfig = Field(default_factory=ExportDefaultsConfig)
+    render_preview: RenderPreviewConfig = Field(default_factory=RenderPreviewConfig)
 
 
 class HistoricalRegistryConfig(BaseModel):

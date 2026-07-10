@@ -67,15 +67,18 @@ from thucthengay.models import (
     MetadataSource,
     MetadataStatus,
     ProjectConfig,
+    RenderPreviewConfig,
     TargetConfig,
     TargetExportConfig,
     TargetGroupConfig,
     TemporalCompareOrientation,
     TemporalCompareState,
+    TilePreviewConfig,
     ValidationSummary,
     ViewState,
 )
 from thucthengay.models.template import MapFrame
+from thucthengay.render.raster import RasterRenderResult
 from thucthengay.render.spec import (
     GeoWindow,
     RenderBackground,
@@ -83,6 +86,7 @@ from thucthengay.render.spec import (
     RenderSpec,
     RenderSpecError,
 )
+from thucthengay.render.tile_preview import TilePreviewState
 from thucthengay.workspace import WorkspaceService
 
 
@@ -1222,6 +1226,93 @@ def test_review_edit_canvas_render_request_keeps_export_size(tmp_path: Path) -> 
     mode._request_canvas_render(selected)  # noqa: SLF001
 
     assert started == [(PreviewRenderQuality.SETTLED_HIGH_RES, 3306, 2340)]
+
+
+def test_review_edit_tile_preview_flag_falls_back_to_full_frame_renderer(monkeypatch) -> None:
+    qapp()
+    mode = ReviewEditMode()
+    mode._set_render_preview_config(  # noqa: SLF001
+        RenderPreviewConfig(tile_preview=TilePreviewConfig(enabled=True))
+    )
+    spec = _preview_spec("alpha__20260525", width=320, height=180)
+    calls: list[str] = []
+
+    def fail_tile_preview(*_args, **_kwargs):  # noqa: ANN002, ANN003
+        calls.append("tile")
+        raise RuntimeError("tile path unavailable")
+
+    def full_frame_preview(spec, **_kwargs):  # noqa: ANN001, ANN003
+        calls.append("full")
+        return RasterRenderResult(
+            canvas=np.zeros((spec.output_height, spec.output_width, 3), dtype=np.uint8)
+        )
+
+    monkeypatch.setattr(review_edit_mode, "render_tile_preview_map", fail_tile_preview)
+    monkeypatch.setattr(review_edit_mode, "render_map_with_cache", full_frame_preview)
+
+    result = mode._render_canvas_map(spec)  # noqa: SLF001
+
+    assert calls == ["tile", "full"]
+    assert result.canvas.shape == (180, 320, 3)
+
+
+def test_review_edit_tile_preview_disabled_uses_full_frame_renderer(monkeypatch) -> None:
+    qapp()
+    mode = ReviewEditMode()
+    spec = _preview_spec("alpha__20260525", width=320, height=180)
+    calls: list[str] = []
+
+    def unexpected_tile_preview(*_args, **_kwargs):  # noqa: ANN002, ANN003
+        calls.append("tile")
+        raise AssertionError("tile preview should be disabled by default")
+
+    def full_frame_preview(spec, **_kwargs):  # noqa: ANN001, ANN003
+        calls.append("full")
+        return RasterRenderResult(
+            canvas=np.zeros((spec.output_height, spec.output_width, 3), dtype=np.uint8)
+        )
+
+    monkeypatch.setattr(review_edit_mode, "render_tile_preview_map", unexpected_tile_preview)
+    monkeypatch.setattr(review_edit_mode, "render_map_with_cache", full_frame_preview)
+
+    mode._render_canvas_map(spec)  # noqa: SLF001
+
+    assert calls == ["full"]
+
+
+def test_review_edit_applies_progressive_tile_preview_frame() -> None:
+    qapp()
+    mode = ReviewEditMode()
+    mode.gis_canvas.set_composition(
+        composition(
+            "alpha__20260525",
+            "alpha",
+            date(2026, 5, 25),
+            needs_revalidation=False,
+        )
+    )
+    token = mode.gis_canvas.set_loading("Dang tai tile preview...")
+    job_id = "canvas:alpha__20260525:progress"
+    mode._render_tokens[job_id] = token  # noqa: SLF001
+    tile_state = TilePreviewState()
+    result = PreviewRenderJobResult(
+        job_id=job_id,
+        composition_id="alpha__20260525",
+        revision=mode.gis_canvas.generation,
+        quality=PreviewRenderQuality.SETTLED_HIGH_RES,
+        state=JobState.SUCCESS,
+        output_width=64,
+        output_height=48,
+        message="Tile preview dang tai 1/2 tile...",
+        canvas=np.full((48, 64, 3), 90, dtype=np.uint8),
+        tile_preview_state=tile_state,
+    )
+
+    mode._handle_canvas_render_progress(result)  # noqa: SLF001
+
+    assert mode.gis_canvas.last_applied_render_label == "Tile preview dang tai 1/2 tile..."
+    assert mode.gis_canvas.rendered_image_size == (64, 48)
+    assert mode._canvas_tile_state is tile_state  # noqa: SLF001
 
 
 def test_review_edit_skips_canvas_render_for_stale_composition(tmp_path: Path) -> None:

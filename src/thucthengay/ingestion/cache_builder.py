@@ -56,6 +56,7 @@ def populate_workspace_cache(
     layers_by_target_date: dict[tuple[str, str], list[ImageLayer]] = {}
     issues: list[Issue] = []
     seen_identities: set[tuple[str, str, str]] = set()
+    seen_logical_identities: set[tuple[str, str, str, str, int]] = set()
 
     for target_id, matches in matching_result.matches.items():
         if checkpoint is not None:
@@ -73,6 +74,7 @@ def populate_workspace_cache(
                 layers_by_target_date=layers_by_target_date,
                 issues=issues,
                 seen_identities=seen_identities,
+                seen_logical_identities=seen_logical_identities,
                 overwrite_existing=overwrite_existing,
             )
 
@@ -85,6 +87,7 @@ def populate_workspace_cache(
             layers_by_target_date=layers_by_target_date,
             issues=issues,
             seen_identities=seen_identities,
+            seen_logical_identities=seen_logical_identities,
             overwrite_existing=overwrite_existing,
         )
         if checkpoint is not None:
@@ -124,6 +127,7 @@ def _add_cache_input(
     layers_by_target_date: dict[tuple[str, str], list[ImageLayer]],
     issues: list[Issue],
     seen_identities: set[tuple[str, str, str]],
+    seen_logical_identities: set[tuple[str, str, str, str, int]],
     overwrite_existing: bool,
 ) -> None:
     source_path = image.source_path.expanduser().resolve()
@@ -135,6 +139,12 @@ def _add_cache_input(
     if identity in seen_identities:
         return
     seen_identities.add(identity)
+
+    logical_identity = _logical_image_identity(image, source_path, date_key)
+    if logical_identity is not None:
+        if logical_identity in seen_logical_identities:
+            return
+        seen_logical_identities.add(logical_identity)
 
     cache_path = _cache_path_for_source(
         workspace_service,
@@ -162,6 +172,28 @@ def _date_key(layer: ImageLayer) -> str:
     if layer.capture_date is None:
         return UNKNOWN_DATE_KEY
     return layer.capture_date.strftime("%Y%m%d")
+
+
+def _logical_image_identity(
+    image: CacheImageInput,
+    source_path: Path,
+    date_key: str,
+) -> tuple[str, str, str, str, int] | None:
+    """Best-effort duplicate key for original files and managed copies.
+
+    Exact source paths are still handled separately. This key catches the common
+    history-loading case where the same GeoTIFF exists once in the input folder
+    and once in the managed archive with the same business metadata.
+    """
+    try:
+        source_size = source_path.stat().st_size
+    except OSError:
+        return None
+    capture_time = image.layer.capture_time.isoformat() if image.layer.capture_time else ""
+    cloud_percent = (
+        "" if image.layer.cloud_percent is None else f"{image.layer.cloud_percent:.6f}"
+    )
+    return (image.target_id, date_key, capture_time, cloud_percent, source_size)
 
 
 def _cache_path_for_source(

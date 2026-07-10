@@ -26,7 +26,7 @@ from thucthengay.jobs import (
     JobState,
     run_satellite_download_job,
 )
-from thucthengay.models import Issue, IssueScope
+from thucthengay.models import Issue, IssueScope, RenderPreviewConfig
 from thucthengay.utils.path_safety import is_absolute_path_text
 from thucthengay.workspace import WorkspaceError, WorkspaceService
 
@@ -216,6 +216,9 @@ class AppShell(QMainWindow):
             )
 
         history_service = _history_service_from_config(config_result)
+        self.review_edit_mode.set_render_preview_config(
+            _render_preview_config_from_config_result(config_result)
+        )
         self.review_edit_mode.load_workspace(
             workspace_service,
             targets=config_result.enabled_targets,
@@ -250,6 +253,9 @@ class AppShell(QMainWindow):
             return
 
         history_service = _history_service_from_config(config_result)
+        self.review_edit_mode.set_render_preview_config(
+            _render_preview_config_from_config_result(config_result)
+        )
         self.review_edit_mode.load_workspace(
             workspace_service,
             targets=config_result.enabled_targets,
@@ -305,6 +311,9 @@ class AppShell(QMainWindow):
         history_service = _history_service_from_config(config_result)
         self.review_edit_mode.set_history_service(history_service)
         self.export_mode.set_history_service(history_service)
+        self.review_edit_mode.set_render_preview_config(
+            _render_preview_config_from_config_result(config_result)
+        )
         self.review_edit_mode.refresh_config_targets(config_result.enabled_targets)
         self.export_mode.refresh_config_targets(
             config_result.enabled_targets,
@@ -397,6 +406,14 @@ def _history_service_from_config(config_result: ConfigLoadResult) -> HistoryServ
     ):
         return HistoryService.disabled()
     return HistoryService(config_result.historical_database_path)
+
+
+def _render_preview_config_from_config_result(
+    config_result: ConfigLoadResult,
+) -> RenderPreviewConfig | None:
+    if config_result.config is None:
+        return None
+    return config_result.config.defaults.render_preview
 
 
 def _export_template_issues(config_result: ConfigLoadResult) -> list[Issue]:
