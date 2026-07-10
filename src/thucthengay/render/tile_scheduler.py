@@ -188,22 +188,40 @@ def _read_dataset_tile(
     try:
         bounds = job.coverage.bounds
         raster_bounds = getattr(src, "bounds", None)
-        if raster_bounds is not None and not _intersects(bounds, raster_bounds):
-            return None
+        read_bounds = bounds
+        dst_row0 = 0
+        dst_row1 = job.output_height
+        dst_col0 = 0
+        dst_col1 = job.output_width
+        if raster_bounds is not None:
+            overlap = _intersection(bounds, _bounds_to_window(raster_bounds))
+            if overlap is None:
+                return None
+            read_bounds = overlap
+            dst_row0, dst_row1, dst_col0, dst_col1 = _geo_to_pixel_rect(
+                bounds,
+                overlap,
+                job.output_width,
+                job.output_height,
+            )
+            if dst_row0 >= dst_row1 or dst_col0 >= dst_col1:
+                return None
         read_window = from_bounds(
-            bounds.min_lon,
-            bounds.min_lat,
-            bounds.max_lon,
-            bounds.max_lat,
+            read_bounds.min_lon,
+            read_bounds.min_lat,
+            read_bounds.max_lon,
+            read_bounds.max_lat,
             transform=src.transform,
         )
         band_indexes, alpha_index = _resolve_band_indexes(src)
         if _is_cancelled(is_cancelled):
             return None
+        read_height = dst_row1 - dst_row0
+        read_width = dst_col1 - dst_col0
         data = src.read(
             indexes=band_indexes,
             window=read_window,
-            out_shape=(len(band_indexes), job.output_height, job.output_width),
+            out_shape=(len(band_indexes), read_height, read_width),
             resampling=Resampling.bilinear,
             masked=True,
         )
@@ -215,7 +233,7 @@ def _read_dataset_tile(
             alpha = src.read(
                 alpha_index,
                 window=read_window,
-                out_shape=(job.output_height, job.output_width),
+                out_shape=(read_height, read_width),
                 resampling=Resampling.nearest,
                 masked=True,
             )
@@ -224,9 +242,13 @@ def _read_dataset_tile(
             rgb = np.repeat(_scale_to_uint8(masked_data), 3, axis=0)
         else:
             rgb = _scale_to_uint8(masked_data)
-        pixels = np.transpose(rgb, (1, 2, 0))
-        valid_mask = ~mask
-        pixels[mask, :] = 0
+        pixels = np.zeros((job.output_height, job.output_width, 3), dtype=np.uint8)
+        valid_mask = np.zeros((job.output_height, job.output_width), dtype=bool)
+        read_pixels = np.transpose(rgb, (1, 2, 0))
+        read_valid = ~mask
+        read_pixels[mask, :] = 0
+        pixels[dst_row0:dst_row1, dst_col0:dst_col1, :] = read_pixels
+        valid_mask[dst_row0:dst_row1, dst_col0:dst_col1] = read_valid
         return pixels, valid_mask
     finally:
         if close_src:
@@ -320,6 +342,41 @@ def _intersects(bounds: GeoWindow, raster_bounds: Any) -> bool:
         or bounds.max_lat <= bottom
         or bounds.min_lat >= top
     )
+
+
+def _intersection(a: GeoWindow, b: GeoWindow) -> GeoWindow | None:
+    min_lon = max(a.min_lon, b.min_lon)
+    min_lat = max(a.min_lat, b.min_lat)
+    max_lon = min(a.max_lon, b.max_lon)
+    max_lat = min(a.max_lat, b.max_lat)
+    if min_lon >= max_lon or min_lat >= max_lat:
+        return None
+    return GeoWindow(min_lon=min_lon, min_lat=min_lat, max_lon=max_lon, max_lat=max_lat)
+
+
+def _geo_to_pixel_rect(
+    reference: GeoWindow,
+    bounds: GeoWindow,
+    width: int,
+    height: int,
+) -> tuple[int, int, int, int]:
+    lon_span = reference.max_lon - reference.min_lon
+    lat_span = reference.max_lat - reference.min_lat
+    col0 = int(math.floor((bounds.min_lon - reference.min_lon) / lon_span * width))
+    col1 = int(math.ceil((bounds.max_lon - reference.min_lon) / lon_span * width))
+    row0 = int(math.floor((reference.max_lat - bounds.max_lat) / lat_span * height))
+    row1 = int(math.ceil((reference.max_lat - bounds.min_lat) / lat_span * height))
+    return (
+        max(0, min(height, row0)),
+        max(0, min(height, row1)),
+        max(0, min(width, col0)),
+        max(0, min(width, col1)),
+    )
+
+
+def _bounds_to_window(raster_bounds: Any) -> GeoWindow:
+    left, bottom, right, top = _bounds_tuple(raster_bounds)
+    return GeoWindow(min_lon=left, min_lat=bottom, max_lon=right, max_lat=top)
 
 
 def _bounds_tuple(raster_bounds: Any) -> tuple[float, float, float, float]:

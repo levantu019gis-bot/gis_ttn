@@ -1849,6 +1849,8 @@ class ReviewEditMode(QWidget):
         map_frame_size = self._map_frame_size_for_composition(composition)
         if map_frame_size is not None:
             self.gis_canvas.set_map_frame_size(*map_frame_size)
+        effective_grid, _source = self._effective_grid_for_composition(composition)
+        self.gis_canvas.set_map_surround_style(effective_grid.style)
         previous_compare_state = composition.temporal_compare
         composition = self._load_temporal_compare_controls(composition)
         compare_state_synced = composition.temporal_compare != previous_compare_state

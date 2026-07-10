@@ -137,6 +137,26 @@ def test_decode_tile_job_returns_valid_mask_for_nodata_pixels() -> None:
     assert np.all(result.pixels[:, :2] == 0)
 
 
+def test_decode_tile_job_places_partial_raster_overlap_at_correct_tile_position() -> None:
+    dataset = _FakeDataset(bounds=(0.5, 0.0, 1.0, 1.0))
+
+    result = decode_tile_job(
+        _job(output_size=8),
+        opener=lambda _path: dataset,
+    )
+
+    assert result.state == TileDecodeState.SUCCESS
+    assert result.pixels is not None
+    assert result.valid_mask is not None
+    assert result.pixels.shape == (8, 8, 3)
+    assert not result.valid_mask[:, :4].any()
+    assert result.valid_mask[:, 4:].all()
+    assert np.all(result.pixels[:, :4] == 0)
+    assert np.all(result.pixels[:, 4:] == 120)
+    _indexes, _window, out_shape = dataset.read_calls[0]
+    assert out_shape == (3, 8, 4)
+
+
 def test_decode_tile_job_cancellation_exits_without_cache_mutation() -> None:
     cache = TileCache(max_bytes=1024)
     scheduler = TileScheduler(cache=cache)
@@ -200,15 +220,17 @@ class _FakeDataset:
         *,
         width: int = 100,
         height: int = 100,
+        bounds: tuple[float, float, float, float] = (0.0, 0.0, 4.0, 4.0),
         mask_left_half: bool = False,
     ) -> None:
         self.width = width
         self.height = height
+        self._bounds = bounds
         self.mask_left_half = mask_left_half
         self.count = 3
         self.crs = GEOGRAPHIC_CRS
-        self.bounds = (0.0, 0.0, 4.0, 4.0)
-        self.transform = from_bounds(0.0, 0.0, 4.0, 4.0, width, height)
+        self.bounds = bounds
+        self.transform = from_bounds(*bounds, width, height)
         self.colorinterp = (ColorInterp.red, ColorInterp.green, ColorInterp.blue)
         self.read_calls = []
         self.closed = False

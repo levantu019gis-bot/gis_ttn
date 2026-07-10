@@ -2,20 +2,22 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from contextlib import nullcontext
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import StrEnum
 from math import isfinite
 from pathlib import Path
 
 import numpy as np
-from PySide6.QtCore import QPoint, QPointF, QRectF, Qt, Signal
-from PySide6.QtGui import QColor, QImage, QPainter, QPen, QPixmap
+from PySide6.QtCore import QPoint, QPointF, QRect, QRectF, Qt, Signal
+from PySide6.QtGui import QColor, QImage, QPainter, QPen, QPixmap, QRegion
 from PySide6.QtWidgets import QGraphicsScene, QGraphicsView
 
 from thucthengay.gis import pan_center_by_viewport_pixels
 from thucthengay.models import Composition, ImageLayer, TemporalCompareOrientation
 from thucthengay.render.diagnostics import RenderDiagnostics
+from thucthengay.render.frame import MapSurroundLayout, PixelRect, build_map_surround_layout
 
 
 class GisCanvasState(StrEnum):
@@ -53,6 +55,22 @@ class _InteractionTarget:
     viewport_rect: QRectF
     compare_pane: bool
     pane_key: str | None = None
+
+
+@dataclass
+class _LivePreviewTransform:
+    offset_x: float = 0.0
+    offset_y: float = 0.0
+    zoom: float = 1.0
+    pane_offsets: dict[str, tuple[float, float]] = field(default_factory=dict)
+
+    def is_identity(self) -> bool:
+        return (
+            abs(self.offset_x) < 0.5
+            and abs(self.offset_y) < 0.5
+            and abs(self.zoom - 1.0) < 0.001
+            and all(abs(x) < 0.5 and abs(y) < 0.5 for x, y in self.pane_offsets.values())
+        )
 
 
 class GisCanvasWidget(QGraphicsView):
@@ -103,7 +121,10 @@ class GisCanvasWidget(QGraphicsView):
         self._last_applied_render_label: str | None = None
         self._rendered_pixmap: QPixmap | None = None
         self._rendered_export_image: QImage | None = None
+        self._rendered_canvas_size: tuple[int, int] | None = None
         self._render_diagnostics: RenderDiagnostics | None = None
+        self._live_preview_transform = _LivePreviewTransform()
+        self._map_surround_style: dict[str, object] = {}
         self._compare_orientation = TemporalCompareOrientation.VERTICAL
         self._compare_panes: dict[str, _InteractiveViewState] = {}
         self._redraw()
@@ -193,11 +214,18 @@ class GisCanvasWidget(QGraphicsView):
         self._frame_aspect = self._map_frame_width_points / self._map_frame_height_points
         self._redraw()
 
+    def set_map_surround_style(self, style: Mapping[str, object] | None) -> None:
+        """Set frame layout style used to locate the rendered inner map on screen."""
+        self._map_surround_style = dict(style or {})
+        self._redraw()
+
     def set_composition(self, composition: Composition | None) -> None:
         """Load the selected composition into the canvas without emitting edits."""
         self._last_applied_render_label = None
         self._rendered_pixmap = None
         self._rendered_export_image = None
+        self._rendered_canvas_size = None
+        self._reset_live_preview_transform()
         self._clear_compare_context()
         if composition is None:
             self._composition_id = None
@@ -296,11 +324,13 @@ class GisCanvasWidget(QGraphicsView):
                 canvas,
                 diagnostics=self._render_diagnostics,
             )
+            self._rendered_canvas_size = (int(canvas.shape[1]), int(canvas.shape[0]))
             self._rendered_pixmap = _image_to_pixmap(
                 self._rendered_export_image,
                 max_width=self.DISPLAY_IMAGE_MAX_WIDTH,
                 diagnostics=self._render_diagnostics,
             )
+        self._reset_live_preview_transform()
         self._state = GisCanvasState.READY
         self._state_message = f"Canvas đã cập nhật: {label}"
         self._last_applied_render_label = label
@@ -319,6 +349,7 @@ class GisCanvasWidget(QGraphicsView):
             dx=dx,
             dy=dy,
         )
+        self._note_live_pan(dx, dy)
         self._mark_interaction_stale()
         self.viewInteractionChanged.emit(list(self._center), self._scale)
         if emit:
@@ -331,6 +362,7 @@ class GisCanvasWidget(QGraphicsView):
             return
         scale = int(round(self._scale * factor))
         self._scale = int(_clamp(scale, self.MIN_SCALE, self.MAX_SCALE))
+        self._note_live_zoom(factor)
         self._mark_interaction_stale()
         self.viewInteractionChanged.emit(list(self._center), self._scale)
         if emit:
@@ -412,6 +444,7 @@ class GisCanvasWidget(QGraphicsView):
             pane_key=target.pane_key,
         )
         self._apply_interaction_view_state(self._drag_target)
+        self._note_live_pan(delta.x(), delta.y(), pane_key=target.pane_key)
         self._emit_interaction_view_changed(self._drag_target)
         self._drag_last_pos = pos
         self._drag_changed = True
@@ -440,6 +473,7 @@ class GisCanvasWidget(QGraphicsView):
             pane_key=target.pane_key,
         )
         self._apply_interaction_view_state(updated)
+        self._note_live_zoom(factor)
         self._mark_interaction_stale()
         self._emit_interaction_view_changed(updated)
         self._emit_interaction_view_edit(updated)
@@ -473,7 +507,10 @@ class GisCanvasWidget(QGraphicsView):
         point = QPointF(pos)
         if not frame.contains(point):
             return None, None
-        pane_a, pane_b = self._compare_pane_rects(frame)
+        inner = self._display_inner_map_rect(frame)
+        if not inner.contains(point):
+            return None, None
+        pane_a, pane_b = self._compare_pane_rects(inner)
         if pane_a.contains(point):
             return "A", pane_a
         if pane_b.contains(point):
@@ -481,16 +518,10 @@ class GisCanvasWidget(QGraphicsView):
         return None, None
 
     def _compare_pane_rects(self, frame: QRectF) -> tuple[QRectF, QRectF]:
-        if self._compare_orientation == TemporalCompareOrientation.HORIZONTAL:
-            half_height = frame.height() / 2
-            return (
-                QRectF(frame.left(), frame.top(), frame.width(), half_height),
-                QRectF(frame.left(), frame.top() + half_height, frame.width(), half_height),
-            )
-        half_width = frame.width() / 2
-        return (
-            QRectF(frame.left(), frame.top(), half_width, frame.height()),
-            QRectF(frame.left() + half_width, frame.top(), half_width, frame.height()),
+        return _split_compare_rect(
+            frame,
+            self._compare_orientation,
+            gap_px=_temporal_compare_pane_gap_px(self._map_surround_style),
         )
 
     def _panned_center(
@@ -550,9 +581,34 @@ class GisCanvasWidget(QGraphicsView):
             self._state = GisCanvasState.NO_VISIBLE_LAYER
             self._state_message = "Không có layer đang bật để hiển thị trên canvas."
         self._last_applied_render_label = None
-        self._rendered_pixmap = None
+        # Keep the display pixmap available for immediate pan/zoom feedback. The
+        # export image is cleared because it no longer matches the current view.
         self._rendered_export_image = None
         self._bump_generation()
+
+    def _note_live_pan(self, dx: float, dy: float, *, pane_key: str | None = None) -> None:
+        if self._rendered_pixmap is None:
+            return
+        if pane_key is None:
+            self._live_preview_transform.offset_x += dx
+            self._live_preview_transform.offset_y += dy
+            return
+        current_x, current_y = self._live_preview_transform.pane_offsets.get(
+            pane_key,
+            (0.0, 0.0),
+        )
+        self._live_preview_transform.pane_offsets[pane_key] = (
+            current_x + dx,
+            current_y + dy,
+        )
+
+    def _note_live_zoom(self, factor: float) -> None:
+        if self._rendered_pixmap is None or not isfinite(factor) or factor <= 0:
+            return
+        self._live_preview_transform.zoom /= factor
+
+    def _reset_live_preview_transform(self) -> None:
+        self._live_preview_transform = _LivePreviewTransform()
 
     def _bump_generation(self) -> None:
         self._generation += 1
@@ -608,14 +664,9 @@ class GisCanvasWidget(QGraphicsView):
         if not self._visible_layers:
             return
         if self._rendered_pixmap is not None:
-            scaled = self._rendered_pixmap.scaled(
-                int(frame.width()),
-                int(frame.height()),
-                Qt.AspectRatioMode.KeepAspectRatio,
-                Qt.TransformationMode.SmoothTransformation,
-            )
-            px = frame.x() + (frame.width() - scaled.width()) / 2
-            py = frame.y() + (frame.height() - scaled.height()) / 2
+            scaled = self._live_preview_pixmap(frame)
+            px = frame.x()
+            py = frame.y()
             self._scene.addPixmap(scaled).setPos(px, py)
             return
         colors = ["#637f5f", "#7d8e9c", "#8e7d58", "#596a84"]
@@ -632,6 +683,148 @@ class GisCanvasWidget(QGraphicsView):
             label = self._scene.addText(_short_layer_name(layer))
             label.setDefaultTextColor(QColor("#f4f7fb"))
             label.setPos(rect.left() + 12, rect.top() + 10 + index * 18)
+
+    def _live_preview_pixmap(self, frame: QRectF) -> QPixmap:
+        width = max(1, int(round(frame.width())))
+        height = max(1, int(round(frame.height())))
+        base = self._rendered_pixmap.scaled(
+            width,
+            height,
+            Qt.AspectRatioMode.KeepAspectRatio,
+            Qt.TransformationMode.SmoothTransformation,
+        )
+        base_rect = _centered_pixmap_rect(base, width=width, height=height)
+        transform = self._live_preview_transform
+        output = QPixmap(width, height)
+        output.fill(Qt.GlobalColor.transparent)
+        painter = QPainter(output)
+        try:
+            if transform.is_identity():
+                painter.drawPixmap(base_rect.topLeft(), base)
+            else:
+                inner_rect = self._display_inner_map_rect(base_rect)
+                if self._compare_panes:
+                    self._paint_live_compare_preview(
+                        painter,
+                        base,
+                        width,
+                        height,
+                        base_rect,
+                        transform,
+                    )
+                else:
+                    self._paint_live_raster_preview(
+                        painter,
+                        base,
+                        width,
+                        height,
+                        base_rect,
+                        inner_rect,
+                        transform,
+                    )
+        finally:
+            painter.end()
+        return output
+
+    def _display_inner_map_rect(self, base_rect: QRectF) -> QRectF:
+        layout, source_width, source_height = self._source_layout_for_display(base_rect)
+        return _scale_source_rect(layout.inner_map, base_rect, source_width, source_height)
+
+    def _source_layout_for_display(
+        self,
+        base_rect: QRectF,
+    ) -> tuple[MapSurroundLayout, int, int]:
+        if self._rendered_canvas_size is None:
+            source_width = max(1, int(round(base_rect.width())))
+            source_height = max(1, int(round(base_rect.height())))
+        else:
+            source_width, source_height = self._rendered_canvas_size
+        layout = build_map_surround_layout(
+            source_width,
+            source_height,
+            self._map_surround_style,
+        )
+        return layout, source_width, source_height
+
+    def _display_compare_pane_rects(
+        self,
+        base_rect: QRectF,
+    ) -> tuple[QRectF, QRectF]:
+        layout, source_width, source_height = self._source_layout_for_display(base_rect)
+        source_inner = _pixel_rect_to_qrectf(layout.inner_map)
+        source_pane_a, source_pane_b = _split_compare_rect(
+            source_inner,
+            self._compare_orientation,
+            gap_px=_temporal_compare_pane_gap_px(self._map_surround_style),
+        )
+        return (
+            _scale_source_qrect(source_pane_a, base_rect, source_width, source_height),
+            _scale_source_qrect(source_pane_b, base_rect, source_width, source_height),
+        )
+
+    def _paint_live_raster_preview(
+        self,
+        painter: QPainter,
+        base: QPixmap,
+        width: int,
+        height: int,
+        base_rect: QRectF,
+        inner_rect: QRectF,
+        transform: _LivePreviewTransform,
+    ) -> None:
+        _draw_static_preview_regions(
+            painter,
+            base,
+            width,
+            height,
+            base_rect,
+            (inner_rect,),
+        )
+        painter.save()
+        try:
+            painter.setClipRect(_to_qrect(inner_rect))
+            dest = _scaled_destination_rect(
+                inner_rect,
+                zoom=transform.zoom,
+                offset_x=transform.offset_x,
+                offset_y=transform.offset_y,
+            )
+            painter.drawPixmap(dest, base, _relative_rect(inner_rect, base_rect))
+        finally:
+            painter.restore()
+
+    def _paint_live_compare_preview(
+        self,
+        painter: QPainter,
+        base: QPixmap,
+        width: int,
+        height: int,
+        base_rect: QRectF,
+        transform: _LivePreviewTransform,
+    ) -> None:
+        pane_a, pane_b = self._display_compare_pane_rects(base_rect)
+        _draw_static_preview_regions(
+            painter,
+            base,
+            width,
+            height,
+            base_rect,
+            (pane_a, pane_b),
+        )
+        for pane_key, pane_rect in (("A", pane_a), ("B", pane_b)):
+            painter.save()
+            try:
+                painter.setClipRect(_to_qrect(pane_rect))
+                pane_dx, pane_dy = transform.pane_offsets.get(pane_key, (0.0, 0.0))
+                dest = _scaled_destination_rect(
+                    pane_rect,
+                    zoom=transform.zoom,
+                    offset_x=transform.offset_x + pane_dx,
+                    offset_y=transform.offset_y + pane_dy,
+                )
+                painter.drawPixmap(dest, base, _relative_rect(pane_rect, base_rect))
+            finally:
+                painter.restore()
 
     def _draw_frame(self, frame: QRectF) -> None:
         shadow_pen = QPen(QColor(0, 0, 0, 110), 34)
@@ -702,6 +895,136 @@ def _image_to_pixmap(
                 Qt.TransformationMode.SmoothTransformation,
             )
         return QPixmap.fromImage(display)
+
+
+def _scaled_destination_rect(
+    rect: QRectF,
+    *,
+    zoom: float,
+    offset_x: float,
+    offset_y: float,
+) -> QRectF:
+    scaled_width = rect.width() * zoom
+    scaled_height = rect.height() * zoom
+    x = rect.left() + (rect.width() - scaled_width) / 2 + offset_x
+    y = rect.top() + (rect.height() - scaled_height) / 2 + offset_y
+    return QRectF(x, y, scaled_width, scaled_height)
+
+
+def _centered_pixmap_rect(pixmap: QPixmap, *, width: int, height: int) -> QRectF:
+    x = (width - pixmap.width()) / 2
+    y = (height - pixmap.height()) / 2
+    return QRectF(x, y, pixmap.width(), pixmap.height())
+
+
+def _scale_source_rect(
+    rect: PixelRect,
+    base_rect: QRectF,
+    source_width: int,
+    source_height: int,
+) -> QRectF:
+    return QRectF(
+        base_rect.left() + rect.left * base_rect.width() / source_width,
+        base_rect.top() + rect.top * base_rect.height() / source_height,
+        rect.width * base_rect.width() / source_width,
+        rect.height * base_rect.height() / source_height,
+    )
+
+
+def _scale_source_qrect(
+    rect: QRectF,
+    base_rect: QRectF,
+    source_width: int,
+    source_height: int,
+) -> QRectF:
+    return QRectF(
+        base_rect.left() + rect.left() * base_rect.width() / source_width,
+        base_rect.top() + rect.top() * base_rect.height() / source_height,
+        rect.width() * base_rect.width() / source_width,
+        rect.height() * base_rect.height() / source_height,
+    )
+
+
+def _pixel_rect_to_qrectf(rect: PixelRect) -> QRectF:
+    return QRectF(rect.left, rect.top, rect.width, rect.height)
+
+
+def _split_compare_rect(
+    rect: QRectF,
+    orientation: TemporalCompareOrientation,
+    *,
+    gap_px: float,
+) -> tuple[QRectF, QRectF]:
+    split_size = (
+        rect.height() if orientation == TemporalCompareOrientation.HORIZONTAL else rect.width()
+    )
+    gap = min(max(0.0, gap_px), max(0.0, split_size - 2.0))
+    if orientation == TemporalCompareOrientation.HORIZONTAL:
+        pane_height = (rect.height() - gap) / 2.0
+        pane_b_top = rect.top() + pane_height + gap
+        return (
+            QRectF(rect.left(), rect.top(), rect.width(), pane_height),
+            QRectF(rect.left(), pane_b_top, rect.width(), rect.bottom() - pane_b_top),
+        )
+
+    pane_width = (rect.width() - gap) / 2.0
+    pane_b_left = rect.left() + pane_width + gap
+    return (
+        QRectF(rect.left(), rect.top(), pane_width, rect.height()),
+        QRectF(pane_b_left, rect.top(), rect.right() - pane_b_left, rect.height()),
+    )
+
+
+def _temporal_compare_pane_gap_px(style: Mapping[str, object]) -> float:
+    value = style.get("temporal_compare_pane_gap_px")
+    if isinstance(value, bool):
+        return 8.0
+    if isinstance(value, int | float) and isfinite(float(value)):
+        return max(0.0, float(value))
+    if isinstance(value, str):
+        try:
+            parsed = float(value.strip())
+        except ValueError:
+            return 8.0
+        return max(0.0, parsed) if isfinite(parsed) else 8.0
+    return 8.0
+
+
+def _relative_rect(rect: QRectF, origin: QRectF) -> QRectF:
+    return QRectF(
+        rect.left() - origin.left(),
+        rect.top() - origin.top(),
+        rect.width(),
+        rect.height(),
+    )
+
+
+def _draw_static_preview_regions(
+    painter: QPainter,
+    base: QPixmap,
+    width: int,
+    height: int,
+    base_rect: QRectF,
+    dynamic_rects: tuple[QRectF, ...],
+) -> None:
+    static_region = QRegion(0, 0, width, height)
+    for rect in dynamic_rects:
+        static_region = static_region.subtracted(QRegion(_to_qrect(rect)))
+    painter.save()
+    try:
+        painter.setClipRegion(static_region)
+        painter.drawPixmap(base_rect.topLeft(), base)
+    finally:
+        painter.restore()
+
+
+def _to_qrect(rect: QRectF) -> QRect:
+    return QRect(
+        int(round(rect.left())),
+        int(round(rect.top())),
+        max(1, int(round(rect.width()))),
+        max(1, int(round(rect.height()))),
+    )
 
 
 def _clamp(value: float, minimum: float, maximum: float) -> float:

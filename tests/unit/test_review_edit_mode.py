@@ -12,7 +12,7 @@ from rasterio.transform import from_origin
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
-from PySide6.QtCore import QPoint, QPointF, Qt
+from PySide6.QtCore import QPoint, QPointF, QRectF, Qt
 from PySide6.QtGui import QBrush, QFont, QImage, QKeyEvent, QWheelEvent
 from PySide6.QtWidgets import (
     QApplication,
@@ -78,6 +78,7 @@ from thucthengay.models import (
     ViewState,
 )
 from thucthengay.models.template import MapFrame
+from thucthengay.render.frame import build_map_surround_layout
 from thucthengay.render.raster import RasterRenderResult
 from thucthengay.render.spec import (
     GeoWindow,
@@ -793,6 +794,189 @@ def test_gis_canvas_states_fixed_frame_and_stale_render_guard() -> None:
     assert "raster" in canvas.state_text()
 
 
+def test_gis_canvas_keeps_live_preview_display_during_stale_pan(tmp_path: Path) -> None:
+    qapp()
+    canvas = GisCanvasWidget()
+    canvas.resize(800, 450)
+    canvas.set_composition(
+        composition(
+            "alpha__20260525",
+            "alpha",
+            date(2026, 5, 25),
+            needs_revalidation=False,
+        )
+    )
+    token = canvas.begin_render_request()
+    rendered = np.full((120, 160, 3), 140, dtype=np.uint8)
+
+    assert canvas.apply_render_result(token, "preview render", canvas=rendered) is True
+    assert canvas.rendered_image_size == (160, 120)
+
+    canvas.pan_by_pixels(40, -20, emit=False)
+
+    assert canvas.state() == GisCanvasState.STALE
+    assert canvas.rendered_image_size == (160, 120)
+    assert canvas.export_displayed_image(tmp_path / "stale.jpg") is False
+    assert canvas._live_preview_transform.offset_x == 40  # noqa: SLF001
+    assert canvas._live_preview_transform.offset_y == -20  # noqa: SLF001
+
+    fresh_token = canvas.begin_render_request()
+    assert canvas.apply_render_result(fresh_token, "fresh render", canvas=rendered) is True
+    assert canvas._live_preview_transform.is_identity()  # noqa: SLF001
+
+
+def test_gis_canvas_live_preview_transforms_inner_map_not_static_frame() -> None:
+    qapp()
+    canvas = GisCanvasWidget()
+    canvas.resize(800, 450)
+    canvas.set_composition(
+        composition(
+            "alpha__20260525",
+            "alpha",
+            date(2026, 5, 25),
+            needs_revalidation=False,
+        )
+    )
+    width, height = 160, 90
+    rendered = np.zeros((height, width, 3), dtype=np.uint8)
+    rendered[:, :] = (210, 20, 20)
+    inner = build_map_surround_layout(width, height).inner_map
+    rendered[inner.top : inner.bottom, inner.left : inner.right, :] = (20, 180, 70)
+    token = canvas.begin_render_request()
+    assert canvas.apply_render_result(token, "preview render", canvas=rendered) is True
+
+    canvas.pan_by_pixels(40, 0, emit=False)
+
+    frame = canvas._frame_rect()  # noqa: SLF001
+    live = canvas._live_preview_pixmap(frame).toImage()  # noqa: SLF001
+    static_pixel = live.pixelColor(2, 2)
+    assert (static_pixel.red(), static_pixel.green(), static_pixel.blue()) == (210, 20, 20)
+
+
+def test_gis_canvas_live_preview_preserves_render_aspect_ratio_on_display() -> None:
+    qapp()
+    canvas = GisCanvasWidget()
+    canvas.resize(800, 450)
+    canvas.set_composition(
+        composition(
+            "alpha__20260525",
+            "alpha",
+            date(2026, 5, 25),
+            needs_revalidation=False,
+        )
+    )
+    rendered = np.full((100, 200, 3), 190, dtype=np.uint8)
+    token = canvas.begin_render_request()
+    assert canvas.apply_render_result(token, "wide render", canvas=rendered) is True
+
+    canvas.pan_by_pixels(20, 0, emit=False)
+
+    frame = canvas._frame_rect()  # noqa: SLF001
+    live = canvas._live_preview_pixmap(frame).toImage()  # noqa: SLF001
+    frame_width = max(1, int(round(frame.width())))
+    frame_height = max(1, int(round(frame.height())))
+    drawn_height = int(round(frame_width / 2))
+    top_margin = (frame_height - drawn_height) // 2
+
+    assert top_margin > 0
+    assert live.pixelColor(frame_width // 2, max(0, top_margin - 1)).alpha() == 0
+    assert live.pixelColor(frame_width // 2, top_margin + 1).alpha() == 255
+
+
+def test_gis_canvas_live_preview_uses_configured_map_surround_style() -> None:
+    qapp()
+    canvas = GisCanvasWidget()
+    canvas.set_map_surround_style(
+        {
+            "reference_width": 160,
+            "reference_height": 90,
+            "reference_outer_frame": [0, 0, 160, 90],
+            "reference_frame_gap": 10,
+            "surround_outer_stroke_width": 2,
+        }
+    )
+
+    inner = canvas._display_inner_map_rect(QRectF(0, 0, 160, 90))  # noqa: SLF001
+
+    assert inner == QRectF(12, 12, 136, 66)
+
+
+def test_gis_canvas_live_preview_scales_inner_map_from_rendered_source_layout() -> None:
+    qapp()
+    canvas = GisCanvasWidget()
+    canvas.set_composition(
+        composition(
+            "alpha__20260525",
+            "alpha",
+            date(2026, 5, 25),
+            needs_revalidation=False,
+        )
+    )
+    canvas.set_map_surround_style(
+        {
+            "reference_width": 160,
+            "reference_height": 90,
+            "reference_outer_frame": [0, 0, 160, 90],
+            "reference_frame_gap": 10,
+            "surround_outer_stroke_width": 2,
+        }
+    )
+    token = canvas.begin_render_request()
+    rendered = np.zeros((90, 160, 3), dtype=np.uint8)
+
+    assert canvas.apply_render_result(token, "preview render", canvas=rendered) is True
+
+    inner = canvas._display_inner_map_rect(QRectF(0, 0, 80, 45))  # noqa: SLF001
+
+    assert inner == QRectF(6, 6, 68, 33)
+
+
+def test_gis_canvas_live_preview_scales_compare_gap_from_rendered_source_layout() -> None:
+    qapp()
+    canvas = GisCanvasWidget()
+    selected = composition(
+        "alpha__20260525",
+        "alpha",
+        date(2026, 5, 25),
+        needs_revalidation=False,
+    ).model_copy(
+        update={
+            "temporal_compare": TemporalCompareState(
+                enabled=True,
+                orientation=TemporalCompareOrientation.VERTICAL,
+                pane_a_composition_id="alpha__20260525",
+                pane_b_composition_id="alpha__20260526",
+            )
+        }
+    )
+    pane_b = composition(
+        "alpha__20260526",
+        "alpha",
+        date(2026, 5, 26),
+        needs_revalidation=False,
+    )
+    canvas.set_map_surround_style(
+        {
+            "reference_width": 160,
+            "reference_height": 90,
+            "reference_outer_frame": [0, 0, 160, 90],
+            "reference_frame_gap": 10,
+            "surround_outer_stroke_width": 2,
+            "temporal_compare_pane_gap_px": 10,
+        }
+    )
+    canvas.set_composition(selected)
+    canvas.set_compare_context(selected, pane_a=selected, pane_b=pane_b)
+    token = canvas.begin_render_request()
+    rendered = np.zeros((90, 160, 3), dtype=np.uint8)
+
+    assert canvas.apply_render_result(token, "compare render", canvas=rendered) is True
+
+    pane_a, pane_b_rect = canvas._display_compare_pane_rects(QRectF(0, 0, 80, 45))  # noqa: SLF001
+
+    assert abs(pane_b_rect.left() - pane_a.right() - 5.0) < 0.01
+
+
 def test_gis_canvas_pan_uses_template_map_frame_size_for_ground_distance() -> None:
     qapp()
     small_frame_canvas = GisCanvasWidget()
@@ -946,6 +1130,52 @@ def test_gis_canvas_compare_drag_distinguishes_panes_with_same_composition() -> 
     assert emissions[0][0] == "B"
     assert emissions[0][1] != selected.temporal_compare.pane_b_center
     assert canvas.center == selected.view.center
+
+
+def test_gis_canvas_live_preview_offsets_only_dragged_compare_pane() -> None:
+    qapp()
+    canvas = GisCanvasWidget()
+    canvas.resize(800, 450)
+    selected = composition(
+        "alpha__20260525",
+        "alpha",
+        date(2026, 5, 25),
+        needs_revalidation=False,
+    ).model_copy(
+        update={
+            "temporal_compare": TemporalCompareState(
+                enabled=True,
+                orientation=TemporalCompareOrientation.VERTICAL,
+                pane_a_composition_id="alpha__20260525",
+                pane_b_composition_id="alpha__20260526",
+            )
+        }
+    )
+    pane_b = composition(
+        "alpha__20260526",
+        "alpha",
+        date(2026, 5, 26),
+        needs_revalidation=False,
+    )
+    canvas.set_composition(selected)
+    canvas.set_compare_context(selected, pane_a=selected, pane_b=pane_b)
+    token = canvas.begin_render_request()
+    rendered = np.full((120, 160, 3), 180, dtype=np.uint8)
+    assert canvas.apply_render_result(token, "compare render", canvas=rendered) is True
+
+    frame = canvas._frame_rect()  # noqa: SLF001
+    _pane_a, pane_b_rect = canvas._display_compare_pane_rects(  # noqa: SLF001
+        QRectF(0, 0, frame.width(), frame.height())
+    )
+    start = QPoint(
+        int(frame.left() + pane_b_rect.center().x()),
+        int(frame.top() + pane_b_rect.center().y()),
+    )
+    canvas._begin_drag_at(start)  # noqa: SLF001
+    canvas._move_drag_to(QPoint(start.x() + 40, start.y()))  # noqa: SLF001
+
+    assert canvas.rendered_image_size == (160, 120)
+    assert canvas._live_preview_transform.pane_offsets == {"B": (40.0, 0.0)}  # noqa: SLF001
 
 
 def test_gis_canvas_exports_current_displayed_image(tmp_path: Path) -> None:
