@@ -5,6 +5,7 @@ from __future__ import annotations
 import math
 from collections import OrderedDict
 from collections.abc import Hashable, Mapping
+from contextlib import nullcontext
 from dataclasses import dataclass
 from pathlib import Path
 from threading import Lock
@@ -15,6 +16,7 @@ import rasterio
 
 from thucthengay.models import TemporalCompareOrientation
 from thucthengay.models.issue import Issue, IssueScope, IssueSeverity
+from thucthengay.render.diagnostics import RenderDiagnostics
 from thucthengay.render.frame import (
     MapSurroundLayout,
     PixelRect,
@@ -521,14 +523,18 @@ def _render_raster_base(
     dataset_opener: DatasetOpener,
     is_cancelled: CancelCallback | None,
     raster_cache: RasterBaseCache | None,
+    diagnostics: RenderDiagnostics | None,
 ) -> RasterRenderResult:
     if raster_cache is None:
-        return render_raster_layers_to_size(
+        if diagnostics is not None:
+            diagnostics.record_cache_miss("raster_base")
+        return _render_raster_layers_to_size_optional_diagnostics(
             render_spec,
             output_width=output_width,
             output_height=output_height,
             dataset_opener=dataset_opener,
             is_cancelled=is_cancelled,
+            diagnostics=diagnostics,
         )
 
     key = _render_raster_base_cache_key(
@@ -538,18 +544,43 @@ def _render_raster_base(
     )
     cached = raster_cache.get(key)
     if cached is not None:
+        if diagnostics is not None:
+            diagnostics.record_cache_hit("raster_base")
         return cached
+    if diagnostics is not None:
+        diagnostics.record_cache_miss("raster_base")
 
-    result = render_raster_layers_to_size(
+    result = _render_raster_layers_to_size_optional_diagnostics(
         render_spec,
         output_width=output_width,
         output_height=output_height,
         dataset_opener=dataset_opener,
         is_cancelled=is_cancelled,
+        diagnostics=diagnostics,
     )
     if is_cancelled is None or not is_cancelled():
         raster_cache.put(key, result)
     return result
+
+
+def _render_raster_layers_to_size_optional_diagnostics(
+    render_spec: RenderSpec,
+    *,
+    output_width: int,
+    output_height: int,
+    dataset_opener: DatasetOpener,
+    is_cancelled: CancelCallback | None,
+    diagnostics: RenderDiagnostics | None,
+) -> RasterRenderResult:
+    kwargs: dict[str, Any] = {
+        "output_width": output_width,
+        "output_height": output_height,
+        "dataset_opener": dataset_opener,
+        "is_cancelled": is_cancelled,
+    }
+    if diagnostics is not None:
+        kwargs["diagnostics"] = diagnostics
+    return render_raster_layers_to_size(render_spec, **kwargs)
 
 
 def render_map(
@@ -557,9 +588,15 @@ def render_map(
     *,
     dataset_opener: DatasetOpener = rasterio.open,
     is_cancelled: CancelCallback | None = None,
+    diagnostics: RenderDiagnostics | None = None,
 ) -> RasterRenderResult:
     """Render a full map-surround image with raster inside the inset map panel."""
-    return _render_map(spec, dataset_opener=dataset_opener, is_cancelled=is_cancelled)
+    return _render_map(
+        spec,
+        dataset_opener=dataset_opener,
+        is_cancelled=is_cancelled,
+        diagnostics=diagnostics,
+    )
 
 
 def render_map_with_cache(
@@ -569,6 +606,7 @@ def render_map_with_cache(
     raster_cache: RasterBaseCache | None = None,
     dataset_opener: DatasetOpener = rasterio.open,
     is_cancelled: CancelCallback | None = None,
+    diagnostics: RenderDiagnostics | None = None,
 ) -> RasterRenderResult:
     """Render a map-surround image while reusing unchanged inner raster bases."""
     if render_cache is None and raster_cache is None:
@@ -580,6 +618,7 @@ def render_map_with_cache(
         raster_cache=render_cache.raster_bases if render_cache is not None else raster_cache,
         frame_cache=render_cache.frame_overlays if render_cache is not None else None,
         full_cache=render_cache.full_maps if render_cache is not None else None,
+        diagnostics=diagnostics,
     )
 
 
@@ -591,6 +630,31 @@ def _render_map(
     raster_cache: RasterBaseCache | None = None,
     frame_cache: FrameOverlayCache | None = None,
     full_cache: FullMapCache | None = None,
+    diagnostics: RenderDiagnostics | None = None,
+) -> RasterRenderResult:
+    if diagnostics is not None:
+        diagnostics.record_render_spec(spec)
+    with diagnostics.time("render.total") if diagnostics is not None else nullcontext():
+        return _render_map_inner(
+            spec,
+            dataset_opener=dataset_opener,
+            is_cancelled=is_cancelled,
+            raster_cache=raster_cache,
+            frame_cache=frame_cache,
+            full_cache=full_cache,
+            diagnostics=diagnostics,
+        )
+
+
+def _render_map_inner(
+    spec: RenderSpec,
+    *,
+    dataset_opener: DatasetOpener,
+    is_cancelled: CancelCallback | None,
+    raster_cache: RasterBaseCache | None,
+    frame_cache: FrameOverlayCache | None,
+    full_cache: FullMapCache | None,
+    diagnostics: RenderDiagnostics | None,
 ) -> RasterRenderResult:
     output_pixels = spec.output_width * spec.output_height
     if output_pixels > MAX_RENDER_PIXELS:
@@ -600,9 +664,14 @@ def _render_map(
     if full_cache is not None and full_key is not None:
         cached_full = full_cache.get(full_key)
         if cached_full is not None:
+            if diagnostics is not None:
+                diagnostics.record_cache_hit("full_map")
             return cached_full
+        if diagnostics is not None:
+            diagnostics.record_cache_miss("full_map")
 
-    render_spec, layout = _render_layout_for_spec(spec)
+    with diagnostics.time("render.layout") if diagnostics is not None else nullcontext():
+        render_spec, layout = _render_layout_for_spec(spec)
     inner = layout.inner_map
     inner_pixels = inner.width * inner.height
     if _estimated_peak_pixels(output_pixels=output_pixels, inner_pixels=inner_pixels) > (
@@ -617,6 +686,7 @@ def _render_map(
             dataset_opener=dataset_opener,
             is_cancelled=is_cancelled,
             raster_cache=raster_cache,
+            diagnostics=diagnostics,
         )
     else:
         result = _render_raster_base(
@@ -626,6 +696,7 @@ def _render_map(
             dataset_opener=dataset_opener,
             is_cancelled=is_cancelled,
             raster_cache=raster_cache,
+            diagnostics=diagnostics,
         )
     if is_cancelled is not None and is_cancelled():
         raise RenderError([*result.issues, _cancelled_issue(spec)])
@@ -639,25 +710,40 @@ def _render_map(
         raise RenderError([*result.issues, _cancelled_issue(spec)])
 
     try:
-        canvas = np.empty((spec.output_height, spec.output_width, 3), dtype=np.uint8)
+        timer = (
+            diagnostics.time("render.canvas_allocate")
+            if diagnostics is not None
+            else nullcontext()
+        )
+        with timer:
+            canvas = np.empty((spec.output_height, spec.output_width, 3), dtype=np.uint8)
     except MemoryError as exc:
         raise RenderError([*result.issues, _memory_issue(spec)]) from exc
 
-    canvas[:, :] = (255, 255, 255)
-    canvas[inner.top : inner.bottom, inner.left : inner.right, :] = bg
-    canvas[inner.top : inner.bottom, inner.left : inner.right, :] = result.canvas
+    with diagnostics.time("render.composite") if diagnostics is not None else nullcontext():
+        canvas[:, :] = (255, 255, 255)
+        canvas[inner.top : inner.bottom, inner.left : inner.right, :] = bg
+        canvas[inner.top : inner.bottom, inner.left : inner.right, :] = result.canvas
 
     try:
         if is_cancelled is not None and is_cancelled():
             raise RenderError([_cancelled_issue(spec)])
         if render_spec.temporal_compare.enabled:
-            draw_map_surround_outline(canvas, render_spec, layout, draw_inner=False)
-            _draw_temporal_compare_pane_frames(
-                canvas,
-                render_spec,
-                layout,
-                is_cancelled=is_cancelled,
+            if diagnostics is not None:
+                diagnostics.record_cache_miss("frame_overlay")
+            timer = (
+                diagnostics.time("render.frame_overlay")
+                if diagnostics is not None
+                else nullcontext()
             )
+            with timer:
+                draw_map_surround_outline(canvas, render_spec, layout, draw_inner=False)
+                _draw_temporal_compare_pane_frames(
+                    canvas,
+                    render_spec,
+                    layout,
+                    is_cancelled=is_cancelled,
+                )
         else:
             _apply_map_surround_frame(
                 canvas,
@@ -666,6 +752,7 @@ def _render_map(
                 background=bg,
                 frame_cache=frame_cache,
                 is_cancelled=is_cancelled,
+                diagnostics=diagnostics,
             )
     except MemoryError as exc:
         raise RenderError([*result.issues, _memory_issue(spec)]) from exc
@@ -692,26 +779,36 @@ def _apply_map_surround_frame(
     background: tuple[int, int, int],
     frame_cache: FrameOverlayCache | None,
     is_cancelled: CancelCallback | None,
+    diagnostics: RenderDiagnostics | None,
 ) -> None:
     if frame_cache is None:
-        draw_map_surround_frame(canvas, spec, layout, is_cancelled=is_cancelled)
+        if diagnostics is not None:
+            diagnostics.record_cache_miss("frame_overlay")
+        with diagnostics.time("render.frame_overlay") if diagnostics is not None else nullcontext():
+            draw_map_surround_frame(canvas, spec, layout, is_cancelled=is_cancelled)
         return
 
     key = _frame_overlay_cache_key(spec, layout)
     cached = frame_cache.get(key)
     if cached is None:
-        pixels, mask = _build_frame_overlay(
-            spec,
-            layout,
-            background=background,
-            is_cancelled=is_cancelled,
-        )
+        if diagnostics is not None:
+            diagnostics.record_cache_miss("frame_overlay")
+        with diagnostics.time("render.frame_overlay") if diagnostics is not None else nullcontext():
+            pixels, mask = _build_frame_overlay(
+                spec,
+                layout,
+                background=background,
+                is_cancelled=is_cancelled,
+            )
         if is_cancelled is None or not is_cancelled():
             frame_cache.put(key, pixels, mask)
     else:
+        if diagnostics is not None:
+            diagnostics.record_cache_hit("frame_overlay")
         pixels, mask = cached
 
-    canvas[mask] = pixels[mask]
+    with diagnostics.time("render.frame_composite") if diagnostics is not None else nullcontext():
+        canvas[mask] = pixels[mask]
 
 
 def _render_temporal_compare_base(
@@ -721,6 +818,7 @@ def _render_temporal_compare_base(
     dataset_opener: DatasetOpener,
     is_cancelled: CancelCallback | None,
     raster_cache: RasterBaseCache | None,
+    diagnostics: RenderDiagnostics | None,
 ) -> RasterRenderResult:
     comparison = spec.temporal_compare
     pane_gap_px = _temporal_compare_pane_gap_px(spec)
@@ -746,6 +844,7 @@ def _render_temporal_compare_base(
             dataset_opener=dataset_opener,
             is_cancelled=is_cancelled,
             raster_cache=raster_cache,
+            diagnostics=diagnostics,
         )
         issues.extend(pane_result.issues)
         painted_layer_ids.extend(pane_result.painted_layer_ids)
@@ -800,6 +899,7 @@ def _render_temporal_compare_pane(
     dataset_opener: DatasetOpener,
     is_cancelled: CancelCallback | None,
     raster_cache: RasterBaseCache | None,
+    diagnostics: RenderDiagnostics | None,
 ) -> RasterRenderResult:
     pane_spec = _spec_for_compare_pane(spec, pane, pane_rect)
     return _render_raster_base(
@@ -809,6 +909,7 @@ def _render_temporal_compare_pane(
         dataset_opener=dataset_opener,
         is_cancelled=is_cancelled,
         raster_cache=raster_cache,
+        diagnostics=diagnostics,
     )
 
 

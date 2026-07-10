@@ -1,5 +1,5 @@
 # generated: 2026-05-24
-# last_updated: 2026-06-14  # epic 10 satellite download tab added
+# last_updated: 2026-07-09  # epic 11 render pipeline performance refactor added
 # project: 3.ThucTheNgay
 # project_key: NOKEY
 # tracking_system: file-system
@@ -35,7 +35,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-05-24
-last_updated: 2026-06-14
+last_updated: 2026-07-09
 project: 3.ThucTheNgay
 project_key: NOKEY
 tracking_system: file-system
@@ -121,3 +121,11 @@ development_status:
   10-7-wire-download-run-results-summary-and-app-boundaries: review
   10-8-add-download-engine-and-ui-regression-tests: review
   epic-10-retrospective: optional
+  epic-11: in-progress
+  11-1-instrument-render-pipeline-and-establish-baseline-metrics: review
+  11-2-add-cog-and-overview-readiness-tooling: review
+  11-3-introduce-fixed-tile-index-and-tile-cache-contracts: review
+  11-4-decode-tiles-with-scheduler-and-cooperative-cancellation: review
+  11-5-compose-gis-canvas-from-cached-tiles-and-support-partial-repaint: review
+  11-6-add-progressive-lod-and-reassess-gpu-path: review
+  epic-11-retrospective: optional

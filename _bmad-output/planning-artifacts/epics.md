@@ -270,6 +270,40 @@ SDT-UX2: The download action area must show one primary action, clear disabled r
 
 SDT-UX3: Status must not rely on color alone; errors and warnings must include icons/text and Vietnamese remediation.
 
+### Render Pipeline Refactor Requirements Addendum
+
+RPR-FR1: Provide render performance instrumentation that records timing for raster window reads, resampling, raster-to-uint8 scaling, QImage conversion, QPixmap conversion, paint/composite steps, cache hit/miss counts, and `rasterio.read()` calls during pan/zoom workflows.
+
+RPR-FR2: Provide a diagnostic path for checking GeoTIFF overview/COG readiness, including available overview levels, raster dimensions, block/tile layout where available, and actionable warnings when large rasters lack usable overviews.
+
+RPR-FR3: Provide tooling or service support to prepare imagery for efficient rendering by creating COG outputs or external overviews, while preserving the existing workspace/cache source-of-truth contracts and never mutating production source imagery without an explicit operator/developer action.
+
+RPR-FR4: Persist or cache raster overview metadata so repeated render operations do not reopen datasets only to discover overview levels.
+
+RPR-FR5: Introduce a fixed map-space tile index that converts a viewport/scale request into deterministic tile keys independent from the current frame, so pan/zoom reuses decoded spatial data.
+
+RPR-FR6: Introduce a byte-budgeted tile cache keyed by raster/file signature, overview/LOD level, tile coordinates, style-affecting parameters where needed, and invalidated only when source signature or render-affecting parameters change.
+
+RPR-FR7: Decode missing tiles asynchronously with prioritization near the viewport center, cooperative cancellation for obsolete requests, and no stale tile application after the view changes.
+
+RPR-FR8: Compose the GIS canvas from cached tiles so pan operations reuse existing decoded tiles and decode only newly exposed tile bands where practical.
+
+RPR-FR9: Implement partial repaint after tile rendering is stable, reusing the previous frame buffer for small pan deltas and recompositing only exposed regions unless zoom or large movement requires a full redraw.
+
+RPR-FR10: Add progressive LOD refinement so lower-resolution cached tiles can appear immediately during fast pan/zoom and be replaced by correct-resolution tiles when available.
+
+RPR-FR11: Reassess GPU/OpenGL only after instrumentation shows the remaining bottleneck is texture/pixmap upload or composition rather than raster decode/resampling.
+
+RPR-AR1: Keep render business logic in `src/thucthengay/render/` and job orchestration in `src/thucthengay/jobs/`; PySide widgets may request render work and display results but must not own raster/tile decode logic.
+
+RPR-AR2: Keep final export fidelity stable: tile-based preview optimization must not change final render output unless a story explicitly updates and verifies the final render contract.
+
+RPR-AR3: Tile cache and scheduler tests must use generated lightweight raster fixtures and deterministic viewport/tile coordinates; they must not depend on real LAN imagery.
+
+RPR-AR4: Epic 11 performance changes must preserve the existing map frame contract exactly. No adjustment may change or affect map-frame shape, dimensions, aspect, outer frame, inner raster panel geometry, DMS labels, tick placement, label text/format, temporal-compare pane gap, pane boundaries, or any existing map-surround spacing unless a separate non-performance story explicitly approves and verifies that visual/layout change.
+
+RPR-UX1: During render diagnostics and progressive rendering, the UI must show clear loading/quality/status text without relying on color alone and without blocking normal Review/Edit actions longer than necessary.
+
 ### FR Coverage Map
 
 FR1: Epic 1 - Load target config.
@@ -307,6 +341,9 @@ HIR-UX1-HIR-UX5: Epic 9 - Historical imagery visibility, explicit loading mode, 
 SDT-FR1-SDT-FR13: Epic 10 - In-app satellite image download workflow.
 SDT-AR1-SDT-AR4: Epic 10 - Download engine/service boundary, progress jobs, SQLite metadata cache, and fixture-based tests.
 SDT-UX1-SDT-UX3: Epic 10 - Download tab path controls, progress/cancel/summary UX, and accessible status messaging.
+RPR-FR1-RPR-FR11: Epic 11 - Render pipeline performance refactor and tile-based preview architecture.
+RPR-AR1-RPR-AR4: Epic 11 - Render service boundaries, final output stability, fixture-based tile tests, and strict map-frame invariance.
+RPR-UX1: Epic 11 - Render diagnostics/progressive status UX.
 
 
 ## Epic List
@@ -380,6 +417,13 @@ Operator co the chon nhieu file GeoJSON, nhieu folder anh nguon, va mot folder o
 
 **FRs covered:** SDT-FR1, SDT-FR2, SDT-FR3, SDT-FR4, SDT-FR5, SDT-FR6, SDT-FR7, SDT-FR8, SDT-FR9, SDT-FR10, SDT-FR11, SDT-FR12, SDT-FR13
 **Key architecture/UX coverage:** SDT-AR1, SDT-AR2, SDT-AR3, SDT-AR4, SDT-UX1, SDT-UX2, SDT-UX3, AR7, AR8, NFR5, NFR6, NFR7, NFR8
+
+### Epic 11: Render Pipeline Performance Refactor
+
+Operator can pan/zoom large satellite imagery smoothly because render work is measured first, GeoTIFF overviews are prepared or detected, decoded raster data is cached by stable map-space tiles, and the GIS canvas reuses cached tiles instead of rerendering the whole frame after every view change.
+
+**FRs covered:** RPR-FR1, RPR-FR2, RPR-FR3, RPR-FR4, RPR-FR5, RPR-FR6, RPR-FR7, RPR-FR8, RPR-FR9, RPR-FR10, RPR-FR11
+**Key architecture/UX coverage:** RPR-AR1, RPR-AR2, RPR-AR3, RPR-AR4, RPR-UX1, AR7, AR8, NFR1, NFR5, NFR7, NFR8
 
 ## Epic 1: Project Setup, Schemas, and Workspace Foundation
 
@@ -2390,3 +2434,181 @@ So that future changes do not break GeoJSON-file selection, output structure, pr
 **Given** UI tests instantiate the download tab
 **When** GeoJSON files, image folders, and output folder are added or removed
 **Then** tests verify control state, disabled reasons, and that no workspace service write is triggered by the download workflow.
+
+## Epic 11: Render Pipeline Performance Refactor
+
+**Goal:** Improve Review/Edit GIS canvas responsiveness for large satellite imagery by measuring current bottlenecks, ensuring rasters have usable overview pyramids, and replacing whole-frame preview rerendering with stable tile-indexed decode/cache/composition behavior.
+
+**Mandatory Epic Constraint:** Epic 11 is a performance/refactor epic only. Every implementation story must preserve the current map-frame visual/layout contract exactly: frame shape, size, aspect, outer frame, inner raster panel, coordinate labels, tick placement, label format/text, temporal-compare pane gap, pane boundaries, and spacing must not change as a side effect of diagnostics, overview handling, tile cache, scheduling, partial repaint, progressive LOD, or any future GPU decision.
+
+### Story 11.1: Instrument Render Pipeline and Establish Baseline Metrics
+
+As a Developer,
+I want render performance instrumentation around the current preview pipeline,
+So that optimization work is driven by measured bottlenecks instead of guesses.
+
+**Requirement References:** RPR-FR1, RPR-FR2, RPR-AR1, RPR-AR4, RPR-UX1
+
+**Acceptance Criteria:**
+
+**Given** render diagnostics are enabled for Review/Edit preview
+**When** a composition is rendered, panned, and zoomed
+**Then** the diagnostic output records timing for raster window reads, resampling/scaling, QImage conversion, QPixmap conversion, paint/composite work, cache hits/misses, output dimensions, and total render latency.
+
+**Given** diagnostics are disabled
+**When** normal Review/Edit rendering runs
+**Then** the render behavior and UI remain unchanged except for negligible instrumentation overhead.
+
+**Given** a diagnostic run includes large GeoTIFF inputs
+**When** the diagnostic summary is written
+**Then** it reports whether each raster has usable overview levels and records enough file signature data to compare later runs.
+
+**Given** a developer runs focused tests
+**When** instrumentation code is exercised with generated raster fixtures
+**Then** tests verify metrics are collected without requiring PySide widgets or production imagery.
+
+**Given** render diagnostics are enabled or disabled
+**When** the same render spec is used
+**Then** diagnostics do not alter map-frame geometry, labels, pane gaps, or final/preview visual layout.
+
+### Story 11.2: Add COG and Overview Readiness Tooling
+
+As a Developer,
+I want tooling and metadata support for COG/overview readiness,
+So that large imagery can be prepared before deeper tile rendering changes are made.
+
+**Requirement References:** RPR-FR2, RPR-FR3, RPR-FR4, RPR-AR1, RPR-AR3, RPR-AR4
+
+**Acceptance Criteria:**
+
+**Given** a GeoTIFF path is checked
+**When** overview readiness runs
+**Then** it reports raster size, CRS, available overview decimation levels, block/tile hints when available, and whether the raster is likely expensive to zoom out.
+
+**Given** a raster lacks usable overviews
+**When** the readiness report is produced
+**Then** it includes actionable remediation for creating COG output or external overviews without silently mutating the source file.
+
+**Given** overview metadata has already been cached for an unchanged raster
+**When** readiness or render code asks for overview levels again
+**Then** it can reuse cached metadata keyed by source path, size, and mtime.
+
+**Given** tests run in CI or a developer machine
+**When** the readiness service is tested
+**Then** it uses generated lightweight raster fixtures and skips only external GDAL CLI conversion steps that are unavailable.
+
+### Story 11.3: Introduce Fixed Tile Index and Tile Cache Contracts
+
+As a Developer,
+I want a deterministic tile index and byte-budgeted tile cache contract,
+So that decoded map-space data can survive pan/zoom changes and be reused across frames.
+
+**Requirement References:** RPR-FR5, RPR-FR6, RPR-AR1, RPR-AR2, RPR-AR3, RPR-AR4
+
+**Acceptance Criteria:**
+
+**Given** a viewport, map scale, tile size, and map-space extent
+**When** `TileIndex` resolves visible tiles
+**Then** it returns deterministic tile keys independent from the current widget frame and stable across small pan movements.
+
+**Given** two nearby pan positions overlap
+**When** visible tile keys are compared
+**Then** shared map-space tiles keep identical keys and only newly exposed tiles are new.
+
+**Given** a tile cache is configured with a byte budget
+**When** tiles are inserted beyond the budget
+**Then** least-recently-used entries are evicted deterministically without evicting unrelated current entries prematurely.
+
+**Given** a raster file changes size or mtime
+**When** tile keys are built
+**Then** the file signature changes and stale tile entries are not reused.
+
+**Given** tile keys and cache entries are introduced
+**When** the renderer derives the map-space tile coverage
+**Then** it uses the existing render spec/map-frame geometry as input and does not redefine frame size, label placement, pane gap, or map-surround layout.
+
+### Story 11.4: Decode Tiles with Scheduler and Cooperative Cancellation
+
+As a Developer,
+I want missing visible tiles decoded asynchronously with cancellation and prioritization,
+So that pan/zoom remains responsive while expensive raster work happens off the UI thread.
+
+**Requirement References:** RPR-FR6, RPR-FR7, RPR-AR1, RPR-AR3, RPR-AR4, RPR-UX1
+
+**Acceptance Criteria:**
+
+**Given** a viewport requests tiles and some are missing from cache
+**When** the tile scheduler runs
+**Then** missing tiles are queued by priority, with tiles nearer the viewport center scheduled before edge tiles.
+
+**Given** the viewport changes before queued tile work completes
+**When** obsolete tile jobs finish
+**Then** their results are rejected and do not overwrite the current view.
+
+**Given** a tile decode job reads raster data
+**When** an appropriate overview/LOD level is available
+**Then** the job reads the smallest practical raster window/decimation for that tile instead of full-frame raster data.
+
+**Given** cancellation is requested
+**When** the decode worker reaches cancellation checkpoints
+**Then** it exits cleanly and leaves cache/state consistent.
+
+### Story 11.5: Compose GIS Canvas from Cached Tiles and Support Partial Repaint
+
+As an Operator,
+I want the GIS canvas to reuse already-decoded tiles while panning,
+So that the map follows interaction quickly instead of waiting for a full viewport rerender.
+
+**Requirement References:** RPR-FR8, RPR-FR9, RPR-AR1, RPR-AR2, RPR-AR4, RPR-UX1
+
+**Acceptance Criteria:**
+
+**Given** visible tiles are already cached
+**When** the Operator pans a small distance
+**Then** the canvas repositions cached tiles immediately and queues only newly exposed tiles.
+
+**Given** a previous composed frame exists
+**When** pan delta is below the configured threshold
+**Then** partial repaint reuses the previous frame buffer and repaints only exposed bands where practical.
+
+**Given** zoom changes or pan delta is too large
+**When** the canvas updates
+**Then** the compositor falls back to a full recomposite without corrupting tile cache state.
+
+**Given** cached tiles or partial repaint are used
+**When** the map is displayed in normal or temporal-compare mode
+**Then** the compositor preserves the existing frame shape, dimensions, labels, ticks, pane gaps, pane boundaries, and spacing exactly.
+
+**Given** final export runs
+**When** preview tile rendering has been used in Review/Edit
+**Then** final render output remains governed by the existing final render contract unless this story explicitly verifies a shared tile path.
+
+### Story 11.6: Add Progressive LOD and Reassess GPU Path
+
+As an Operator,
+I want fast pan/zoom to show useful lower-resolution imagery first and refine automatically,
+So that Review/Edit remains usable even when high-resolution tiles are still decoding.
+
+**Requirement References:** RPR-FR10, RPR-FR11, RPR-AR1, RPR-AR2, RPR-AR4, RPR-UX1
+
+**Acceptance Criteria:**
+
+**Given** high-resolution visible tiles are missing but lower-resolution cached tiles cover the same area
+**When** the canvas repaints during fast pan/zoom
+**Then** it displays the lower-resolution tiles as temporary imagery and replaces them when correct-resolution tiles arrive.
+
+**Given** progressive LOD is active
+**When** lower-quality imagery is shown
+**Then** the UI exposes a clear render-quality/loading status without blocking review actions or relying on color alone.
+
+**Given** progressive LOD or a future GPU path is evaluated
+**When** imagery is temporarily lower quality or rendered through another compositor
+**Then** only raster imagery quality/timing may vary; map-frame geometry, labels, gaps, pane boundaries, and surrounding layout remain unchanged.
+
+**Given** tile cache, scheduler, compositor, and partial repaint are stable
+**When** diagnostics are rerun
+**Then** the team can compare baseline versus optimized metrics for CPU, read count, cache hit rate, and perceived latency.
+
+**Given** diagnostics show the remaining bottleneck is not raster decode/resampling
+**When** GPU/OpenGL is considered
+**Then** the decision record states whether to keep QPainter/QImage or create a later GPU-specific epic/story, with evidence from the measured metrics.

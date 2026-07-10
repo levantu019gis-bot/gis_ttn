@@ -17,7 +17,7 @@ Performance:
 from __future__ import annotations
 
 from collections.abc import Callable, Iterator
-from contextlib import contextmanager
+from contextlib import contextmanager, nullcontext
 from dataclasses import dataclass
 
 import numpy as np
@@ -36,6 +36,7 @@ from thucthengay.gis.crs import (
     normalize_crs_key,
 )
 from thucthengay.models.issue import Issue, IssueScope, IssueSeverity
+from thucthengay.render.diagnostics import RenderDiagnostics
 from thucthengay.render.spec import MAX_RENDER_PIXELS, RenderLayerRef, RenderSpec
 
 DatasetOpener = Callable[[str], "rasterio.DatasetReader"]
@@ -205,16 +206,20 @@ def _read_alpha_mask(
     window,
     out_h: int,
     out_w: int,
+    diagnostics: RenderDiagnostics | None,
 ) -> np.ndarray | None:
     if alpha_index is None:
         return None
-    alpha = src.read(
-        alpha_index,
-        window=window,
-        out_shape=(out_h, out_w),
-        resampling=Resampling.nearest,
-        masked=True,
-    )
+    if diagnostics is not None:
+        diagnostics.increment("rasterio.read.calls")
+    with diagnostics.time("raster.alpha_read") if diagnostics is not None else nullcontext():
+        alpha = src.read(
+            alpha_index,
+            window=window,
+            out_shape=(out_h, out_w),
+            resampling=Resampling.nearest,
+            masked=True,
+        )
     alpha_values = np.ma.asarray(alpha).filled(0)
     return alpha_values <= 0
 
@@ -225,6 +230,7 @@ def _read_layer_into(
     geo_bbox: tuple[float, float, float, float],
     canvas: np.ndarray,
     covered_mask: np.ndarray,
+    diagnostics: RenderDiagnostics | None,
 ) -> _LayerReadResult:
     """Read ``dataset`` into the ``canvas`` region corresponding to its overlap.
 
@@ -236,6 +242,8 @@ def _read_layer_into(
 
     src: DatasetReader
     if use_vrt:
+        if diagnostics is not None:
+            diagnostics.increment("raster.warped_vrt.layers")
         src = WarpedVRT(
             dataset,
             crs=GEOGRAPHIC_CRS,
@@ -283,13 +291,17 @@ def _read_layer_into(
             return _LayerReadResult(written=False, fully_occluded=True)
 
         read_bands, alpha_index = _resolve_band_indexes(src)
-        data = src.read(
-            indexes=read_bands,
-            window=read_window,
-            out_shape=(len(read_bands), read_out_h, read_out_w),
-            resampling=Resampling.bilinear,
-            masked=True,
-        )
+        if diagnostics is not None:
+            diagnostics.increment("rasterio.read.calls")
+            diagnostics.increment("raster.window_read.output_pixels", read_out_h * read_out_w)
+        with diagnostics.time("raster.window_read") if diagnostics is not None else nullcontext():
+            data = src.read(
+                indexes=read_bands,
+                window=read_window,
+                out_shape=(len(read_bands), read_out_h, read_out_w),
+                resampling=Resampling.bilinear,
+                masked=True,
+            )
         masked_data = np.ma.asarray(data)
         mask = np.ma.getmaskarray(masked_data).any(axis=0)
         alpha_mask = _read_alpha_mask(
@@ -298,14 +310,21 @@ def _read_layer_into(
             window=read_window,
             out_h=read_out_h,
             out_w=read_out_w,
+            diagnostics=diagnostics,
         )
         if alpha_mask is not None:
             mask = np.logical_or(mask, alpha_mask)
 
-        if len(read_bands) == 1:
-            rgb = np.repeat(_scale_to_uint8(masked_data), 3, axis=0)
-        else:
-            rgb = _scale_to_uint8(masked_data)
+        timer = (
+            diagnostics.time("raster.scale_to_uint8")
+            if diagnostics is not None
+            else nullcontext()
+        )
+        with timer:
+            if len(read_bands) == 1:
+                rgb = np.repeat(_scale_to_uint8(masked_data), 3, axis=0)
+            else:
+                rgb = _scale_to_uint8(masked_data)
 
         valid = ~mask
         if not valid.any():
@@ -370,6 +389,7 @@ def render_raster_layers(
     *,
     dataset_opener: DatasetOpener = rasterio.open,
     is_cancelled: CancelCallback | None = None,
+    diagnostics: RenderDiagnostics | None = None,
 ) -> RasterRenderResult:
     """Composite visible raster layers into a structured render result.
 
@@ -380,7 +400,10 @@ def render_raster_layers(
     raised with structured issues.
     """
     return render_raster_layers_result(
-        spec, dataset_opener=dataset_opener, is_cancelled=is_cancelled
+        spec,
+        dataset_opener=dataset_opener,
+        is_cancelled=is_cancelled,
+        diagnostics=diagnostics,
     )
 
 
@@ -391,6 +414,7 @@ def render_raster_layers_to_size(
     output_height: int,
     dataset_opener: DatasetOpener = rasterio.open,
     is_cancelled: CancelCallback | None = None,
+    diagnostics: RenderDiagnostics | None = None,
 ) -> RasterRenderResult:
     """Composite raster layers into an alternate output size using the same geo window."""
     if output_width <= 0 or output_height <= 0:
@@ -412,6 +436,7 @@ def render_raster_layers_to_size(
         sized_spec,
         dataset_opener=dataset_opener,
         is_cancelled=is_cancelled,
+        diagnostics=diagnostics,
     )
 
 
@@ -420,6 +445,7 @@ def render_raster_layers_result(
     *,
     dataset_opener: DatasetOpener = rasterio.open,
     is_cancelled: CancelCallback | None = None,
+    diagnostics: RenderDiagnostics | None = None,
 ) -> RasterRenderResult:
     """Composite visible raster layers into a single uint8 RGB canvas.
 
@@ -430,6 +456,24 @@ def render_raster_layers_result(
     on remaining layers. If *no* layer is successfully drawn AND at least one
     issue was recorded, ``RenderError`` is raised.
     """
+    if diagnostics is not None:
+        diagnostics.record_render_spec(spec)
+    with diagnostics.time("raster.total") if diagnostics is not None else nullcontext():
+        return _render_raster_layers_result(
+            spec,
+            dataset_opener=dataset_opener,
+            is_cancelled=is_cancelled,
+            diagnostics=diagnostics,
+        )
+
+
+def _render_raster_layers_result(
+    spec: RenderSpec,
+    *,
+    dataset_opener: DatasetOpener,
+    is_cancelled: CancelCallback | None,
+    diagnostics: RenderDiagnostics | None,
+) -> RasterRenderResult:
     geo_bbox = (
         spec.geo_window.min_lon,
         spec.geo_window.min_lat,
@@ -497,6 +541,12 @@ def render_raster_layers_result(
             break
         try:
             with _open_layer(layer, dataset_opener) as dataset:
+                if diagnostics is not None:
+                    diagnostics.record_raster_source(
+                        layer_id=layer.layer_id,
+                        path=layer.cache_path or layer.source_path,
+                        dataset=dataset,
+                    )
                 if dataset.crs is None:
                     issues.append(
                         _issue(
@@ -514,6 +564,7 @@ def render_raster_layers_result(
                     geo_bbox=geo_bbox,
                     canvas=canvas,
                     covered_mask=covered_mask,
+                    diagnostics=diagnostics,
                 )
                 if layer_result.written or layer_result.fully_occluded:
                     painted_layer_ids.add(layer.layer_id)

@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from pydantic import ValidationError
-from PySide6.QtCore import Qt, QThread, QTimer, Signal, Slot
+from PySide6.QtCore import QModelIndex, Qt, QThread, QTimer, Signal, Slot
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QApplication,
@@ -890,11 +890,12 @@ class ReviewEditMode(QWidget):
         self._render_tokens[request.job_id] = token
         thread.start()
 
-    def _render_canvas_map(self, spec, *, is_cancelled=None):  # noqa: ANN001
+    def _render_canvas_map(self, spec, *, is_cancelled=None, diagnostics=None):  # noqa: ANN001
         return render_map_with_cache(
             spec,
             render_cache=self._canvas_render_cache,
             is_cancelled=is_cancelled,
+            diagnostics=diagnostics,
         )
 
     def _resolved_compare_compositions_for_render(
@@ -1113,6 +1114,14 @@ class ReviewEditMode(QWidget):
                 return layer
         return None
 
+    def _layer_by_id(self, layer_id: str) -> ImageLayer | None:
+        if self.selected_composition is None:
+            return None
+        for layer in self.selected_composition.layers:
+            if layer.layer_id == layer_id:
+                return layer
+        return None
+
     def _open_metadata_editor(self) -> None:
         layer = self._current_layer()
         if layer is None or self._workspace_service is None or self.selected_composition is None:
@@ -1126,11 +1135,16 @@ class ReviewEditMode(QWidget):
             return
         current_layer = self._current_layer()
         if current_layer is None or current_layer.layer_id != layer_id:
+            current_layer = self._layer_by_id(layer_id)
+            if current_layer is not None:
+                self._select_layer_by_id(layer_id)
+        if current_layer is None or current_layer.layer_id != layer_id:
             self.action_summary.setText("Không tìm thấy layer đang chọn để lưu metadata.")
             return
         composition_id = self.selected_composition.composition_id
         target_id = self.selected_composition.target_id
-        source_path = str(payload.get("source_path") or "").strip()
+        source_value = payload.get("source_path")
+        source_path = str(source_value).strip() if source_value else current_layer.source_path
         source_changed = source_path != current_layer.source_path
         try:
             payload, source_update_message = self._prepare_source_path_payload(

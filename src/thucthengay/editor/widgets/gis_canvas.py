@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from contextlib import nullcontext
 from dataclasses import dataclass
 from enum import StrEnum
 from math import isfinite
@@ -14,6 +15,7 @@ from PySide6.QtWidgets import QGraphicsScene, QGraphicsView
 
 from thucthengay.gis import pan_center_by_viewport_pixels
 from thucthengay.models import Composition, ImageLayer, TemporalCompareOrientation
+from thucthengay.render.diagnostics import RenderDiagnostics
 
 
 class GisCanvasState(StrEnum):
@@ -101,6 +103,7 @@ class GisCanvasWidget(QGraphicsView):
         self._last_applied_render_label: str | None = None
         self._rendered_pixmap: QPixmap | None = None
         self._rendered_export_image: QImage | None = None
+        self._render_diagnostics: RenderDiagnostics | None = None
         self._compare_orientation = TemporalCompareOrientation.VERTICAL
         self._compare_panes: dict[str, _InteractiveViewState] = {}
         self._redraw()
@@ -130,6 +133,10 @@ class GisCanvasWidget(QGraphicsView):
         if self._rendered_pixmap is None:
             return None
         return self._rendered_pixmap.width(), self._rendered_pixmap.height()
+
+    def set_render_diagnostics(self, diagnostics: RenderDiagnostics | None) -> None:
+        """Attach an optional diagnostics collector for conversion and paint timings."""
+        self._render_diagnostics = diagnostics
 
     def state(self) -> GisCanvasState:
         return self._state
@@ -285,10 +292,14 @@ class GisCanvasWidget(QGraphicsView):
             return False
 
         if canvas is not None:
-            self._rendered_export_image = _numpy_to_image(canvas)
+            self._rendered_export_image = _numpy_to_image(
+                canvas,
+                diagnostics=self._render_diagnostics,
+            )
             self._rendered_pixmap = _image_to_pixmap(
                 self._rendered_export_image,
                 max_width=self.DISPLAY_IMAGE_MAX_WIDTH,
+                diagnostics=self._render_diagnostics,
             )
         self._state = GisCanvasState.READY
         self._state_message = f"Canvas đã cập nhật: {label}"
@@ -547,17 +558,19 @@ class GisCanvasWidget(QGraphicsView):
         self._generation += 1
 
     def _redraw(self) -> None:
-        self._scene.clear()
-        width = max(self.viewport().width(), 640)
-        height = max(self.viewport().height(), 360)
-        self._scene.setSceneRect(0, 0, width, height)
-        self._scene.setBackgroundBrush(QColor("#242a31"))
+        diagnostics = self._render_diagnostics
+        with diagnostics.time("qt.paint_composite") if diagnostics is not None else nullcontext():
+            self._scene.clear()
+            width = max(self.viewport().width(), 640)
+            height = max(self.viewport().height(), 360)
+            self._scene.setSceneRect(0, 0, width, height)
+            self._scene.setBackgroundBrush(QColor("#242a31"))
 
-        frame = self._frame_rect()
-        self._draw_layers(frame)
-        if self._rendered_pixmap is None:
-            self._draw_frame(frame)
-            self._draw_state_text(width)
+            frame = self._frame_rect()
+            self._draw_layers(frame)
+            if self._rendered_pixmap is None:
+                self._draw_frame(frame)
+                self._draw_state_text(width)
 
     def _displayed_image(self) -> QImage:
         scene_rect = self._scene.sceneRect()
@@ -567,11 +580,13 @@ class GisCanvasWidget(QGraphicsView):
         image.fill(QColor("#242a31"))
         painter = QPainter(image)
         try:
-            self._scene.render(
-                painter,
-                QRectF(0, 0, width, height),
-                scene_rect,
-            )
+            diagnostics = self._render_diagnostics
+            with diagnostics.time("qt.scene_render") if diagnostics is not None else nullcontext():
+                self._scene.render(
+                    painter,
+                    QRectF(0, 0, width, height),
+                    scene_rect,
+                )
         finally:
             painter.end()
         return image
@@ -649,33 +664,44 @@ def _short_layer_name(layer: ImageLayer) -> str:
     return name if len(name) <= 42 else f"{name[:18]}...{name[-18:]}"
 
 
-def _numpy_to_image(canvas: np.ndarray) -> QImage:
+def _numpy_to_image(
+    canvas: np.ndarray,
+    *,
+    diagnostics: RenderDiagnostics | None = None,
+) -> QImage:
     height, width = canvas.shape[:2]
-    if canvas.ndim == 2:
-        image = QImage(canvas.data, width, height, width, QImage.Format.Format_Grayscale8)
-    elif canvas.shape[2] == 3:
-        rgb = np.ascontiguousarray(canvas)
-        image = QImage(rgb.data, width, height, 3 * width, QImage.Format.Format_RGB888)
-    else:
-        rgba = np.ascontiguousarray(canvas[:, :, :4])
-        image = QImage(
-            rgba.data, width, height, 4 * width, QImage.Format.Format_RGBA8888
-        )
-    owned = image.copy()
+    with diagnostics.time("qt.qimage_conversion") if diagnostics is not None else nullcontext():
+        if canvas.ndim == 2:
+            image = QImage(canvas.data, width, height, width, QImage.Format.Format_Grayscale8)
+        elif canvas.shape[2] == 3:
+            rgb = np.ascontiguousarray(canvas)
+            image = QImage(rgb.data, width, height, 3 * width, QImage.Format.Format_RGB888)
+        else:
+            rgba = np.ascontiguousarray(canvas[:, :, :4])
+            image = QImage(
+                rgba.data, width, height, 4 * width, QImage.Format.Format_RGBA8888
+            )
+        owned = image.copy()
     return owned
 
 
-def _image_to_pixmap(image: QImage, *, max_width: int | None = None) -> QPixmap:
-    display = image
-    if max_width is not None and max_width > 0 and image.width() > max_width:
-        scaled_height = max(1, int(round(image.height() * max_width / image.width())))
-        display = image.scaled(
-            max_width,
-            scaled_height,
-            Qt.AspectRatioMode.KeepAspectRatio,
-            Qt.TransformationMode.SmoothTransformation,
-        )
-    return QPixmap.fromImage(display)
+def _image_to_pixmap(
+    image: QImage,
+    *,
+    max_width: int | None = None,
+    diagnostics: RenderDiagnostics | None = None,
+) -> QPixmap:
+    with diagnostics.time("qt.qpixmap_conversion") if diagnostics is not None else nullcontext():
+        display = image
+        if max_width is not None and max_width > 0 and image.width() > max_width:
+            scaled_height = max(1, int(round(image.height() * max_width / image.width())))
+            display = image.scaled(
+                max_width,
+                scaled_height,
+                Qt.AspectRatioMode.KeepAspectRatio,
+                Qt.TransformationMode.SmoothTransformation,
+            )
+        return QPixmap.fromImage(display)
 
 
 def _clamp(value: float, minimum: float, maximum: float) -> float:

@@ -12,6 +12,7 @@ import numpy as np
 from thucthengay.jobs.progress import JobState, ProgressEvent
 from thucthengay.models import Issue, IssueScope, IssueSeverity
 from thucthengay.render import render_map
+from thucthengay.render.diagnostics import RenderDiagnostics
 from thucthengay.render.raster import RasterRenderResult, RenderError
 from thucthengay.render.spec import RenderSpec
 
@@ -32,6 +33,7 @@ class PreviewRenderRequest:
     revision: int
     quality: PreviewRenderQuality
     spec: RenderSpec
+    diagnostics: RenderDiagnostics | None = field(default=None, compare=False)
 
 
 @dataclass(frozen=True)
@@ -164,7 +166,10 @@ def run_preview_render_job(
         return _error_result(request, [_cancelled_issue(request)], publish=publish)
 
     try:
-        render_result = render(request.spec, is_cancelled=is_cancelled)
+        render_kwargs = {"is_cancelled": is_cancelled}
+        if request.diagnostics is not None:
+            render_kwargs["diagnostics"] = request.diagnostics
+        render_result = render(request.spec, **render_kwargs)
     except RenderError as exc:
         return _error_result(request, exc.issues, publish=publish)
     except Exception as exc:  # noqa: BLE001 - convert worker failures into UI-safe payloads.
