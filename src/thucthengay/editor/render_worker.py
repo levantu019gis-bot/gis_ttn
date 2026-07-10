@@ -23,14 +23,13 @@ class RenderWorker(QObject):
         super().__init__(parent)
         self._request = request
         self._render = render
-        self._cancelled = False
 
     def cancel(self) -> None:
         """Request cooperative cancellation for the running render."""
-        self._cancelled = True
+        self._request.cancellation_token.cancel()
 
     def is_cancelled(self) -> bool:
-        return self._cancelled
+        return self._request.cancellation_token.is_cancelled()
 
     @Slot()
     def run(self) -> None:

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterator
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
 from contextlib import nullcontext
 from dataclasses import dataclass, field
 from time import perf_counter
@@ -44,6 +44,9 @@ class TilePreviewSettings:
     tile_width_degrees: float = 0.05
     tile_height_degrees: float = 0.05
     partial_repaint_threshold_px: int = 96
+    progress_frame_interval_ms: int = 66
+    progress_tile_batch_size: int = 4
+    tile_decode_timeout_ms: int = 0
 
 
 @dataclass(frozen=True)
@@ -205,6 +208,7 @@ def _iter_normal_tile_preview_frames(
     for result in _iter_decode_results(
         jobs,
         max_workers=settings.max_decode_workers,
+        timeout_ms=settings.tile_decode_timeout_ms,
         is_cancelled=is_cancelled,
         diagnostics=diagnostics,
     ):
@@ -281,6 +285,7 @@ def _iter_compare_tile_preview_frames(
     for result in _iter_decode_results(
         tuple(pane_job.job for pane_job in pane_jobs),
         max_workers=settings.max_decode_workers,
+        timeout_ms=settings.tile_decode_timeout_ms,
         is_cancelled=is_cancelled,
         diagnostics=diagnostics,
     ):
@@ -468,6 +473,7 @@ def _iter_decode_results(
     jobs: tuple[TileDecodeJob, ...],
     *,
     max_workers: int,
+    timeout_ms: int,
     is_cancelled: CancelCallback | None,
     diagnostics: RenderDiagnostics | None,
 ) -> Iterator[TileDecodeResult]:
@@ -493,17 +499,32 @@ def _iter_decode_results(
         executor.submit(_decode_tile_job_timed, job, is_cancelled=is_cancelled)
         for job in jobs
     ]
+    pending = set(futures)
+    timeout_seconds = timeout_ms / 1000.0 if timeout_ms > 0 else None
+    aborted = False
     try:
-        for future in as_completed(futures):
+        while pending:
             if _is_cancelled(is_cancelled):
+                aborted = True
                 break
-            timed = future.result()
-            _record_decode_timing(timed, diagnostics=diagnostics)
-            yield timed.result
+            done, pending = wait(
+                pending,
+                timeout=timeout_seconds,
+                return_when=FIRST_COMPLETED,
+            )
+            if not done:
+                if diagnostics is not None:
+                    diagnostics.increment("tile_preview.decode.timeouts", len(pending))
+                aborted = True
+                break
+            for future in done:
+                timed = future.result()
+                _record_decode_timing(timed, diagnostics=diagnostics)
+                yield timed.result
     finally:
-        for future in futures:
+        for future in pending:
             future.cancel()
-        executor.shutdown(wait=True, cancel_futures=True)
+        executor.shutdown(wait=not aborted, cancel_futures=True)
 
 
 def _decode_tile_job_timed(

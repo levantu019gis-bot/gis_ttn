@@ -57,6 +57,7 @@ from thucthengay.jobs import (
     PreviewRenderController,
     PreviewRenderJobResult,
     PreviewRenderQuality,
+    PreviewRenderRequest,
 )
 from thucthengay.models import (
     Composition,
@@ -87,7 +88,7 @@ from thucthengay.render.spec import (
     RenderSpec,
     RenderSpecError,
 )
-from thucthengay.render.tile_preview import TilePreviewState
+from thucthengay.render.tile_preview import TilePreviewSettings, TilePreviewState
 from thucthengay.workspace import WorkspaceService
 
 
@@ -825,6 +826,37 @@ def test_gis_canvas_keeps_live_preview_display_during_stale_pan(tmp_path: Path) 
     assert canvas._live_preview_transform.is_identity()  # noqa: SLF001
 
 
+def test_gis_canvas_live_pan_flush_uses_fast_overlay_without_full_redraw() -> None:
+    qapp()
+    canvas = GisCanvasWidget()
+    canvas.resize(800, 450)
+    canvas.set_composition(
+        composition(
+            "alpha__20260525",
+            "alpha",
+            date(2026, 5, 25),
+            needs_revalidation=False,
+        )
+    )
+    token = canvas.begin_render_request()
+    assert canvas.apply_render_result(
+        token,
+        "preview render",
+        canvas=np.full((90, 160, 3), 120, dtype=np.uint8),
+    )
+    assert canvas._live_static_item is not None  # noqa: SLF001
+
+    def fail_redraw() -> None:
+        raise AssertionError("live pan should update overlay without full redraw")
+
+    canvas._redraw = fail_redraw  # type: ignore[method-assign]  # noqa: SLF001
+    canvas.pan_by_pixels(20, 0, emit=False)
+    canvas._flush_live_redraw()  # noqa: SLF001
+
+    assert canvas._live_clip_item is not None  # noqa: SLF001
+    assert canvas._live_raster_item is not None  # noqa: SLF001
+
+
 def test_gis_canvas_live_preview_transforms_inner_map_not_static_frame() -> None:
     qapp()
     canvas = GisCanvasWidget()
@@ -1508,6 +1540,85 @@ def test_review_edit_tile_preview_disabled_uses_full_frame_renderer(monkeypatch)
     mode._render_canvas_map(spec)  # noqa: SLF001
 
     assert calls == ["full"]
+
+
+def test_review_edit_tile_preview_settings_resolves_auto_workers(monkeypatch) -> None:
+    monkeypatch.setattr(review_edit_mode.os, "cpu_count", lambda: 2)
+
+    settings = review_edit_mode._tile_preview_settings(  # noqa: SLF001
+        TilePreviewConfig(
+            enabled=True,
+            max_decode_workers="auto",
+            progress_frame_interval_ms=80,
+            progress_tile_batch_size=7,
+            tile_decode_timeout_ms=250,
+        )
+    )
+
+    assert settings.max_decode_workers == 2
+    assert settings.progress_frame_interval_ms == 80
+    assert settings.progress_tile_batch_size == 7
+    assert settings.tile_decode_timeout_ms == 250
+
+
+def test_preview_render_request_uses_independent_cancellation_tokens() -> None:
+    first = PreviewRenderRequest(
+        job_id="job-1",
+        composition_id="alpha__20260525",
+        revision=1,
+        quality=PreviewRenderQuality.SETTLED_HIGH_RES,
+        spec=_preview_spec("alpha__20260525"),
+    )
+    second = PreviewRenderRequest(
+        job_id="job-2",
+        composition_id="alpha__20260525",
+        revision=2,
+        quality=PreviewRenderQuality.SETTLED_HIGH_RES,
+        spec=_preview_spec("alpha__20260525"),
+    )
+
+    first.cancellation_token.cancel()
+
+    assert first.cancellation_token.is_cancelled() is True
+    assert second.cancellation_token.is_cancelled() is False
+
+
+def test_tile_preview_worker_throttle_uses_time_or_tile_batch() -> None:
+    qapp()
+    request = PreviewRenderRequest(
+        job_id="job-1",
+        composition_id="alpha__20260525",
+        revision=1,
+        quality=PreviewRenderQuality.SETTLED_HIGH_RES,
+        spec=_preview_spec("alpha__20260525"),
+    )
+    cache = review_edit_mode.TileCache(max_bytes=1024)  # noqa: SLF001
+    worker = review_edit_mode.TilePreviewWorker(  # noqa: SLF001
+        request,
+        tile_cache=cache,
+        tile_scheduler=review_edit_mode.TileScheduler(cache=cache),  # noqa: SLF001
+        render_cache=review_edit_mode.MapRenderCache(),  # noqa: SLF001
+        previous_state=TilePreviewState(),
+        settings=TilePreviewSettings(
+            progress_frame_interval_ms=10**12,
+            progress_tile_batch_size=4,
+        ),
+        fallback_to_full_render=True,
+    )
+
+    assert (
+        worker._should_emit_frame(3, False, last_emit_at=1.0, last_emit_decoded=0)  # noqa: SLF001
+        is False
+    )
+    assert (
+        worker._should_emit_frame(4, False, last_emit_at=1.0, last_emit_decoded=0)  # noqa: SLF001
+        is True
+    )
+    request.cancellation_token.cancel()
+    assert (
+        worker._should_emit_frame(4, True, last_emit_at=1.0, last_emit_decoded=0)  # noqa: SLF001
+        is False
+    )
 
 
 def test_review_edit_applies_progressive_tile_preview_frame() -> None:

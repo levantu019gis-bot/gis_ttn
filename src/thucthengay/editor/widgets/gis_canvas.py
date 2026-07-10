@@ -10,9 +10,15 @@ from math import isfinite
 from pathlib import Path
 
 import numpy as np
-from PySide6.QtCore import QPoint, QPointF, QRect, QRectF, Qt, Signal
+from PySide6.QtCore import QPoint, QPointF, QRect, QRectF, Qt, QTimer, Signal
 from PySide6.QtGui import QColor, QImage, QPainter, QPen, QPixmap, QRegion
-from PySide6.QtWidgets import QGraphicsScene, QGraphicsView
+from PySide6.QtWidgets import (
+    QGraphicsItem,
+    QGraphicsPixmapItem,
+    QGraphicsRectItem,
+    QGraphicsScene,
+    QGraphicsView,
+)
 
 from thucthengay.gis import pan_center_by_viewport_pixels
 from thucthengay.models import Composition, ImageLayer, TemporalCompareOrientation
@@ -124,6 +130,15 @@ class GisCanvasWidget(QGraphicsView):
         self._rendered_canvas_size: tuple[int, int] | None = None
         self._render_diagnostics: RenderDiagnostics | None = None
         self._live_preview_transform = _LivePreviewTransform()
+        self._live_preview_max_fps = 30
+        self._live_redraw_pending = False
+        self._live_redraw_timer = QTimer(self)
+        self._live_redraw_timer.setSingleShot(True)
+        self._live_redraw_timer.timeout.connect(self._flush_live_redraw)
+        self._live_static_item: QGraphicsPixmapItem | None = None
+        self._live_clip_item: QGraphicsRectItem | None = None
+        self._live_raster_item: QGraphicsPixmapItem | None = None
+        self._live_overlay_key: tuple[int, int, int, int, int] | None = None
         self._map_surround_style: dict[str, object] = {}
         self._compare_orientation = TemporalCompareOrientation.VERTICAL
         self._compare_panes: dict[str, _InteractiveViewState] = {}
@@ -158,6 +173,9 @@ class GisCanvasWidget(QGraphicsView):
     def set_render_diagnostics(self, diagnostics: RenderDiagnostics | None) -> None:
         """Attach an optional diagnostics collector for conversion and paint timings."""
         self._render_diagnostics = diagnostics
+
+    def set_live_preview_max_fps(self, fps: int) -> None:
+        self._live_preview_max_fps = int(_clamp(fps, 1, 120))
 
     def state(self) -> GisCanvasState:
         return self._state
@@ -354,7 +372,7 @@ class GisCanvasWidget(QGraphicsView):
         self.viewInteractionChanged.emit(list(self._center), self._scale)
         if emit:
             self._emit_view_edit()
-        self._redraw()
+        self._request_live_redraw()
 
     def zoom_by_factor(self, factor: float, *, emit: bool = True) -> None:
         """Zoom the view by changing the scale denominator."""
@@ -367,7 +385,7 @@ class GisCanvasWidget(QGraphicsView):
         self.viewInteractionChanged.emit(list(self._center), self._scale)
         if emit:
             self._emit_view_edit()
-        self._redraw()
+        self._request_live_redraw()
 
     def resizeEvent(self, event) -> None:  # noqa: ANN001, N802
         super().resizeEvent(event)
@@ -449,7 +467,7 @@ class GisCanvasWidget(QGraphicsView):
         self._drag_last_pos = pos
         self._drag_changed = True
         self._mark_interaction_stale()
-        self._redraw()
+        self._request_live_redraw()
 
     def _end_drag(self) -> None:
         target = self._drag_target
@@ -477,7 +495,7 @@ class GisCanvasWidget(QGraphicsView):
         self._mark_interaction_stale()
         self._emit_interaction_view_changed(updated)
         self._emit_interaction_view_edit(updated)
-        self._redraw()
+        self._request_live_redraw()
 
     def _interaction_target_at(self, pos: QPoint | QPointF) -> _InteractionTarget:
         pane_key, pane_rect = self._compare_pane_at(pos)
@@ -614,6 +632,9 @@ class GisCanvasWidget(QGraphicsView):
         self._generation += 1
 
     def _redraw(self) -> None:
+        self._live_redraw_pending = False
+        self._live_redraw_timer.stop()
+        self._discard_live_preview_items()
         diagnostics = self._render_diagnostics
         with diagnostics.time("qt.paint_composite") if diagnostics is not None else nullcontext():
             self._scene.clear()
@@ -627,6 +648,95 @@ class GisCanvasWidget(QGraphicsView):
             if self._rendered_pixmap is None:
                 self._draw_frame(frame)
                 self._draw_state_text(width)
+
+    def _request_live_redraw(self) -> None:
+        if self._live_redraw_pending:
+            return
+        self._live_redraw_pending = True
+        interval_ms = max(1, round(1000 / max(1, self._live_preview_max_fps)))
+        self._live_redraw_timer.start(interval_ms)
+
+    def _flush_live_redraw(self) -> None:
+        if not self._live_redraw_pending:
+            return
+        self._live_redraw_pending = False
+        if self._update_fast_live_preview_items():
+            return
+        self._redraw()
+
+    def _discard_live_preview_items(self) -> None:
+        self._live_static_item = None
+        self._live_clip_item = None
+        self._live_raster_item = None
+        self._live_overlay_key = None
+
+    def _update_fast_live_preview_items(self) -> bool:
+        if (
+            self._rendered_pixmap is None
+            or self._live_static_item is None
+            or self._compare_panes
+            or self._live_preview_transform.is_identity()
+        ):
+            return False
+        frame = self._frame_rect()
+        width = max(1, int(round(frame.width())))
+        height = max(1, int(round(frame.height())))
+        base = self._rendered_pixmap.scaled(
+            width,
+            height,
+            Qt.AspectRatioMode.KeepAspectRatio,
+            Qt.TransformationMode.FastTransformation,
+        )
+        local_base_rect = _centered_pixmap_rect(base, width=width, height=height)
+        base_rect = local_base_rect.translated(frame.topLeft())
+        inner_rect = self._display_inner_map_rect(base_rect)
+        key = (
+            int(round(frame.left())),
+            int(round(frame.top())),
+            width,
+            height,
+            int(self._rendered_pixmap.cacheKey()),
+        )
+        if (
+            self._live_clip_item is None
+            or self._live_raster_item is None
+            or self._live_overlay_key != key
+        ):
+            self._live_overlay_key = key
+            if self._live_clip_item is not None:
+                self._scene.removeItem(self._live_clip_item)
+            self._live_clip_item = self._scene.addRect(
+                inner_rect,
+                QPen(Qt.PenStyle.NoPen),
+                QColor(0, 0, 0, 0),
+            )
+            self._live_clip_item.setFlag(
+                QGraphicsItem.GraphicsItemFlag.ItemClipsChildrenToShape,
+                True,
+            )
+            self._live_clip_item.setZValue(10)
+            self._live_raster_item = QGraphicsPixmapItem(base, self._live_clip_item)
+            self._live_raster_item.setTransformationMode(
+                Qt.TransformationMode.FastTransformation
+            )
+        else:
+            self._live_clip_item.setRect(inner_rect)
+            self._live_raster_item.setPixmap(base)
+
+        inner_relative = _relative_rect(inner_rect, base_rect)
+        dest = _scaled_destination_rect(
+            inner_rect,
+            zoom=self._live_preview_transform.zoom,
+            offset_x=self._live_preview_transform.offset_x,
+            offset_y=self._live_preview_transform.offset_y,
+        )
+        zoom = max(0.001, self._live_preview_transform.zoom)
+        self._live_raster_item.setScale(zoom)
+        self._live_raster_item.setPos(
+            dest.left() - inner_relative.left() * zoom,
+            dest.top() - inner_relative.top() * zoom,
+        )
+        return True
 
     def _displayed_image(self) -> QImage:
         scene_rect = self._scene.sceneRect()
@@ -667,7 +777,10 @@ class GisCanvasWidget(QGraphicsView):
             scaled = self._live_preview_pixmap(frame)
             px = frame.x()
             py = frame.y()
-            self._scene.addPixmap(scaled).setPos(px, py)
+            item = self._scene.addPixmap(scaled)
+            item.setPos(px, py)
+            if not self._compare_panes:
+                self._live_static_item = item
             return
         colors = ["#637f5f", "#7d8e9c", "#8e7d58", "#596a84"]
         base_rect = frame.adjusted(-54, -34, 54, 34)

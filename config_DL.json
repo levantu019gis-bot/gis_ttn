@@ -44,7 +44,13 @@
     "render_preview": {
       "tile_preview": {
         "enabled": true,
-        "max_decode_workers": 4
+        "max_decode_workers": "auto",
+        "progress_frame_interval_ms": 66,
+        "progress_tile_batch_size": 4,
+        "interaction_render_debounce_ms": 250,
+        "live_preview_max_fps": 30,
+        "cancel_on_interaction": true,
+        "tile_decode_timeout_ms": 0
       }
     }
   },

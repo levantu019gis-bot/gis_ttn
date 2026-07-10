@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 from pydantic import ValidationError
@@ -123,6 +124,7 @@ class ReviewEditMode(QWidget):
         self._canvas_tile_scheduler = TileScheduler(cache=self._canvas_tile_cache)
         self._canvas_tile_state = TilePreviewState()
         self._pending_canvas_view: tuple[str, str, list[float], int | None] | None = None
+        self._pending_canvas_render_composition: Composition | None = None
         self._target_render_thread: QThread | None = None
         self._target_render_worker: RenderWorker | None = None
         self._target_render_token: TargetPreviewRequestToken | None = None
@@ -241,13 +243,16 @@ class ReviewEditMode(QWidget):
         self.preview_summary = self.target_preview.status_label
 
         self.gis_canvas = GisCanvasWidget()
+        self.gis_canvas.set_live_preview_max_fps(
+            self._render_preview_config.tile_preview.live_preview_max_fps
+        )
         self.gis_canvas.viewEditCompleted.connect(self._persist_canvas_view)
-        self.gis_canvas.viewInteractionChanged.connect(self._sync_target_preview_viewport_overlays)
+        self.gis_canvas.viewInteractionChanged.connect(self._handle_canvas_view_interaction)
         self.gis_canvas.comparePaneViewEditCompleted.connect(
             self._persist_compare_pane_view
         )
         self.gis_canvas.comparePaneViewInteractionChanged.connect(
-            self._sync_target_preview_viewport_overlays
+            self._handle_canvas_view_interaction
         )
         self._canvas_view_persist_timer = QTimer(self)
         self._canvas_view_persist_timer.setSingleShot(True)
@@ -859,6 +864,11 @@ class ReviewEditMode(QWidget):
 
     def _request_canvas_render(self, composition: Composition) -> None:
         """Build a RenderSpec and submit a background render for the GIS canvas."""
+        if self._render_threads:
+            self._pending_canvas_render_composition = composition
+            self._cancel_render()
+            return
+        self._pending_canvas_render_composition = None
         self._cancel_render()
         visible = [layer for layer in composition.layers if layer.visible]
         if not visible:
@@ -933,13 +943,7 @@ class ReviewEditMode(QWidget):
             tile_scheduler=self._canvas_tile_scheduler,
             render_cache=self._canvas_render_cache,
             previous_state=self._canvas_tile_state,
-            settings=TilePreviewSettings(
-                tile_pixels=tile_config.tile_pixels,
-                max_decode_workers=tile_config.max_decode_workers,
-                tile_width_degrees=tile_config.tile_width_degrees,
-                tile_height_degrees=tile_config.tile_height_degrees,
-                partial_repaint_threshold_px=tile_config.partial_repaint_threshold_px,
-            ),
+            settings=_tile_preview_settings(tile_config),
             fallback_to_full_render=tile_config.fallback_to_full_render,
         )
         worker.moveToThread(thread)
@@ -967,13 +971,7 @@ class ReviewEditMode(QWidget):
                     tile_scheduler=self._canvas_tile_scheduler,
                     render_cache=self._canvas_render_cache,
                     previous_state=self._canvas_tile_state,
-                    settings=TilePreviewSettings(
-                        tile_pixels=tile_config.tile_pixels,
-                        max_decode_workers=tile_config.max_decode_workers,
-                        tile_width_degrees=tile_config.tile_width_degrees,
-                        tile_height_degrees=tile_config.tile_height_degrees,
-                        partial_repaint_threshold_px=tile_config.partial_repaint_threshold_px,
-                    ),
+                    settings=_tile_preview_settings(tile_config),
                     is_cancelled=is_cancelled,
                     diagnostics=diagnostics,
                 )
@@ -995,6 +993,10 @@ class ReviewEditMode(QWidget):
         config: RenderPreviewConfig | None,
     ) -> None:
         self._render_preview_config = config or RenderPreviewConfig()
+        if hasattr(self, "gis_canvas"):
+            self.gis_canvas.set_live_preview_max_fps(
+                self._render_preview_config.tile_preview.live_preview_max_fps
+            )
         self._canvas_tile_cache = TileCache(
             max_bytes=self._render_preview_config.tile_preview.max_cache_bytes
         )
@@ -1103,6 +1105,11 @@ class ReviewEditMode(QWidget):
         elif result.state == JobState.ERROR:
             self.gis_canvas.set_error(result.message)
 
+    def _handle_canvas_view_interaction(self, *_args) -> None:  # noqa: ANN002
+        self._sync_target_preview_viewport_overlays()
+        if self._render_preview_config.tile_preview.cancel_on_interaction:
+            self._cancel_render()
+
     @Slot(object)
     def _handle_target_preview_render_result(self, result: PreviewRenderJobResult) -> None:
         token = self._target_render_token
@@ -1152,6 +1159,13 @@ class ReviewEditMode(QWidget):
         self._render_threads.pop(job_id, None)
         self._render_workers.pop(job_id, None)
         self._render_tokens.pop(job_id, None)
+        if self._render_threads:
+            return
+        pending = self._pending_canvas_render_composition
+        if pending is None:
+            return
+        self._pending_canvas_render_composition = None
+        QTimer.singleShot(0, lambda composition=pending: self._request_canvas_render(composition))
 
     def _clear_target_render_worker(self) -> None:
         self._target_render_thread = None
@@ -1610,14 +1624,20 @@ class ReviewEditMode(QWidget):
             scale,
         )
         self._sync_target_preview_viewport_overlays()
-        self._canvas_view_persist_timer.start(self.CANVAS_VIEW_PERSIST_DEBOUNCE_MS)
+        self._canvas_view_persist_timer.start(self._canvas_view_debounce_ms())
 
     def _persist_compare_pane_view(self, pane: str, center: list[float]) -> None:
         if self.selected_composition is None:
             return
         self._pending_canvas_view = ("compare_pane", pane, list(center), None)
         self._sync_target_preview_viewport_overlays()
-        self._canvas_view_persist_timer.start(self.CANVAS_VIEW_PERSIST_DEBOUNCE_MS)
+        self._canvas_view_persist_timer.start(self._canvas_view_debounce_ms())
+
+    def _canvas_view_debounce_ms(self) -> int:
+        return max(
+            0,
+            int(self._render_preview_config.tile_preview.interaction_render_debounce_ms),
+        )
 
     def _flush_pending_canvas_view(self) -> None:
         pending = self._pending_canvas_view
@@ -2261,6 +2281,26 @@ def _render_spec_error_message(error: RenderSpecError | ValidationError) -> str:
     if text:
         return f"Không tạo được render spec cho GIS canvas: {text}"
     return "Không tạo được render spec cho GIS canvas."
+
+
+def _tile_preview_settings(config) -> TilePreviewSettings:  # noqa: ANN001
+    return TilePreviewSettings(
+        tile_pixels=config.tile_pixels,
+        max_decode_workers=_resolve_decode_workers(config.max_decode_workers),
+        tile_width_degrees=config.tile_width_degrees,
+        tile_height_degrees=config.tile_height_degrees,
+        partial_repaint_threshold_px=config.partial_repaint_threshold_px,
+        progress_frame_interval_ms=config.progress_frame_interval_ms,
+        progress_tile_batch_size=config.progress_tile_batch_size,
+        tile_decode_timeout_ms=config.tile_decode_timeout_ms,
+    )
+
+
+def _resolve_decode_workers(value: int | str) -> int:
+    cpu_count = os.cpu_count() or 1
+    if isinstance(value, str) and value.lower() == "auto":
+        return max(1, min(4, cpu_count))
+    return max(1, min(int(value), cpu_count, 16))
 
 
 def _summary_suffix(message: str | None) -> str:

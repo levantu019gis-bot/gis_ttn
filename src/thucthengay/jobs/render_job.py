@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from enum import StrEnum
+from threading import Event
 from uuid import uuid4
 
 import numpy as np
@@ -24,6 +25,19 @@ class PreviewRenderQuality(StrEnum):
     SETTLED_HIGH_RES = "settled_high_res"
 
 
+class CancellationToken:
+    """Per-request cooperative cancellation state."""
+
+    def __init__(self) -> None:
+        self._event = Event()
+
+    def cancel(self) -> None:
+        self._event.set()
+
+    def is_cancelled(self) -> bool:
+        return self._event.is_set()
+
+
 @dataclass(frozen=True)
 class PreviewRenderRequest:
     """A single preview render request bound to a composition revision."""
@@ -33,6 +47,10 @@ class PreviewRenderRequest:
     revision: int
     quality: PreviewRenderQuality
     spec: RenderSpec
+    cancellation_token: CancellationToken = field(
+        default_factory=CancellationToken,
+        compare=False,
+    )
     diagnostics: RenderDiagnostics | None = field(default=None, compare=False)
 
 

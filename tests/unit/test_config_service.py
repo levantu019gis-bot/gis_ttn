@@ -430,11 +430,17 @@ def test_load_project_config_applies_shared_defaults_with_target_overrides(
                     "tile_preview": {
                         "enabled": True,
                         "max_cache_bytes": 123456,
-                        "max_decode_workers": 3,
+                        "max_decode_workers": "auto",
                         "tile_pixels": 384,
                         "tile_width_degrees": 0.02,
                         "tile_height_degrees": 0.03,
                         "partial_repaint_threshold_px": 48,
+                        "progress_frame_interval_ms": 80,
+                        "progress_tile_batch_size": 6,
+                        "interaction_render_debounce_ms": 300,
+                        "live_preview_max_fps": 24,
+                        "cancel_on_interaction": False,
+                        "tile_decode_timeout_ms": 5000,
                     }
                 },
             },
@@ -464,11 +470,17 @@ def test_load_project_config_applies_shared_defaults_with_target_overrides(
     tile_preview = result.config.defaults.render_preview.tile_preview
     assert tile_preview.enabled is True
     assert tile_preview.max_cache_bytes == 123456
-    assert tile_preview.max_decode_workers == 3
+    assert tile_preview.max_decode_workers == "auto"
     assert tile_preview.tile_pixels == 384
     assert tile_preview.tile_width_degrees == 0.02
     assert tile_preview.tile_height_degrees == 0.03
     assert tile_preview.partial_repaint_threshold_px == 48
+    assert tile_preview.progress_frame_interval_ms == 80
+    assert tile_preview.progress_tile_batch_size == 6
+    assert tile_preview.interaction_render_debounce_ms == 300
+    assert tile_preview.live_preview_max_fps == 24
+    assert tile_preview.cancel_on_interaction is False
+    assert tile_preview.tile_decode_timeout_ms == 5000
 
 
 def test_load_project_config_resolves_historical_registry_database_path(

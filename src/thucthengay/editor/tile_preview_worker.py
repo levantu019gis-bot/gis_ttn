@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from time import monotonic
+
 from PySide6.QtCore import QObject, Signal, Slot
 
 from thucthengay.jobs import JobState, PreviewRenderJobResult, PreviewRenderRequest
@@ -44,19 +46,21 @@ class TilePreviewWorker(QObject):
         self._previous_state = previous_state
         self._settings = settings
         self._fallback_to_full_render = fallback_to_full_render
-        self._cancelled = False
 
     def cancel(self) -> None:
         """Request cooperative cancellation for the running tile preview."""
-        self._cancelled = True
+        self._request.cancellation_token.cancel()
 
     def is_cancelled(self) -> bool:
-        return self._cancelled
+        return self._request.cancellation_token.is_cancelled()
 
     @Slot()
     def run(self) -> None:
         """Worker entry point invoked by QThread."""
         last_result: PreviewRenderJobResult | None = None
+        last_emit_at = 0.0
+        last_emit_decoded = 0
+        is_cancelled = self._request.cancellation_token.is_cancelled
         try:
             for frame in iter_tile_preview_frames(
                 self._request.spec,
@@ -65,10 +69,10 @@ class TilePreviewWorker(QObject):
                 render_cache=self._render_cache,
                 previous_state=self._previous_state,
                 settings=self._settings,
-                is_cancelled=self.is_cancelled,
+                is_cancelled=is_cancelled,
                 diagnostics=self._request.diagnostics,
             ):
-                if self.is_cancelled():
+                if is_cancelled():
                     break
                 result = self._result(
                     state=JobState.SUCCESS,
@@ -78,7 +82,15 @@ class TilePreviewWorker(QObject):
                     tile_state=frame.state,
                 )
                 last_result = result
-                self.frameReady.emit(result)
+                if self._should_emit_frame(
+                    frame.decoded_tiles,
+                    frame.done,
+                    last_emit_at=last_emit_at,
+                    last_emit_decoded=last_emit_decoded,
+                ):
+                    self.frameReady.emit(result)
+                    last_emit_at = monotonic()
+                    last_emit_decoded = frame.decoded_tiles
             if self.is_cancelled():
                 last_result = self._error_result([_cancelled_issue(self._request)])
             if last_result is None:
@@ -92,6 +104,26 @@ class TilePreviewWorker(QObject):
             else:
                 last_result = self._fallback_result()
         self.finished.emit(last_result)
+
+    def _should_emit_frame(
+        self,
+        decoded_tiles: int,
+        done: bool,
+        *,
+        last_emit_at: float,
+        last_emit_decoded: int,
+    ) -> bool:
+        if done:
+            return not self.is_cancelled()
+        if last_emit_at <= 0:
+            return True
+        elapsed_ms = (monotonic() - last_emit_at) * 1000.0
+        interval_reached = elapsed_ms >= self._settings.progress_frame_interval_ms
+        batch_reached = (
+            decoded_tiles - last_emit_decoded
+        ) >= self._settings.progress_tile_batch_size
+        # OR semantics: update when either time or decoded-tile batch reaches its threshold.
+        return interval_reached or batch_reached
 
     def _fallback_result(self) -> PreviewRenderJobResult:
         try:

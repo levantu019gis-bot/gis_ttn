@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import date
 from enum import StrEnum
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import AliasChoices, BaseModel, ConfigDict, Field, field_validator, model_validator
 
@@ -166,12 +166,35 @@ class TilePreviewConfig(BaseModel):
 
     enabled: bool = False
     max_cache_bytes: int = Field(default=512 * 1024 * 1024, ge=0)
-    max_decode_workers: int = Field(default=1, ge=1, le=16)
+    max_decode_workers: int | Literal["auto"] = Field(default=1)
     tile_pixels: int = Field(default=256, ge=1, le=2048)
     tile_width_degrees: float = Field(default=0.05, gt=0)
     tile_height_degrees: float = Field(default=0.05, gt=0)
     partial_repaint_threshold_px: int = Field(default=96, ge=0)
+    progress_frame_interval_ms: int = Field(default=66, ge=0)
+    progress_tile_batch_size: int = Field(default=4, ge=1)
+    interaction_render_debounce_ms: int = Field(default=250, ge=0)
+    live_preview_max_fps: int = Field(default=30, ge=1, le=120)
+    cancel_on_interaction: bool = True
+    tile_decode_timeout_ms: int = Field(default=0, ge=0)
     fallback_to_full_render: bool = True
+
+    @field_validator("max_decode_workers")
+    @classmethod
+    def max_decode_workers_must_be_auto_or_positive(
+        cls,
+        value: int | str,
+    ) -> int | Literal["auto"]:
+        if isinstance(value, str):
+            normalized = value.strip().lower()
+            if normalized == "auto":
+                return "auto"
+            msg = "max_decode_workers must be a positive integer or 'auto'"
+            raise ValueError(msg)
+        if value < 1:
+            msg = "max_decode_workers must be greater than or equal to 1"
+            raise ValueError(msg)
+        return min(int(value), 16)
 
 
 class RenderPreviewConfig(BaseModel):
