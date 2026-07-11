@@ -1035,13 +1035,11 @@ class ReviewEditMode(QWidget):
         if self.selected_composition is None or self._workspace_service is None:
             return
         self._pending_canvas_render_composition = None
-        self._cancel_render(wait=True)
+        self._cancel_render()
         self._canvas_render_cache.clear()
         self._reset_tile_preview_state()
 
-        self._flush_pending_canvas_view()
-        if self._render_threads:
-            return
+        self._flush_pending_canvas_view(request_render=False)
         composition = self.selected_composition
         if composition is None:
             return
@@ -1181,12 +1179,12 @@ class ReviewEditMode(QWidget):
             worker.cancel()
         if not wait:
             return
-        for thread in list(self._render_threads.values()):
+        for job_id, thread in list(self._render_threads.items()):
             if thread.isRunning():
                 thread.quit()
-                thread.wait(2000)
-        self._render_threads.clear()
-        self._render_workers.clear()
+                if not thread.wait(2000):
+                    continue
+            self._clear_canvas_render_worker(job_id)
 
     def _cancel_target_render(self) -> None:
         if self._target_render_thread is not None and self._target_render_thread.isRunning():
@@ -1683,7 +1681,7 @@ class ReviewEditMode(QWidget):
             int(self._render_preview_config.tile_preview.interaction_render_debounce_ms),
         )
 
-    def _flush_pending_canvas_view(self) -> None:
+    def _flush_pending_canvas_view(self, *, request_render: bool = True) -> None:
         pending = self._pending_canvas_view
         self._pending_canvas_view = None
         self._canvas_view_persist_timer.stop()
@@ -1710,7 +1708,8 @@ class ReviewEditMode(QWidget):
             self.selected_composition = updated
             self._update_detail_panels(updated, preserve_canvas_render=True)
             self._replace_workspace_projection_composition(updated)
-            self._request_canvas_render(updated)
+            if request_render:
+                self._request_canvas_render(updated)
             return
 
         composition_id = identifier
@@ -1731,7 +1730,8 @@ class ReviewEditMode(QWidget):
             self.selected_composition = updated
             self._update_detail_panels(updated, preserve_canvas_render=True)
             self._replace_workspace_projection_composition(updated)
-            self._request_canvas_render(updated)
+            if request_render:
+                self._request_canvas_render(updated)
             return
 
         self._replace_workspace_projection_row(updated)
@@ -1744,7 +1744,8 @@ class ReviewEditMode(QWidget):
         self.selected_composition = selected
         self._update_detail_panels(selected, preserve_canvas_render=True)
         self._replace_workspace_projection_composition(selected)
-        self._request_canvas_render(selected)
+        if request_render:
+            self._request_canvas_render(selected)
 
     def _replace_workspace_projection_row(self, composition: Composition) -> None:
         if not self.tree_model.replace_composition(composition):

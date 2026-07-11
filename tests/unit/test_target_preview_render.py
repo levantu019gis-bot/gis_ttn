@@ -20,10 +20,24 @@ from thucthengay.models import (
 from thucthengay.render import RenderSpecError, build_target_preview_spec
 
 
-def _write_raster(path: Path, bounds: tuple[float, float, float, float], fill: int) -> None:
-    width = 16
-    height = 16
+def _write_raster(
+    path: Path,
+    bounds: tuple[float, float, float, float],
+    fill: int,
+    *,
+    width: int = 16,
+    height: int = 16,
+    tiled: bool = False,
+    overviews: bool = False,
+) -> None:
     data = np.full((3, height, width), fill, dtype=np.uint8)
+    kwargs = {}
+    if tiled:
+        kwargs = {
+            "tiled": True,
+            "blockxsize": 16,
+            "blockysize": 16,
+        }
     with rasterio.open(
         path,
         "w",
@@ -34,8 +48,11 @@ def _write_raster(path: Path, bounds: tuple[float, float, float, float], fill: i
         dtype="uint8",
         crs="EPSG:4326",
         transform=from_bounds(*bounds, width=width, height=height),
+        **kwargs,
     ) as dataset:
         dataset.write(data)
+        if overviews:
+            dataset.build_overviews([2, 4], rasterio.enums.Resampling.nearest)
 
 
 def _target() -> TargetConfig:
@@ -154,3 +171,74 @@ def test_target_preview_spec_requires_at_least_one_visible_layer() -> None:
         )
 
     assert exc_info.value.issues[0].issue_id == "target_preview.no_visible_layers"
+
+
+def test_target_preview_blocks_large_unoptimized_raster(tmp_path: Path) -> None:
+    raster = tmp_path / "large-unoptimized.tif"
+    _write_raster(
+        raster,
+        (106.0, 10.0, 106.5, 10.5),
+        fill=30,
+        width=64,
+        height=64,
+        tiled=True,
+        overviews=False,
+    )
+    composition = _composition(
+        [ImageLayer(layer_id="large", source_path=str(raster), visible=True, order=0)]
+    )
+
+    with pytest.raises(RenderSpecError) as exc_info:
+        build_target_preview_spec(
+            composition=composition,
+            target=_target(),
+            output_width=320,
+            output_height=180,
+            expensive_dimension_threshold=32,
+        )
+
+    assert exc_info.value.issues[0].issue_id == "target_preview.raster_not_optimized"
+
+
+def test_target_preview_allows_optimized_cache_path_for_large_raster(tmp_path: Path) -> None:
+    source = tmp_path / "source-unoptimized.tif"
+    cache = tmp_path / "cache-ready.tif"
+    _write_raster(
+        source,
+        (106.0, 10.0, 106.5, 10.5),
+        fill=30,
+        width=64,
+        height=64,
+        tiled=True,
+        overviews=False,
+    )
+    _write_raster(
+        cache,
+        (106.0, 10.0, 106.5, 10.5),
+        fill=30,
+        width=64,
+        height=64,
+        tiled=True,
+        overviews=True,
+    )
+    composition = _composition(
+        [
+            ImageLayer(
+                layer_id="large",
+                source_path=str(source),
+                cache_path=str(cache),
+                visible=True,
+                order=0,
+            )
+        ]
+    )
+
+    spec = build_target_preview_spec(
+        composition=composition,
+        target=_target(),
+        output_width=320,
+        output_height=180,
+        expensive_dimension_threshold=32,
+    )
+
+    assert spec.visible_layers[0].cache_path == str(cache)

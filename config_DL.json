@@ -45,6 +45,10 @@
       "tile_preview": {
         "enabled": true,
         "max_decode_workers": "auto",
+        "max_cache_bytes": 1073741824,
+        "tile_pixels": 768,
+        "tile_width_degrees": 0.02,
+        "tile_height_degrees": 0.02,
         "progress_frame_interval_ms": 66,
         "progress_tile_batch_size": 4,
         "interaction_render_debounce_ms": 250,

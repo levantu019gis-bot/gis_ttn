@@ -1460,6 +1460,40 @@ def test_review_edit_refresh_button_forces_clean_canvas_render(tmp_path: Path) -
     assert "render lai GIS canvas" in mode.action_summary.text()
 
 
+def test_review_edit_refresh_requests_render_even_when_previous_worker_is_registered(
+    tmp_path: Path,
+) -> None:
+    qapp()
+    service = WorkspaceService(tmp_path / "workspace")
+    service.initialize(config_path="config.json")
+    service.write_composition(
+        composition("alpha__20260525", "alpha", date(2026, 5, 25), needs_revalidation=False)
+    )
+
+    mode = ReviewEditMode()
+    mode._request_canvas_render = lambda _composition: None  # noqa: SLF001
+    mode._request_target_preview = lambda _composition: None  # noqa: SLF001
+    mode.load_workspace(
+        service,
+        targets=[target_config("alpha", sort_order=1, name="Alpha Target")],
+    )
+    target_index = mode.tree_model.index(0, 0)
+    mode.tree_view.setCurrentIndex(mode.tree_model.index(0, 0, target_index))
+
+    requested: list[str] = []
+    mode._render_threads["old-job"] = object()  # type: ignore[assignment]  # noqa: SLF001
+    mode._cancel_render = lambda **_kwargs: None  # type: ignore[method-assign]  # noqa: SLF001
+    mode._canvas_render_cache.clear = lambda: None  # type: ignore[method-assign]
+    mode._reset_tile_preview_state = lambda: None  # type: ignore[method-assign]  # noqa: SLF001
+    mode._request_canvas_render = (  # type: ignore[method-assign]  # noqa: SLF001
+        lambda item: requested.append(item.composition_id)
+    )
+
+    mode._refresh_canvas_render()  # noqa: SLF001
+
+    assert requested == ["alpha__20260525"]
+
+
 def test_review_edit_canvas_render_uses_final_template_size_not_viewport(
     tmp_path: Path,
     monkeypatch,

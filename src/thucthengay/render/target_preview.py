@@ -14,8 +14,21 @@ from pydantic import ValidationError
 from rasterio.errors import RasterioError
 
 from thucthengay.gis.crs import Bbox, dataset_geographic_bbox
-from thucthengay.models import Composition, Issue, IssueScope, IssueSeverity, TargetConfig
+from thucthengay.models import (
+    Composition,
+    ImageLayer,
+    Issue,
+    IssueScope,
+    IssueSeverity,
+    TargetConfig,
+)
 from thucthengay.models.template import MapFrame, TemplateMetadata
+from thucthengay.render.overview import (
+    DEFAULT_EXPENSIVE_DIMENSION_THRESHOLD,
+    DEFAULT_EXPENSIVE_PIXEL_THRESHOLD,
+    RasterReadinessStatus,
+    inspect_raster_overview_readiness,
+)
 from thucthengay.render.raster import DatasetOpener
 from thucthengay.render.spec import (
     MAX_RENDER_PIXELS,
@@ -41,6 +54,8 @@ def build_target_preview_spec(
     output_width: int = DEFAULT_TARGET_PREVIEW_WIDTH,
     output_height: int = DEFAULT_TARGET_PREVIEW_HEIGHT,
     dataset_opener: DatasetOpener = rasterio.open,
+    expensive_dimension_threshold: int = DEFAULT_EXPENSIVE_DIMENSION_THRESHOLD,
+    expensive_pixel_threshold: int = DEFAULT_EXPENSIVE_PIXEL_THRESHOLD,
 ) -> RenderSpec:
     """Build a render spec covering all raster bounds for one target-date composition."""
     issues: list[Issue] = []
@@ -103,6 +118,16 @@ def build_target_preview_spec(
 
     if issues:
         raise RenderSpecError(issues)
+
+    readiness_issues = _target_preview_readiness_issues(
+        layers,
+        target_id=target.id,
+        composition_id=composition.composition_id,
+        expensive_dimension_threshold=expensive_dimension_threshold,
+        expensive_pixel_threshold=expensive_pixel_threshold,
+    )
+    if readiness_issues:
+        raise RenderSpecError(readiness_issues)
 
     bboxes: list[Bbox] = []
     bbox_issues: list[Issue] = []
@@ -214,6 +239,53 @@ def _issue(
         message=message,
         remediation=remediation,
     )
+
+
+def _target_preview_readiness_issues(
+    layers: list[ImageLayer],
+    *,
+    target_id: str,
+    composition_id: str,
+    expensive_dimension_threshold: int,
+    expensive_pixel_threshold: int,
+) -> list[Issue]:
+    issues: list[Issue] = []
+    seen_paths: set[str] = set()
+    for layer in layers:
+        path = layer.cache_path or layer.source_path
+        if path in seen_paths:
+            continue
+        seen_paths.add(path)
+        readiness = inspect_raster_overview_readiness(
+            path,
+            expensive_dimension_threshold=expensive_dimension_threshold,
+            expensive_pixel_threshold=expensive_pixel_threshold,
+        )
+        if readiness.status == RasterReadinessStatus.UNREADABLE:
+            continue
+        if readiness.status == RasterReadinessStatus.READY:
+            continue
+        if not readiness.likely_expensive_to_zoom_out:
+            continue
+        notes = " ".join(readiness.notes)
+        issues.append(
+            _issue(
+                "target_preview.raster_not_optimized",
+                (
+                    "Target Preview bo qua raster lon chua toi uu tile/overview "
+                    f"cho layer '{layer.layer_id}'."
+                ),
+                (
+                    "Tao ban copy COG hoac tiled GeoTIFF co internal overviews, "
+                    "cap nhat layer.cache_path sang ban da toi uu, roi thu lai. "
+                    f"Raster: {path}. {notes}"
+                ),
+                target_id=target_id,
+                composition_id=composition_id,
+                layer_id=layer.layer_id,
+            )
+        )
+    return issues
 
 
 def _union_bbox(bboxes: Iterable[Bbox]) -> dict[str, float]:
