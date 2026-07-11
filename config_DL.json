@@ -87,10 +87,10 @@
       "name": "CCHQ HAO GIANG 1",
       "alias": "CCHQ HAO GIANG 1",
       "coordinate": [
-        116.67967874,
-        23.34361945
+        116.73467081,
+        23.26004839
       ],
-      "scale": 50000,
+      "scale": 9843,
       "grid": {
         "interval": {
           "minutes": 5
@@ -193,10 +193,10 @@
       "name": "CCHQ HAO GIANG 2",
       "alias": "CCHQ HAO GIANG 2",
       "coordinate": [
-        116.58146867,
-        23.32834767
+        116.54756451,
+        23.38847302
       ],
-      "scale": 48084,
+      "scale": 21335,
       "grid": {
         "interval": {
           "minutes": 5

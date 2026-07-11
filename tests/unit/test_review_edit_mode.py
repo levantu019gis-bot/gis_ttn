@@ -826,6 +826,48 @@ def test_gis_canvas_keeps_live_preview_display_during_stale_pan(tmp_path: Path) 
     assert canvas._live_preview_transform.is_identity()  # noqa: SLF001
 
 
+def test_gis_canvas_preserves_live_preview_when_reloading_same_view_update() -> None:
+    qapp()
+    canvas = GisCanvasWidget()
+    canvas.resize(800, 450)
+    base = composition(
+        "alpha__20260525",
+        "alpha",
+        date(2026, 5, 25),
+        needs_revalidation=False,
+    )
+    canvas.set_composition(base)
+    token = canvas.begin_render_request()
+    rendered = np.full((120, 160, 3), 140, dtype=np.uint8)
+
+    assert canvas.apply_render_result(token, "preview render", canvas=rendered) is True
+
+    canvas.pan_by_pixels(40, -20, emit=False)
+    updated = base.model_copy(
+        update={
+            "view": ViewState(center=canvas.center, scale=canvas.scale),
+            "needs_revalidation": False,
+        }
+    )
+
+    canvas.set_composition(updated, preserve_render=True)
+
+    assert canvas.rendered_image_size == (160, 120)
+    assert canvas._live_preview_transform.offset_x == 40  # noqa: SLF001
+    assert canvas._live_preview_transform.offset_y == -20  # noqa: SLF001
+
+    redraw_calls: list[object] = []
+
+    def record_redraw() -> None:
+        redraw_calls.append(object())
+
+    canvas._redraw = record_redraw  # noqa: SLF001
+    loading_token = canvas.set_loading("Dang render lai...")
+
+    assert loading_token.generation == canvas.generation
+    assert redraw_calls == []
+
+
 def test_gis_canvas_live_pan_flush_uses_fast_overlay_without_full_redraw() -> None:
     qapp()
     canvas = GisCanvasWidget()
@@ -1213,6 +1255,66 @@ def test_gis_canvas_live_preview_offsets_only_dragged_compare_pane() -> None:
     canvas._begin_drag_at(start)  # noqa: SLF001
     canvas._move_drag_to(QPoint(start.x() + 40, start.y()))  # noqa: SLF001
 
+    assert canvas.rendered_image_size == (160, 120)
+    assert canvas._live_preview_transform.pane_offsets == {"B": (40.0, 0.0)}  # noqa: SLF001
+
+
+def test_gis_canvas_preserves_compare_context_when_reloading_same_pane_view() -> None:
+    qapp()
+    canvas = GisCanvasWidget()
+    canvas.resize(800, 450)
+    selected = composition(
+        "alpha__20260525",
+        "alpha",
+        date(2026, 5, 25),
+        needs_revalidation=False,
+    ).model_copy(
+        update={
+            "temporal_compare": TemporalCompareState(
+                enabled=True,
+                orientation=TemporalCompareOrientation.VERTICAL,
+                pane_a_composition_id="alpha__20260525",
+                pane_b_composition_id="alpha__20260526",
+                pane_a_center=[106.7, 10.8],
+                pane_b_center=[107.0, 11.0],
+            )
+        }
+    )
+    pane_b = composition(
+        "alpha__20260526",
+        "alpha",
+        date(2026, 5, 26),
+        needs_revalidation=False,
+    )
+    canvas.set_composition(selected)
+    canvas.set_compare_context(selected, pane_a=selected, pane_b=pane_b)
+    token = canvas.begin_render_request()
+    rendered = np.full((120, 160, 3), 180, dtype=np.uint8)
+    assert canvas.apply_render_result(token, "compare render", canvas=rendered) is True
+
+    frame = canvas._frame_rect()  # noqa: SLF001
+    _pane_a, pane_b_rect = canvas._display_compare_pane_rects(  # noqa: SLF001
+        QRectF(0, 0, frame.width(), frame.height())
+    )
+    start = QPoint(
+        int(frame.left() + pane_b_rect.center().x()),
+        int(frame.top() + pane_b_rect.center().y()),
+    )
+    canvas._begin_drag_at(start)  # noqa: SLF001
+    canvas._move_drag_to(QPoint(start.x() + 40, start.y()))  # noqa: SLF001
+    pane_b_center = list(canvas._compare_panes["B"].center)  # noqa: SLF001
+    updated = selected.model_copy(
+        update={
+            "temporal_compare": selected.temporal_compare.model_copy(
+                update={"pane_b_center": pane_b_center}
+            )
+        }
+    )
+
+    canvas.set_composition(updated, preserve_render=True)
+
+    assert set(canvas._compare_panes) == {"A", "B"}  # noqa: SLF001
+    assert canvas._compare_panes["B"].center == pane_b_center  # noqa: SLF001
     assert canvas.rendered_image_size == (160, 120)
     assert canvas._live_preview_transform.pane_offsets == {"B": (40.0, 0.0)}  # noqa: SLF001
 

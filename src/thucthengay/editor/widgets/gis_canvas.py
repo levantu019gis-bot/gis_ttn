@@ -237,17 +237,32 @@ class GisCanvasWidget(QGraphicsView):
         self._map_surround_style = dict(style or {})
         self._redraw()
 
-    def set_composition(self, composition: Composition | None) -> None:
+    def set_composition(
+        self,
+        composition: Composition | None,
+        *,
+        preserve_render: bool = False,
+    ) -> None:
         """Load the selected composition into the canvas without emitting edits."""
+        previous_composition_id = self._composition_id
+        previous_visible_layers = _visible_layer_signature(self._visible_layers)
+        previous_compare_context = _compare_context_signature(
+            self._compare_panes,
+            self._compare_orientation,
+        )
+        previous_pixmap = self._rendered_pixmap
+        previous_canvas_size = self._rendered_canvas_size
+        previous_live_transform = self._live_preview_transform
+
         self._last_applied_render_label = None
-        self._rendered_pixmap = None
         self._rendered_export_image = None
-        self._rendered_canvas_size = None
-        self._reset_live_preview_transform()
-        self._clear_compare_context()
         if composition is None:
             self._composition_id = None
             self._visible_layers = []
+            self._clear_compare_context()
+            self._rendered_pixmap = None
+            self._rendered_canvas_size = None
+            self._reset_live_preview_transform()
             self._state = GisCanvasState.EMPTY
             self._state_message = "Chưa chọn composition."
             self._bump_generation()
@@ -257,10 +272,27 @@ class GisCanvasWidget(QGraphicsView):
         self._composition_id = composition.composition_id
         self._center = list(composition.view.center)
         self._scale = composition.view.scale
-        self._visible_layers = sorted(
+        visible_layers = sorted(
             (layer for layer in composition.layers if layer.visible),
             key=lambda layer: (layer.order, layer.layer_id),
         )
+        should_preserve_render = (
+            preserve_render
+            and previous_composition_id == composition.composition_id
+            and previous_pixmap is not None
+            and previous_visible_layers == _visible_layer_signature(visible_layers)
+            and previous_compare_context == _composition_compare_signature(composition)
+        )
+        self._visible_layers = visible_layers
+        if should_preserve_render:
+            self._rendered_pixmap = previous_pixmap
+            self._rendered_canvas_size = previous_canvas_size
+            self._live_preview_transform = previous_live_transform
+        else:
+            self._clear_compare_context()
+            self._rendered_pixmap = None
+            self._rendered_canvas_size = None
+            self._reset_live_preview_transform()
         if not self._visible_layers:
             self._state = GisCanvasState.NO_VISIBLE_LAYER
             self._state_message = "Không có layer đang bật để hiển thị trên canvas."
@@ -310,7 +342,8 @@ class GisCanvasWidget(QGraphicsView):
         self._state = GisCanvasState.LOADING
         self._state_message = message
         token = self.begin_render_request()
-        self._redraw()
+        if self._rendered_pixmap is None:
+            self._redraw()
         return token
 
     def set_error(self, message: str) -> None:
@@ -1005,6 +1038,61 @@ def _short_layer_name(layer: ImageLayer) -> str:
     path = layer.cache_path or layer.source_path
     name = path.rsplit("/", maxsplit=1)[-1].rsplit("\\", maxsplit=1)[-1]
     return name if len(name) <= 42 else f"{name[:18]}...{name[-18:]}"
+
+
+def _visible_layer_signature(layers: list[ImageLayer]) -> tuple[tuple[object, ...], ...]:
+    return tuple(
+        (
+            layer.layer_id,
+            layer.source_path,
+            layer.cache_path,
+            layer.visible,
+            layer.order,
+        )
+        for layer in layers
+    )
+
+
+def _compare_context_signature(
+    panes: dict[str, _InteractiveViewState],
+    orientation: TemporalCompareOrientation,
+) -> tuple[object, ...]:
+    if set(panes) != {"A", "B"}:
+        return (False,)
+    pane_a = panes["A"]
+    pane_b = panes["B"]
+    return (
+        True,
+        orientation,
+        pane_a.composition_id,
+        pane_b.composition_id,
+        _center_signature(pane_a.center),
+        _center_signature(pane_b.center),
+    )
+
+
+def _composition_compare_signature(composition: Composition) -> tuple[object, ...]:
+    state = composition.temporal_compare
+    if (
+        not state.enabled
+        or not state.pane_a_composition_id
+        or not state.pane_b_composition_id
+    ):
+        return (False,)
+    return (
+        True,
+        state.orientation,
+        state.pane_a_composition_id,
+        state.pane_b_composition_id,
+        _center_signature(state.pane_a_center),
+        _center_signature(state.pane_b_center),
+    )
+
+
+def _center_signature(center: list[float] | None) -> tuple[float, float] | None:
+    if center is None or len(center) < 2:
+        return None
+    return (round(float(center[0]), 8), round(float(center[1]), 8))
 
 
 def _numpy_to_image(

@@ -1706,7 +1706,7 @@ class ReviewEditMode(QWidget):
                 return
 
             self.selected_composition = updated
-            self._update_detail_panels(updated)
+            self._update_detail_panels(updated, preserve_canvas_render=True)
             self._replace_workspace_projection_composition(updated)
             self._request_canvas_render(updated)
             return
@@ -1727,7 +1727,7 @@ class ReviewEditMode(QWidget):
 
         if composition_id == selected_id:
             self.selected_composition = updated
-            self._update_detail_panels(updated)
+            self._update_detail_panels(updated, preserve_canvas_render=True)
             self._replace_workspace_projection_composition(updated)
             self._request_canvas_render(updated)
             return
@@ -1740,7 +1740,7 @@ class ReviewEditMode(QWidget):
             return
 
         self.selected_composition = selected
-        self._update_detail_panels(selected)
+        self._update_detail_panels(selected, preserve_canvas_render=True)
         self._replace_workspace_projection_composition(selected)
         self._request_canvas_render(selected)
 
@@ -1902,7 +1902,12 @@ class ReviewEditMode(QWidget):
         finally:
             self._suppress_selection_validation = previous_suppression
 
-    def _update_detail_panels(self, composition: Composition) -> None:
+    def _update_detail_panels(
+        self,
+        composition: Composition,
+        *,
+        preserve_canvas_render: bool = False,
+    ) -> None:
         self.composition_title.setText(
             f"{composition.composition_id} | {composition.capture_date.isoformat()}"
         )
@@ -1919,7 +1924,10 @@ class ReviewEditMode(QWidget):
         composition = self._load_temporal_compare_controls(composition)
         compare_state_synced = composition.temporal_compare != previous_compare_state
         self.selected_composition = composition
-        self.gis_canvas.set_composition(composition)
+        self.gis_canvas.set_composition(
+            composition,
+            preserve_render=preserve_canvas_render,
+        )
         self._load_canvas_compare_context(composition)
         self._sync_target_preview_viewport_overlays()
         self._load_grid_controls(composition)
