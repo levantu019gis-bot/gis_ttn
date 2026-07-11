@@ -86,7 +86,16 @@ class TargetExportConfig(BaseModel):
     template_pptx_file: str = Field(
         validation_alias=AliasChoices("template_pptx_file", "template_metadata_file")
     )
+    compare_template_pptx_file: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices(
+            "compare_template_pptx_file",
+            "template_pptx_file_compare",
+            "temporal_compare_template_pptx_file",
+        ),
+    )
     placeholders: list[TemplatePlaceholder] = Field(default_factory=list)
+    compare_placeholders: list[TemplatePlaceholder] | None = None
     txt_line_template: str | None = Field(
         default=None,
         validation_alias=AliasChoices("txt_line_template", "template_txt_value"),
@@ -121,6 +130,11 @@ class TargetExportConfig(BaseModel):
     def template_metadata_file(self) -> str:
         """Backward-compatible access during the Epic 6 migration."""
         return self.template_pptx_file
+
+    @property
+    def compare_template_metadata_file(self) -> str | None:
+        """Backward-compatible-style access for temporal compare PPTX templates."""
+        return self.compare_template_pptx_file
 
     @property
     def template_txt_value(self) -> str | None:

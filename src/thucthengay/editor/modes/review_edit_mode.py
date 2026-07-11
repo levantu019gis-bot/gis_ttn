@@ -48,6 +48,10 @@ from thucthengay.editor.widgets import (
     confirm_date_change_dialog,
 )
 from thucthengay.export.final_render import final_render_output_size
+from thucthengay.export.template_selection import (
+    template_metadata_for_composition,
+    template_pptx_file_for_composition,
+)
 from thucthengay.gis import view_geo_bounds
 from thucthengay.history import HistoryRecordError, HistoryService
 from thucthengay.ingestion import cache_layer_source, scan_geotiff_file
@@ -257,6 +261,13 @@ class ReviewEditMode(QWidget):
         self._canvas_view_persist_timer = QTimer(self)
         self._canvas_view_persist_timer.setSingleShot(True)
         self._canvas_view_persist_timer.timeout.connect(self._flush_pending_canvas_view)
+        self.refresh_canvas_button = QPushButton("Refresh")
+        self.refresh_canvas_button.setObjectName("reviewGisRefresh")
+        self.refresh_canvas_button.setToolTip(
+            "Cancel current preview, clear render cache, and render the selected canvas again"
+        )
+        self.refresh_canvas_button.clicked.connect(self._refresh_canvas_render)
+        self.refresh_canvas_button.setEnabled(False)
         self.export_canvas_button = QPushButton("Xuất ảnh")
         self.export_canvas_button.setObjectName("reviewGisExportImage")
         self.export_canvas_button.setToolTip("Xuất ảnh đang hiển thị trong GIS editor")
@@ -476,6 +487,7 @@ class ReviewEditMode(QWidget):
         header = QHBoxLayout()
         header.addWidget(QLabel("GIS editor"))
         header.addStretch(1)
+        header.addWidget(self.refresh_canvas_button)
         header.addWidget(self.export_canvas_button)
 
         layout.addLayout(header)
@@ -828,21 +840,26 @@ class ReviewEditMode(QWidget):
         target = self._target_for_composition(composition)
         template_metadata: TemplateMetadata | None = None
         template_error: str | None = None
-        if target is not None and "template_metadata" in target.metadata:
+        if target is not None:
             try:
-                template_metadata = TemplateMetadata.model_validate(
-                    target.metadata["template_metadata"]
-                )
+                template_metadata = template_metadata_for_composition(target, composition)
             except Exception as error:  # noqa: BLE001
                 template_error = str(error)
-        elif target is not None and isinstance(target.metadata.get("map_frame"), dict):
+        if (
+            template_metadata is None
+            and target is not None
+            and isinstance(target.metadata.get("map_frame"), dict)
+        ):
             frame = dict(target.metadata["map_frame"])
             frame.setdefault("x", 0)
             frame.setdefault("y", 0)
             try:
                 template_metadata = TemplateMetadata.model_validate(
                     {
-                        "template_pptx": target.export.template_metadata_file,
+                        "template_pptx": template_pptx_file_for_composition(
+                            target,
+                            composition,
+                        ),
                         "slide_index": 0,
                         "map_frame": frame,
                     }
@@ -896,7 +913,10 @@ class ReviewEditMode(QWidget):
                 composition=render_composition,
                 target=target,
                 template=context.template_metadata,
-                template_metadata_file=target.export.template_metadata_file,
+                template_metadata_file=template_pptx_file_for_composition(
+                    target,
+                    composition,
+                ),
                 output_width=canvas_width,
                 output_height=canvas_height,
                 compare_compositions=compare_compositions,
@@ -1008,6 +1028,24 @@ class ReviewEditMode(QWidget):
         self._canvas_tile_scheduler = TileScheduler(cache=self._canvas_tile_cache)
         self._canvas_tile_state = TilePreviewState()
 
+    def _refresh_canvas_render(self) -> None:
+        """Force a clean render of the currently selected GIS canvas."""
+        if self.selected_composition is None or self._workspace_service is None:
+            return
+        self._pending_canvas_render_composition = None
+        self._cancel_render(wait=True)
+        self._canvas_render_cache.clear()
+        self._reset_tile_preview_state()
+
+        self._flush_pending_canvas_view()
+        if self._render_threads:
+            return
+        composition = self.selected_composition
+        if composition is None:
+            return
+        self._request_canvas_render(composition)
+        self.action_summary.setText("Da yeu cau render lai GIS canvas.")
+
     def _resolved_compare_compositions_for_render(
         self,
         composition: Composition,
@@ -1041,7 +1079,10 @@ class ReviewEditMode(QWidget):
                 composition=render_composition,
                 target=target,
                 template=context.template_metadata,
-                template_metadata_file=target.export.template_metadata_file,
+                template_metadata_file=template_pptx_file_for_composition(
+                    target,
+                    composition,
+                ),
                 output_width=self.target_preview.render_width(),
                 output_height=self.target_preview.render_height(),
             )
@@ -1541,6 +1582,7 @@ class ReviewEditMode(QWidget):
         self.previous_button.setEnabled(previous_available)
         self.skip_button.setEnabled(has_selection)
         self.include_validate_button.setEnabled(has_selection)
+        self.refresh_canvas_button.setEnabled(has_selection)
         self.export_canvas_button.setEnabled(has_selection)
         self.revalidate_button.setEnabled(
             has_selection
@@ -2203,7 +2245,7 @@ class ReviewEditMode(QWidget):
 
 
 def _is_positive_number(value: object) -> bool:
-    return isinstance(value, (int, float)) and not isinstance(value, bool) and value > 0
+    return isinstance(value, int | float) and not isinstance(value, bool) and value > 0
 
 
 def _map_frame_size(map_frame: object) -> tuple[float, float] | None:

@@ -22,6 +22,7 @@ from thucthengay.export import (
     load_target_template,
     template_compatibility_issues,
 )
+from thucthengay.export.template_selection import COMPARE_TEMPLATE_METADATA_KEY
 from thucthengay.models import (
     HistoricalImageSelectionConfig,
     HistoricalSelectionMode,
@@ -47,6 +48,7 @@ class ResolvedTargetPaths:
     target_id: str
     geojson_file: Path | None = None
     template_pptx_file: Path | None = None
+    compare_template_pptx_file: Path | None = None
     template_metadata_file: Path | None = None
     template_pptx: Path | None = None
 
@@ -68,7 +70,9 @@ class ConfigLoadResult:
     enabled_targets: list[TargetConfig] = field(default_factory=list)
     target_paths: dict[str, ResolvedTargetPaths] = field(default_factory=dict)
     template_metadata: dict[str, TemplateMetadata] = field(default_factory=dict)
+    compare_template_metadata: dict[str, TemplateMetadata] = field(default_factory=dict)
     loaded_templates: dict[str, LoadedTemplate] = field(default_factory=dict)
+    loaded_compare_templates: dict[str, LoadedTemplate] = field(default_factory=dict)
     historical_database_path: Path | None = None
     issues: list[Issue] = field(default_factory=list)
 
@@ -363,10 +367,16 @@ def _validate_target_references(
         config_file,
         target.export.template_pptx_file,
     )
+    compare_template_pptx_file = (
+        resolve_config_asset_path(config_file, target.export.compare_template_pptx_file)
+        if target.export.compare_template_pptx_file
+        else None
+    )
     target_paths = ResolvedTargetPaths(
         target_id=target.id,
         geojson_file=geojson_file,
         template_pptx_file=template_pptx_file,
+        compare_template_pptx_file=compare_template_pptx_file,
     )
 
     if geojson_file is None:
@@ -399,6 +409,32 @@ def _validate_target_references(
     result.template_metadata[target.id] = loaded_template.metadata
     result.loaded_templates[target.id] = loaded_template
     target.metadata["template_metadata"] = loaded_template.metadata.model_dump(mode="json")
+    if compare_template_pptx_file is not None:
+        try:
+            compare_placeholders = (
+                target.export.compare_placeholders or target.export.placeholders
+            )
+            if (
+                compare_template_pptx_file == template_pptx_file
+                and target.export.compare_placeholders is None
+            ):
+                compare_loaded_template = loaded_template
+            else:
+                compare_loaded_template = load_target_template(
+                    target,
+                    compare_template_pptx_file,
+                    placeholders=compare_placeholders,
+                    metadata_source="compare_template_pptx_file",
+                )
+        except TemplateLoadError as error:
+            result.issues.append(_template_load_issue(target.id, error))
+            result.target_paths[target.id] = target_paths
+            return
+        result.compare_template_metadata[target.id] = compare_loaded_template.metadata
+        result.loaded_compare_templates[target.id] = compare_loaded_template
+        target.metadata[COMPARE_TEMPLATE_METADATA_KEY] = (
+            compare_loaded_template.metadata.model_dump(mode="json")
+        )
     result.target_paths[target.id] = target_paths
 
 
@@ -504,7 +540,10 @@ def _remediation_for_field_path(field_path: str) -> str:
     if "grid.interval" in field_path:
         return "`grid.interval` phải là cấu hình DMS hợp lệ và lớn hơn 0."
     if "template_pptx_file" in field_path:
-        return "Khai báo `export.template_pptx_file` trỏ tới PPTX template một slide của target."
+        return (
+            "Khai báo `export.template_pptx_file` hoặc "
+            "`export.compare_template_pptx_file` trỏ tới PPTX template một slide của target."
+        )
     if "placeholders" in field_path:
         return (
             "Khai báo `export.placeholders` với `element_id` hoặc `selector`; "

@@ -1322,6 +1322,42 @@ def test_review_edit_export_button_saves_gis_canvas_image(tmp_path: Path) -> Non
     assert "Đã xuất ảnh GIS editor" in mode.action_summary.text()
 
 
+def test_review_edit_refresh_button_forces_clean_canvas_render(tmp_path: Path) -> None:
+    qapp()
+    service = WorkspaceService(tmp_path / "workspace")
+    service.initialize(config_path="config.json")
+    service.write_composition(
+        composition("alpha__20260525", "alpha", date(2026, 5, 25), needs_revalidation=False)
+    )
+
+    mode = ReviewEditMode()
+    mode._request_canvas_render = lambda _composition: None  # noqa: SLF001
+    mode._request_target_preview = lambda _composition: None  # noqa: SLF001
+    mode.load_workspace(
+        service,
+        targets=[target_config("alpha", sort_order=1, name="Alpha Target")],
+    )
+    target_index = mode.tree_model.index(0, 0)
+    mode.tree_view.setCurrentIndex(mode.tree_model.index(0, 0, target_index))
+
+    calls: list[str] = []
+    requested: list[str] = []
+    mode._cancel_render = lambda **_kwargs: calls.append("cancel")  # type: ignore[method-assign]  # noqa: SLF001
+    mode._canvas_render_cache.clear = lambda: calls.append("cache")  # type: ignore[method-assign]
+    mode._reset_tile_preview_state = lambda: calls.append("tiles")  # type: ignore[method-assign]  # noqa: SLF001
+    mode._request_canvas_render = (  # type: ignore[method-assign]  # noqa: SLF001
+        lambda item: requested.append(item.composition_id)
+    )
+
+    assert mode.refresh_canvas_button.isEnabled()
+
+    mode.refresh_canvas_button.click()
+
+    assert calls == ["cancel", "cache", "tiles"]
+    assert requested == ["alpha__20260525"]
+    assert "render lai GIS canvas" in mode.action_summary.text()
+
+
 def test_review_edit_canvas_render_uses_final_template_size_not_viewport(
     tmp_path: Path,
     monkeypatch,

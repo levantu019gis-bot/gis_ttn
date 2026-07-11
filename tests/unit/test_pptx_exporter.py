@@ -391,6 +391,103 @@ def test_export_combined_pptx_uses_compare_pane_time_placeholders(
     assert "A 24.05.26 07.15/24.05.26 | B 26.05.26 09.45/26.05.26" in slide_text
 
 
+def test_export_combined_pptx_uses_compare_template_when_compare_enabled(
+    tmp_path: Path,
+) -> None:
+    normal_map_id, normal_text_id = _write_template(
+        tmp_path / "templates" / "alpha-normal.pptx",
+        static_marker="NORMAL TEMPLATE",
+    )
+    compare_map_id, compare_text_id = _write_template(
+        tmp_path / "templates" / "alpha-compare.pptx",
+        static_marker="COMPARE TEMPLATE",
+    )
+    placeholders = [
+        TemplatePlaceholder(
+            field="map_image",
+            element_id=normal_map_id,
+            kind=PlaceholderType.MAP_IMAGE,
+        ),
+        TemplatePlaceholder(
+            field="target_title",
+            element_id=normal_text_id,
+            kind=PlaceholderType.TEXT,
+        ),
+    ]
+    compare_placeholders = [
+        TemplatePlaceholder(
+            field="map_image",
+            element_id=compare_map_id,
+            kind=PlaceholderType.MAP_IMAGE,
+        ),
+        TemplatePlaceholder(
+            field="target_title",
+            element_id=compare_text_id,
+            kind=PlaceholderType.TEXT,
+        ),
+    ]
+    target = TargetConfig(
+        id="alpha",
+        name="Alpha Name",
+        title="Alpha Title",
+        geojson_file="targets/alpha.geojson",
+        coordinate=[106.7, 10.8],
+        scale=50000,
+        grid=GridConfig(interval=GridInterval(minutes=1)),
+        export={
+            "template_pptx_file": str(tmp_path / "templates" / "alpha-normal.pptx"),
+            "compare_template_pptx_file": str(
+                tmp_path / "templates" / "alpha-compare.pptx"
+            ),
+            "template_txt_value": "Tai {target_title} luc {time_label}",
+            "placeholders": [item.model_dump(mode="json") for item in placeholders],
+            "compare_placeholders": [
+                item.model_dump(mode="json") for item in compare_placeholders
+            ],
+        },
+        metadata={
+            "template_metadata": TemplateMetadata(
+                template_pptx=str(tmp_path / "templates" / "alpha-normal.pptx"),
+                slide_index=0,
+                map_frame=MapFrame(x=36, y=54, width=288, height=216),
+                placeholders=placeholders,
+            ).model_dump(mode="json"),
+            "compare_template_metadata": TemplateMetadata(
+                template_pptx=str(tmp_path / "templates" / "alpha-compare.pptx"),
+                slide_index=0,
+                map_frame=MapFrame(x=36, y=54, width=288, height=216),
+                placeholders=compare_placeholders,
+            ).model_dump(mode="json"),
+        },
+    )
+    service = _workspace(
+        tmp_path,
+        _composition(
+            "alpha__20260525",
+            temporal_compare=TemporalCompareState(
+                enabled=True,
+                pane_a_composition_id="alpha__20260524",
+                pane_b_composition_id="alpha__20260526",
+            ),
+        ),
+        _composition("alpha__20260524", capture_date=date(2026, 5, 24), include=False),
+        _composition("alpha__20260526", capture_date=date(2026, 5, 26), include=False),
+    )
+    ensure_final_renders_for_export(service, [target], render=_success_render)
+
+    output_path = service.paths.exports / "compare-template.pptx"
+    result = export_combined_pptx(service, [target], output_path=output_path)
+
+    assert result.ok is True
+    slide_text = "\n".join(
+        shape.text
+        for shape in Presentation(str(output_path)).slides[0].shapes
+        if hasattr(shape, "text")
+    )
+    assert "COMPARE TEMPLATE" in slide_text
+    assert "NORMAL TEMPLATE" not in slide_text
+
+
 def test_export_combined_pptx_falls_back_pane_time_placeholders_for_normal_mode(
     tmp_path: Path,
 ) -> None:

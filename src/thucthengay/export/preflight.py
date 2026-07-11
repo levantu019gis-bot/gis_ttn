@@ -12,6 +12,7 @@ from pydantic import ValidationError
 
 from thucthengay.export.compare_text import resolve_compare_text_panes
 from thucthengay.export.final_render import final_render_currentness_issue
+from thucthengay.export.template_selection import template_metadata_for_composition
 from thucthengay.export.txt_values import resolve_txt_line, time_label
 from thucthengay.models import (
     Composition,
@@ -110,11 +111,9 @@ def _validation_context_for(
 ) -> ValidationContext:
     template_metadata: TemplateMetadata | None = None
     template_error: str | None = None
-    if target is not None and "template_metadata" in target.metadata:
+    if target is not None:
         try:
-            template_metadata = TemplateMetadata.model_validate(
-                target.metadata["template_metadata"]
-            )
+            template_metadata = template_metadata_for_composition(target, composition)
         except Exception as error:  # noqa: BLE001
             template_error = str(error)
     return ValidationContext(
@@ -173,9 +172,15 @@ def _target_export_issues(
 ) -> list[Issue]:
     if target is None:
         return []
+    placeholders = (
+        target.export.compare_placeholders
+        if composition.temporal_compare.enabled
+        and target.export.compare_placeholders is not None
+        else target.export.placeholders
+    )
     required_map = [
         placeholder
-        for placeholder in target.export.placeholders
+        for placeholder in placeholders
         if placeholder.required and placeholder.kind == PlaceholderType.MAP_IMAGE
     ]
     if required_map:
@@ -197,70 +202,68 @@ def _pptx_template_dimension_issues(
     compositions: list[Composition],
     target_map: dict[str, TargetConfig],
 ) -> list[Issue]:
-    target_ids = _included_target_ids(compositions)
-    templates: dict[str, TemplateMetadata] = {}
-    for target_id in target_ids:
-        target = target_map.get(target_id)
+    templates: dict[str, tuple[Composition, TemplateMetadata]] = {}
+    for composition in compositions:
+        target = target_map.get(composition.target_id)
         if target is None:
             continue
         try:
-            templates[target_id] = TemplateMetadata.model_validate(
-                target.metadata["template_metadata"]
+            templates[composition.composition_id] = (
+                composition,
+                template_metadata_for_composition(target, composition),
             )
-        except (KeyError, ValidationError):
+        except (ValueError, ValidationError):
             continue
-    if len({template.template_pptx for template in templates.values()}) <= 1:
+    if len({template.template_pptx for _, template in templates.values()}) <= 1:
         return []
 
     dimensions: dict[str, tuple[int, int]] = {}
     paths: dict[str, str] = {}
-    for target_id, template in templates.items():
-        paths[target_id] = template.template_pptx
+    composition_targets: dict[str, str] = {}
+    for composition_id, (composition, template) in templates.items():
+        paths[composition_id] = template.template_pptx
+        composition_targets[composition_id] = composition.target_id
         if not Path(template.template_pptx).is_file():
             continue
         try:
             presentation = Presentation(template.template_pptx)
         except Exception:  # noqa: BLE001
             continue
-        dimensions[target_id] = (int(presentation.slide_width), int(presentation.slide_height))
+        dimensions[composition_id] = (
+            int(presentation.slide_width),
+            int(presentation.slide_height),
+        )
 
     if len(dimensions) <= 1:
         return []
 
     issues: list[Issue] = []
-    base_target_id = next(iter(dimensions))
-    base_dimension = dimensions[base_target_id]
-    for target_id, dimension in dimensions.items():
-        if target_id == base_target_id or dimension == base_dimension:
+    base_composition_id = next(iter(dimensions))
+    base_dimension = dimensions[base_composition_id]
+    for composition_id, dimension in dimensions.items():
+        if composition_id == base_composition_id or dimension == base_dimension:
             continue
         issues.append(
             Issue(
                 issue_id="export.pptx_template_slide_size_mismatch",
                 severity=IssueSeverity.ERROR,
                 scope=IssueScope.TEMPLATE,
-                target_id=target_id,
+                target_id=composition_targets.get(composition_id),
+                composition_id=composition_id,
                 message=(
                     "PPTX template cua cac target include khac kich thuoc slide: "
-                    f"`{base_target_id}` {base_dimension[0]}x{base_dimension[1]} EMU, "
-                    f"`{target_id}` {dimension[0]}x{dimension[1]} EMU."
+                    f"`{base_composition_id}` {base_dimension[0]}x{base_dimension[1]} EMU, "
+                    f"`{composition_id}` {dimension[0]}x{dimension[1]} EMU."
                 ),
                 remediation=(
                     "Dung cac PPTX template co cung slide size/aspect cho mot lan export tong hop, "
                     "hoac tach thanh cac lan export rieng. "
-                    f"Template tham chieu: {paths.get(base_target_id, '')}; "
-                    f"template lech: {paths.get(target_id, '')}."
+                    f"Template tham chieu: {paths.get(base_composition_id, '')}; "
+                    f"template lech: {paths.get(composition_id, '')}."
                 ),
             )
         )
     return issues
-
-
-def _included_target_ids(compositions: list[Composition]) -> list[str]:
-    target_ids: list[str] = []
-    for composition in compositions:
-        if composition.target_id not in target_ids:
-            target_ids.append(composition.target_id)
-    return target_ids
 
 
 def _txt_template_issues(

@@ -777,6 +777,49 @@ def test_template_pptx_resolves_relative_to_config_file(tmp_path: Path) -> None:
     )
 
 
+def test_compare_template_pptx_resolves_relative_to_config_file(tmp_path: Path) -> None:
+    (tmp_path / "targets").mkdir(parents=True)
+    (tmp_path / "targets" / "target_a.geojson").write_text("{}", encoding="utf-8")
+    normal_id = write_template_pptx(tmp_path / "templates" / "target_a.pptx")
+    compare_map_id, _title_id, compare_time_id, _comment_id = (
+        write_named_export_contract_template_pptx(
+            tmp_path / "templates" / "target_a.compare.pptx"
+        )
+    )
+    target = target_config(
+        "target_a",
+        1,
+        template_pptx_file="templates/target_a.pptx",
+        map_element_id=normal_id,
+    )
+    target["export"]["compare_template_pptx_file"] = "templates/target_a.compare.pptx"  # type: ignore[index]
+    target["export"]["compare_placeholders"] = [  # type: ignore[index]
+        {"field": "map_image", "kind": "map_image", "element_id": compare_map_id},
+        {
+            "field": "time_label_pane_A",
+            "kind": "text",
+            "element_id": compare_time_id,
+        },
+    ]
+    write_json(tmp_path / "config.json", {"targets": [target]})
+
+    result = load_project_config(tmp_path / "config.json")
+
+    assert result.ok is True
+    assert result.target_paths["target_a"].compare_template_pptx_file == (
+        tmp_path / "templates" / "target_a.compare.pptx"
+    ).resolve()
+    assert result.compare_template_metadata["target_a"].template_pptx == str(
+        (tmp_path / "templates" / "target_a.compare.pptx").resolve()
+    )
+    loaded_target = result.enabled_targets[0]
+    compare_metadata = loaded_target.metadata["compare_template_metadata"]
+    assert compare_metadata["template_pptx"] == str(
+        (tmp_path / "templates" / "target_a.compare.pptx").resolve()
+    )
+    assert compare_metadata["metadata"]["source"] == "compare_template_pptx_file"
+
+
 def test_template_pptx_must_have_exactly_one_slide(tmp_path: Path) -> None:
     (tmp_path / "targets").mkdir(parents=True)
     (tmp_path / "targets" / "target_a.geojson").write_text("{}", encoding="utf-8")

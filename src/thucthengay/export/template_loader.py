@@ -51,7 +51,13 @@ class LoadedTemplate:
     compatibility_signature: str
 
 
-def load_target_template(target: TargetConfig, template_pptx_file: Path) -> LoadedTemplate:
+def load_target_template(
+    target: TargetConfig,
+    template_pptx_file: Path,
+    *,
+    placeholders: Iterable[TemplatePlaceholder] | None = None,
+    metadata_source: str = "template_pptx_file",
+) -> LoadedTemplate:
     """Load one target PPTX template and verify configured element-id mappings."""
     if not template_pptx_file.is_file():
         raise TemplateLoadError(
@@ -84,9 +90,12 @@ def load_target_template(target: TargetConfig, template_pptx_file: Path) -> Load
         shape.element_id: shape.name
         for shape in shape_inventory
     }
+    configured_placeholders = list(
+        target.export.placeholders if placeholders is None else placeholders
+    )
     matches = [
         resolve_placeholder(placeholder, shape_inventory)
-        for placeholder in target.export.placeholders
+        for placeholder in configured_placeholders
     ]
     _reject_ambiguous_required_matches(matches, target.id)
     placeholders = _placeholders_with_diagnostics(
@@ -143,7 +152,7 @@ def load_target_template(target: TargetConfig, template_pptx_file: Path) -> Load
         ) from exc
 
     metadata: dict[str, Any] = {
-        "source": "template_pptx_file",
+        "source": metadata_source,
         "element_names": {str(key): value for key, value in element_names.items()},
         "shape_inventory": shape_inventory_payload(shape_inventory),
         "placeholder_resolution": [

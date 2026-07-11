@@ -97,7 +97,8 @@
         }
       },
       "export": {
-        "template_pptx_file": "data/templates/target_003.template.pptx",
+        "template_pptx_file": "data/templates/target_001.template.pptx",
+        "compare_template_pptx_file": "data/templates/target_003.template.pptx",
         "template_txt_value": "xx",
         "placeholders": [
           {
@@ -106,7 +107,27 @@
           },
           {
             "field": "title",
-            "value": "Hiện trạng CCHQ HAO GIANG 1 ngày {capture_date}",
+            "value": "Hi?n tr?ng CCHQ HAO GIANG 1 ng?y {capture_date}",
+            "kind": "text"
+          },
+          {
+            "field": "time",
+            "kind": "text"
+          },
+          {
+            "field": "comment",
+            "value": "",
+            "kind": "text"
+          }
+        ],
+        "compare_placeholders": [
+          {
+            "field": "map_image",
+            "kind": "map_image"
+          },
+          {
+            "field": "title",
+            "value": "Hi?n tr?ng CCHQ HAO GIANG 1 ng?y {capture_date}",
             "kind": "text"
           },
           {
@@ -182,7 +203,8 @@
         }
       },
       "export": {
-        "template_pptx_file": "data/templates/target_003.template.pptx",
+        "template_pptx_file": "data/templates/target_001.template.pptx",
+        "compare_template_pptx_file": "data/templates/target_003.template.pptx",
         "template_txt_value": "xx",
         "placeholders": [
           {
@@ -191,7 +213,27 @@
           },
           {
             "field": "title",
-            "value": "Hiện trạng CCHQ HAO GIANG 1 ngày {capture_date}",
+            "value": "Hi?n tr?ng CCHQ HAO GIANG 2 ng?y {capture_date}",
+            "kind": "text"
+          },
+          {
+            "field": "time",
+            "kind": "text"
+          },
+          {
+            "field": "comment",
+            "value": "",
+            "kind": "text"
+          }
+        ],
+        "compare_placeholders": [
+          {
+            "field": "map_image",
+            "kind": "map_image"
+          },
+          {
+            "field": "title",
+            "value": "Hi?n tr?ng CCHQ HAO GIANG 2 ng?y {capture_date}",
             "kind": "text"
           },
           {
@@ -267,7 +309,8 @@
         }
       },
       "export": {
-        "template_pptx_file": "data/templates/target_003.template.pptx",
+        "template_pptx_file": "data/templates/target_001.template.pptx",
+        "compare_template_pptx_file": "data/templates/target_003.template.pptx",
         "template_txt_value": "xx",
         "placeholders": [
           {
@@ -276,7 +319,27 @@
           },
           {
             "field": "title",
-            "value": "Hiện trạng CCHQ HAO GIANG 1 ngày {capture_date}",
+            "value": "Hi?n tr?ng CCHQ TU MINH ng?y {capture_date}",
+            "kind": "text"
+          },
+          {
+            "field": "time",
+            "kind": "text"
+          },
+          {
+            "field": "comment",
+            "value": "",
+            "kind": "text"
+          }
+        ],
+        "compare_placeholders": [
+          {
+            "field": "map_image",
+            "kind": "map_image"
+          },
+          {
+            "field": "title",
+            "value": "Hi?n tr?ng CCHQ TU MINH ng?y {capture_date}",
             "kind": "text"
           },
           {
@@ -352,7 +415,8 @@
         }
       },
       "export": {
-        "template_pptx_file": "data/templates/target_003.template.pptx",
+        "template_pptx_file": "data/templates/target_001.template.pptx",
+        "compare_template_pptx_file": "data/templates/target_003.template.pptx",
         "template_txt_value": "xx",
         "placeholders": [
           {
@@ -361,7 +425,27 @@
           },
           {
             "field": "title",
-            "value": "Hiện trạng CCHQ HAO GIANG 1 ngày {capture_date}",
+            "value": "Hi?n tr?ng CCHQ TIEU THANH ng?y {capture_date}",
+            "kind": "text"
+          },
+          {
+            "field": "time",
+            "kind": "text"
+          },
+          {
+            "field": "comment",
+            "value": "",
+            "kind": "text"
+          }
+        ],
+        "compare_placeholders": [
+          {
+            "field": "map_image",
+            "kind": "map_image"
+          },
+          {
+            "field": "title",
+            "value": "Hi?n tr?ng CCHQ TIEU THANH ng?y {capture_date}",
             "kind": "text"
           },
           {
@@ -437,7 +521,8 @@
         }
       },
       "export": {
-        "template_pptx_file": "data/templates/target_003.template.pptx",
+        "template_pptx_file": "data/templates/target_001.template.pptx",
+        "compare_template_pptx_file": "data/templates/target_003.template.pptx",
         "template_txt_value": "xx",
         "placeholders": [
           {
@@ -446,7 +531,27 @@
           },
           {
             "field": "title",
-            "value": "Hiện trạng CCHQ HAO GIANG 1 ngày {capture_date}",
+            "value": "Hi?n tr?ng CCHQ PHUC DINH ng?y {capture_date}",
+            "kind": "text"
+          },
+          {
+            "field": "time",
+            "kind": "text"
+          },
+          {
+            "field": "comment",
+            "value": "",
+            "kind": "text"
+          }
+        ],
+        "compare_placeholders": [
+          {
+            "field": "map_image",
+            "kind": "map_image"
+          },
+          {
+            "field": "title",
+            "value": "Hi?n tr?ng CCHQ PHUC DINH ng?y {capture_date}",
             "kind": "text"
           },
           {
@@ -522,7 +627,8 @@
         }
       },
       "export": {
-        "template_pptx_file": "data/templates/target_003.template.pptx",
+        "template_pptx_file": "data/templates/target_001.template.pptx",
+        "compare_template_pptx_file": "data/templates/target_003.template.pptx",
         "template_txt_value": "xx",
         "placeholders": [
           {
@@ -531,7 +637,27 @@
           },
           {
             "field": "title",
-            "value": "Hiện trạng CCHQ HAO GIANG 1 ngày {capture_date}",
+            "value": "Hi?n tr?ng CCHQ NGOC HOAN ng?y {capture_date}",
+            "kind": "text"
+          },
+          {
+            "field": "time",
+            "kind": "text"
+          },
+          {
+            "field": "comment",
+            "value": "",
+            "kind": "text"
+          }
+        ],
+        "compare_placeholders": [
+          {
+            "field": "map_image",
+            "kind": "map_image"
+          },
+          {
+            "field": "title",
+            "value": "Hi?n tr?ng CCHQ NGOC HOAN ng?y {capture_date}",
             "kind": "text"
           },
           {
@@ -607,7 +733,8 @@
         }
       },
       "export": {
-        "template_pptx_file": "data/templates/target_003.template.pptx",
+        "template_pptx_file": "data/templates/target_001.template.pptx",
+        "compare_template_pptx_file": "data/templates/target_003.template.pptx",
         "template_txt_value": "xx",
         "placeholders": [
           {
@@ -616,7 +743,27 @@
           },
           {
             "field": "title",
-            "value": "Hiện trạng CCHQ HAO GIANG 1 ngày {capture_date}",
+            "value": "Hi?n tr?ng CCHQ DINH HAI 1 ng?y {capture_date}",
+            "kind": "text"
+          },
+          {
+            "field": "time",
+            "kind": "text"
+          },
+          {
+            "field": "comment",
+            "value": "",
+            "kind": "text"
+          }
+        ],
+        "compare_placeholders": [
+          {
+            "field": "map_image",
+            "kind": "map_image"
+          },
+          {
+            "field": "title",
+            "value": "Hi?n tr?ng CCHQ DINH HAI 1 ng?y {capture_date}",
             "kind": "text"
           },
           {
@@ -692,7 +839,8 @@
         }
       },
       "export": {
-        "template_pptx_file": "data/templates/target_003.template.pptx",
+        "template_pptx_file": "data/templates/target_001.template.pptx",
+        "compare_template_pptx_file": "data/templates/target_003.template.pptx",
         "template_txt_value": "xx",
         "placeholders": [
           {
@@ -701,7 +849,27 @@
           },
           {
             "field": "title",
-            "value": "Hiện trạng CCHQ HAO GIANG 1 ngày {capture_date}",
+            "value": "Hi?n tr?ng CCHQ DINH HAI 2 ng?y {capture_date}",
+            "kind": "text"
+          },
+          {
+            "field": "time",
+            "kind": "text"
+          },
+          {
+            "field": "comment",
+            "value": "",
+            "kind": "text"
+          }
+        ],
+        "compare_placeholders": [
+          {
+            "field": "map_image",
+            "kind": "map_image"
+          },
+          {
+            "field": "title",
+            "value": "Hi?n tr?ng CCHQ DINH HAI 2 ng?y {capture_date}",
             "kind": "text"
           },
           {
@@ -777,7 +945,8 @@
         }
       },
       "export": {
-        "template_pptx_file": "data/templates/target_003.template.pptx",
+        "template_pptx_file": "data/templates/target_001.template.pptx",
+        "compare_template_pptx_file": "data/templates/target_003.template.pptx",
         "template_txt_value": "xx",
         "placeholders": [
           {
@@ -786,7 +955,27 @@
           },
           {
             "field": "title",
-            "value": "Hiện trạng CCHQ HAO GIANG 1 ngày {capture_date}",
+            "value": "Hi?n tr?ng CCHQ DINH HAI 3 ng?y {capture_date}",
+            "kind": "text"
+          },
+          {
+            "field": "time",
+            "kind": "text"
+          },
+          {
+            "field": "comment",
+            "value": "",
+            "kind": "text"
+          }
+        ],
+        "compare_placeholders": [
+          {
+            "field": "map_image",
+            "kind": "map_image"
+          },
+          {
+            "field": "title",
+            "value": "Hi?n tr?ng CCHQ DINH HAI 3 ng?y {capture_date}",
             "kind": "text"
           },
           {
@@ -862,7 +1051,8 @@
         }
       },
       "export": {
-        "template_pptx_file": "data/templates/target_003.template.pptx",
+        "template_pptx_file": "data/templates/target_001.template.pptx",
+        "compare_template_pptx_file": "data/templates/target_003.template.pptx",
         "template_txt_value": "xx",
         "placeholders": [
           {
@@ -871,7 +1061,27 @@
           },
           {
             "field": "title",
-            "value": "Hiện trạng CCHQ HAO GIANG 1 ngày {capture_date}",
+            "value": "Hi?n tr?ng CCHQ DUONG PHO ng?y {capture_date}",
+            "kind": "text"
+          },
+          {
+            "field": "time",
+            "kind": "text"
+          },
+          {
+            "field": "comment",
+            "value": "",
+            "kind": "text"
+          }
+        ],
+        "compare_placeholders": [
+          {
+            "field": "map_image",
+            "kind": "map_image"
+          },
+          {
+            "field": "title",
+            "value": "Hi?n tr?ng CCHQ DUONG PHO ng?y {capture_date}",
             "kind": "text"
           },
           {
@@ -947,7 +1157,8 @@
         }
       },
       "export": {
-        "template_pptx_file": "data/templates/target_003.template.pptx",
+        "template_pptx_file": "data/templates/target_001.template.pptx",
+        "compare_template_pptx_file": "data/templates/target_003.template.pptx",
         "template_txt_value": "xx",
         "placeholders": [
           {
@@ -956,7 +1167,27 @@
           },
           {
             "field": "title",
-            "value": "Hiện trạng CCHQ HAO GIANG 1 ngày {capture_date}",
+            "value": "Hi?n tr?ng CCHQ BAO SON ng?y {capture_date}",
+            "kind": "text"
+          },
+          {
+            "field": "time",
+            "kind": "text"
+          },
+          {
+            "field": "comment",
+            "value": "",
+            "kind": "text"
+          }
+        ],
+        "compare_placeholders": [
+          {
+            "field": "map_image",
+            "kind": "map_image"
+          },
+          {
+            "field": "title",
+            "value": "Hi?n tr?ng CCHQ BAO SON ng?y {capture_date}",
             "kind": "text"
           },
           {
@@ -1032,7 +1263,8 @@
         }
       },
       "export": {
-        "template_pptx_file": "data/templates/target_003.template.pptx",
+        "template_pptx_file": "data/templates/target_001.template.pptx",
+        "compare_template_pptx_file": "data/templates/target_003.template.pptx",
         "template_txt_value": "xx",
         "placeholders": [
           {
@@ -1041,7 +1273,27 @@
           },
           {
             "field": "title",
-            "value": "Hiện trạng CCHQ HAO GIANG 1 ngày {capture_date}",
+            "value": "Hi?n tr?ng CCHQ PHO DONG ng?y {capture_date}",
+            "kind": "text"
+          },
+          {
+            "field": "time",
+            "kind": "text"
+          },
+          {
+            "field": "comment",
+            "value": "",
+            "kind": "text"
+          }
+        ],
+        "compare_placeholders": [
+          {
+            "field": "map_image",
+            "kind": "map_image"
+          },
+          {
+            "field": "title",
+            "value": "Hi?n tr?ng CCHQ PHO DONG ng?y {capture_date}",
             "kind": "text"
           },
           {
@@ -1117,7 +1369,8 @@
         }
       },
       "export": {
-        "template_pptx_file": "data/templates/target_003.template.pptx",
+        "template_pptx_file": "data/templates/target_001.template.pptx",
+        "compare_template_pptx_file": "data/templates/target_003.template.pptx",
         "template_txt_value": "xx",
         "placeholders": [
           {
@@ -1126,7 +1379,27 @@
           },
           {
             "field": "title",
-            "value": "Hiện trạng CCHQ HAO GIANG 1 ngày {capture_date}",
+            "value": "Hi?n tr?ng CCHQ MA CONG ng?y {capture_date}",
+            "kind": "text"
+          },
+          {
+            "field": "time",
+            "kind": "text"
+          },
+          {
+            "field": "comment",
+            "value": "",
+            "kind": "text"
+          }
+        ],
+        "compare_placeholders": [
+          {
+            "field": "map_image",
+            "kind": "map_image"
+          },
+          {
+            "field": "title",
+            "value": "Hi?n tr?ng CCHQ MA CONG ng?y {capture_date}",
             "kind": "text"
           },
           {
@@ -1202,7 +1475,8 @@
         }
       },
       "export": {
-        "template_pptx_file": "data/templates/target_003.template.pptx",
+        "template_pptx_file": "data/templates/target_001.template.pptx",
+        "compare_template_pptx_file": "data/templates/target_003.template.pptx",
         "template_txt_value": "xx",
         "placeholders": [
           {
@@ -1211,7 +1485,27 @@
           },
           {
             "field": "title",
-            "value": "Hiện trạng CCHQ HAO GIANG 1 ngày {capture_date}",
+            "value": "Hi?n tr?ng CCHQ TA DOANH ng?y {capture_date}",
+            "kind": "text"
+          },
+          {
+            "field": "time",
+            "kind": "text"
+          },
+          {
+            "field": "comment",
+            "value": "",
+            "kind": "text"
+          }
+        ],
+        "compare_placeholders": [
+          {
+            "field": "map_image",
+            "kind": "map_image"
+          },
+          {
+            "field": "title",
+            "value": "Hi?n tr?ng CCHQ TA DOANH ng?y {capture_date}",
             "kind": "text"
           },
           {
@@ -1287,7 +1581,8 @@
         }
       },
       "export": {
-        "template_pptx_file": "data/templates/target_003.template.pptx",
+        "template_pptx_file": "data/templates/target_001.template.pptx",
+        "compare_template_pptx_file": "data/templates/target_003.template.pptx",
         "template_txt_value": "xx",
         "placeholders": [
           {
@@ -1296,7 +1591,27 @@
           },
           {
             "field": "title",
-            "value": "Hiện trạng CCHQ HAO GIANG 1 ngày {capture_date}",
+            "value": "Hi?n tr?ng CCHQ KY TAN ng?y {capture_date}",
+            "kind": "text"
+          },
+          {
+            "field": "time",
+            "kind": "text"
+          },
+          {
+            "field": "comment",
+            "value": "",
+            "kind": "text"
+          }
+        ],
+        "compare_placeholders": [
+          {
+            "field": "map_image",
+            "kind": "map_image"
+          },
+          {
+            "field": "title",
+            "value": "Hi?n tr?ng CCHQ KY TAN ng?y {capture_date}",
             "kind": "text"
           },
           {
@@ -1372,7 +1687,8 @@
         }
       },
       "export": {
-        "template_pptx_file": "data/templates/target_003.template.pptx",
+        "template_pptx_file": "data/templates/target_001.template.pptx",
+        "compare_template_pptx_file": "data/templates/target_003.template.pptx",
         "template_txt_value": "xx",
         "placeholders": [
           {
@@ -1381,7 +1697,27 @@
           },
           {
             "field": "title",
-            "value": "Hiện trạng CCHQ HAO GIANG 1 ngày {capture_date}",
+            "value": "Hi?n tr?ng SBLD TAN GIANG ng?y {capture_date}",
+            "kind": "text"
+          },
+          {
+            "field": "time",
+            "kind": "text"
+          },
+          {
+            "field": "comment",
+            "value": "",
+            "kind": "text"
+          }
+        ],
+        "compare_placeholders": [
+          {
+            "field": "map_image",
+            "kind": "map_image"
+          },
+          {
+            "field": "title",
+            "value": "Hi?n tr?ng SBLD TAN GIANG ng?y {capture_date}",
             "kind": "text"
           },
           {
@@ -1457,7 +1793,8 @@
         }
       },
       "export": {
-        "template_pptx_file": "data/templates/target_003.template.pptx",
+        "template_pptx_file": "data/templates/target_001.template.pptx",
+        "compare_template_pptx_file": "data/templates/target_003.template.pptx",
         "template_txt_value": "xx",
         "placeholders": [
           {
@@ -1466,7 +1803,27 @@
           },
           {
             "field": "title",
-            "value": "Hiện trạng CCHQ HAO GIANG 1 ngày {capture_date}",
+            "value": "Hi?n tr?ng CCKQ DONG BINH ng?y {capture_date}",
+            "kind": "text"
+          },
+          {
+            "field": "time",
+            "kind": "text"
+          },
+          {
+            "field": "comment",
+            "value": "",
+            "kind": "text"
+          }
+        ],
+        "compare_placeholders": [
+          {
+            "field": "map_image",
+            "kind": "map_image"
+          },
+          {
+            "field": "title",
+            "value": "Hi?n tr?ng CCKQ DONG BINH ng?y {capture_date}",
             "kind": "text"
           },
           {
@@ -1542,7 +1899,8 @@
         }
       },
       "export": {
-        "template_pptx_file": "data/templates/target_003.template.pptx",
+        "template_pptx_file": "data/templates/target_001.template.pptx",
+        "compare_template_pptx_file": "data/templates/target_003.template.pptx",
         "template_txt_value": "xx",
         "placeholders": [
           {
@@ -1551,7 +1909,27 @@
           },
           {
             "field": "title",
-            "value": "Hiện trạng CCHQ HAO GIANG 1 ngày {capture_date}",
+            "value": "Hi?n tr?ng CCKQ DONG DUONG ng?y {capture_date}",
+            "kind": "text"
+          },
+          {
+            "field": "time",
+            "kind": "text"
+          },
+          {
+            "field": "comment",
+            "value": "",
+            "kind": "text"
+          }
+        ],
+        "compare_placeholders": [
+          {
+            "field": "map_image",
+            "kind": "map_image"
+          },
+          {
+            "field": "title",
+            "value": "Hi?n tr?ng CCKQ DONG DUONG ng?y {capture_date}",
             "kind": "text"
           },
           {
@@ -1627,7 +2005,8 @@
         }
       },
       "export": {
-        "template_pptx_file": "data/templates/target_003.template.pptx",
+        "template_pptx_file": "data/templates/target_001.template.pptx",
+        "compare_template_pptx_file": "data/templates/target_003.template.pptx",
         "template_txt_value": "xx",
         "placeholders": [
           {
@@ -1636,7 +2015,27 @@
           },
           {
             "field": "title",
-            "value": "Hiện trạng CCHQ HAO GIANG 1 ngày {capture_date}",
+            "value": "Hi?n tr?ng CCKQ DAI SON ng?y {capture_date}",
+            "kind": "text"
+          },
+          {
+            "field": "time",
+            "kind": "text"
+          },
+          {
+            "field": "comment",
+            "value": "",
+            "kind": "text"
+          }
+        ],
+        "compare_placeholders": [
+          {
+            "field": "map_image",
+            "kind": "map_image"
+          },
+          {
+            "field": "title",
+            "value": "Hi?n tr?ng CCKQ DAI SON ng?y {capture_date}",
             "kind": "text"
           },
           {
@@ -1712,7 +2111,8 @@
         }
       },
       "export": {
-        "template_pptx_file": "data/templates/target_003.template.pptx",
+        "template_pptx_file": "data/templates/target_001.template.pptx",
+        "compare_template_pptx_file": "data/templates/target_003.template.pptx",
         "template_txt_value": "xx",
         "placeholders": [
           {
@@ -1721,7 +2121,27 @@
           },
           {
             "field": "title",
-            "value": "Hiện trạng CCHQ HAO GIANG 1 ngày {capture_date}",
+            "value": "Hi?n tr?ng SBLD AN KHANH ng?y {capture_date}",
+            "kind": "text"
+          },
+          {
+            "field": "time",
+            "kind": "text"
+          },
+          {
+            "field": "comment",
+            "value": "",
+            "kind": "text"
+          }
+        ],
+        "compare_placeholders": [
+          {
+            "field": "map_image",
+            "kind": "map_image"
+          },
+          {
+            "field": "title",
+            "value": "Hi?n tr?ng SBLD AN KHANH ng?y {capture_date}",
             "kind": "text"
           },
           {
@@ -1797,7 +2217,8 @@
         }
       },
       "export": {
-        "template_pptx_file": "data/templates/target_003.template.pptx",
+        "template_pptx_file": "data/templates/target_001.template.pptx",
+        "compare_template_pptx_file": "data/templates/target_003.template.pptx",
         "template_txt_value": "xx",
         "placeholders": [
           {
@@ -1806,7 +2227,27 @@
           },
           {
             "field": "title",
-            "value": "Hiện trạng CCHQ HAO GIANG 1 ngày {capture_date}",
+            "value": "Hi?n tr?ng CCKQ LUC AN ng?y {capture_date}",
+            "kind": "text"
+          },
+          {
+            "field": "time",
+            "kind": "text"
+          },
+          {
+            "field": "comment",
+            "value": "",
+            "kind": "text"
+          }
+        ],
+        "compare_placeholders": [
+          {
+            "field": "map_image",
+            "kind": "map_image"
+          },
+          {
+            "field": "title",
+            "value": "Hi?n tr?ng CCKQ LUC AN ng?y {capture_date}",
             "kind": "text"
           },
           {
@@ -1882,7 +2323,8 @@
         }
       },
       "export": {
-        "template_pptx_file": "data/templates/target_003.template.pptx",
+        "template_pptx_file": "data/templates/target_001.template.pptx",
+        "compare_template_pptx_file": "data/templates/target_003.template.pptx",
         "template_txt_value": "xx",
         "placeholders": [
           {
@@ -1891,7 +2333,27 @@
           },
           {
             "field": "title",
-            "value": "Hiện trạng CCHQ HAO GIANG 1 ngày {capture_date}",
+            "value": "Hi?n tr?ng CCKQ LUC HOP ng?y {capture_date}",
+            "kind": "text"
+          },
+          {
+            "field": "time",
+            "kind": "text"
+          },
+          {
+            "field": "comment",
+            "value": "",
+            "kind": "text"
+          }
+        ],
+        "compare_placeholders": [
+          {
+            "field": "map_image",
+            "kind": "map_image"
+          },
+          {
+            "field": "title",
+            "value": "Hi?n tr?ng CCKQ LUC HOP ng?y {capture_date}",
             "kind": "text"
           },
           {
@@ -1967,7 +2429,8 @@
         }
       },
       "export": {
-        "template_pptx_file": "data/templates/target_003.template.pptx",
+        "template_pptx_file": "data/templates/target_001.template.pptx",
+        "compare_template_pptx_file": "data/templates/target_003.template.pptx",
         "template_txt_value": "xx",
         "placeholders": [
           {
@@ -1976,7 +2439,27 @@
           },
           {
             "field": "title",
-            "value": "Hiện trạng CCHQ HAO GIANG 1 ngày {capture_date}",
+            "value": "Hi?n tr?ng CCKQ BON NGUU ng?y {capture_date}",
+            "kind": "text"
+          },
+          {
+            "field": "time",
+            "kind": "text"
+          },
+          {
+            "field": "comment",
+            "value": "",
+            "kind": "text"
+          }
+        ],
+        "compare_placeholders": [
+          {
+            "field": "map_image",
+            "kind": "map_image"
+          },
+          {
+            "field": "title",
+            "value": "Hi?n tr?ng CCKQ BON NGUU ng?y {capture_date}",
             "kind": "text"
           },
           {
@@ -2052,7 +2535,8 @@
         }
       },
       "export": {
-        "template_pptx_file": "data/templates/target_003.template.pptx",
+        "template_pptx_file": "data/templates/target_001.template.pptx",
+        "compare_template_pptx_file": "data/templates/target_003.template.pptx",
         "template_txt_value": "xx",
         "placeholders": [
           {
@@ -2061,7 +2545,27 @@
           },
           {
             "field": "title",
-            "value": "Hiện trạng CCHQ HAO GIANG 1 ngày {capture_date}",
+            "value": "Hi?n tr?ng KKC_OnChau ng?y {capture_date}",
+            "kind": "text"
+          },
+          {
+            "field": "time",
+            "kind": "text"
+          },
+          {
+            "field": "comment",
+            "value": "",
+            "kind": "text"
+          }
+        ],
+        "compare_placeholders": [
+          {
+            "field": "map_image",
+            "kind": "map_image"
+          },
+          {
+            "field": "title",
+            "value": "Hi?n tr?ng KKC_OnChau ng?y {capture_date}",
             "kind": "text"
           },
           {
@@ -2137,7 +2641,8 @@
         }
       },
       "export": {
-        "template_pptx_file": "data/templates/target_003.template.pptx",
+        "template_pptx_file": "data/templates/target_001.template.pptx",
+        "compare_template_pptx_file": "data/templates/target_003.template.pptx",
         "template_txt_value": "xx",
         "placeholders": [
           {
@@ -2146,7 +2651,27 @@
           },
           {
             "field": "title",
-            "value": "Hiện trạng CCHQ HAO GIANG 1 ngày {capture_date}",
+            "value": "Hi?n tr?ng BaiBienTuongSon_NinhBa_ChietGiang_TQ ng?y {capture_date}",
+            "kind": "text"
+          },
+          {
+            "field": "time",
+            "kind": "text"
+          },
+          {
+            "field": "comment",
+            "value": "",
+            "kind": "text"
+          }
+        ],
+        "compare_placeholders": [
+          {
+            "field": "map_image",
+            "kind": "map_image"
+          },
+          {
+            "field": "title",
+            "value": "Hi?n tr?ng BaiBienTuongSon_NinhBa_ChietGiang_TQ ng?y {capture_date}",
             "kind": "text"
           },
           {
@@ -2222,7 +2747,8 @@
         }
       },
       "export": {
-        "template_pptx_file": "data/templates/target_003.template.pptx",
+        "template_pptx_file": "data/templates/target_001.template.pptx",
+        "compare_template_pptx_file": "data/templates/target_003.template.pptx",
         "template_txt_value": "xx",
         "placeholders": [
           {
@@ -2231,7 +2757,27 @@
           },
           {
             "field": "title",
-            "value": "Hiện trạng CCHQ HAO GIANG 1 ngày {capture_date}",
+            "value": "Hi?n tr?ng KhuHuanLuyenDanhChiemDaovaDoBoChienThuat_DaoNanri_PhucKien ng?y {capture_date}",
+            "kind": "text"
+          },
+          {
+            "field": "time",
+            "kind": "text"
+          },
+          {
+            "field": "comment",
+            "value": "",
+            "kind": "text"
+          }
+        ],
+        "compare_placeholders": [
+          {
+            "field": "map_image",
+            "kind": "map_image"
+          },
+          {
+            "field": "title",
+            "value": "Hi?n tr?ng KhuHuanLuyenDanhChiemDaovaDoBoChienThuat_DaoNanri_PhucKien ng?y {capture_date}",
             "kind": "text"
           },
           {
@@ -2307,7 +2853,8 @@
         }
       },
       "export": {
-        "template_pptx_file": "data/templates/target_003.template.pptx",
+        "template_pptx_file": "data/templates/target_001.template.pptx",
+        "compare_template_pptx_file": "data/templates/target_003.template.pptx",
         "template_txt_value": "xx",
         "placeholders": [
           {
@@ -2316,7 +2863,27 @@
           },
           {
             "field": "title",
-            "value": "Hiện trạng CCHQ HAO GIANG 1 ngày {capture_date}",
+            "value": "Hi?n tr?ng KhuHuanLuyenTacChienDoBo_VinhDaiThanh_daoDongSon_PhucKien ng?y {capture_date}",
+            "kind": "text"
+          },
+          {
+            "field": "time",
+            "kind": "text"
+          },
+          {
+            "field": "comment",
+            "value": "",
+            "kind": "text"
+          }
+        ],
+        "compare_placeholders": [
+          {
+            "field": "map_image",
+            "kind": "map_image"
+          },
+          {
+            "field": "title",
+            "value": "Hi?n tr?ng KhuHuanLuyenTacChienDoBo_VinhDaiThanh_daoDongSon_PhucKien ng?y {capture_date}",
             "kind": "text"
           },
           {
@@ -2392,7 +2959,8 @@
         }
       },
       "export": {
-        "template_pptx_file": "data/templates/target_003.template.pptx",
+        "template_pptx_file": "data/templates/target_001.template.pptx",
+        "compare_template_pptx_file": "data/templates/target_003.template.pptx",
         "template_txt_value": "xx",
         "placeholders": [
           {
@@ -2401,7 +2969,27 @@
           },
           {
             "field": "title",
-            "value": "Hiện trạng CCHQ HAO GIANG 1 ngày {capture_date}",
+            "value": "Hi?n tr?ng KhuHuanLuyenTacChienDoBo_VinhDaiThanh_PhucKien ng?y {capture_date}",
+            "kind": "text"
+          },
+          {
+            "field": "time",
+            "kind": "text"
+          },
+          {
+            "field": "comment",
+            "value": "",
+            "kind": "text"
+          }
+        ],
+        "compare_placeholders": [
+          {
+            "field": "map_image",
+            "kind": "map_image"
+          },
+          {
+            "field": "title",
+            "value": "Hi?n tr?ng KhuHuanLuyenTacChienDoBo_VinhDaiThanh_PhucKien ng?y {capture_date}",
             "kind": "text"
           },
           {
@@ -2477,7 +3065,8 @@
         }
       },
       "export": {
-        "template_pptx_file": "data/templates/target_003.template.pptx",
+        "template_pptx_file": "data/templates/target_001.template.pptx",
+        "compare_template_pptx_file": "data/templates/target_003.template.pptx",
         "template_txt_value": "xx",
         "placeholders": [
           {
@@ -2486,7 +3075,27 @@
           },
           {
             "field": "title",
-            "value": "Hiện trạng CCHQ HAO GIANG 1 ngày {capture_date}",
+            "value": "Hi?n tr?ng VinhKeThach_SanVi_QuangDong_TQ ng?y {capture_date}",
+            "kind": "text"
+          },
+          {
+            "field": "time",
+            "kind": "text"
+          },
+          {
+            "field": "comment",
+            "value": "",
+            "kind": "text"
+          }
+        ],
+        "compare_placeholders": [
+          {
+            "field": "map_image",
+            "kind": "map_image"
+          },
+          {
+            "field": "title",
+            "value": "Hi?n tr?ng VinhKeThach_SanVi_QuangDong_TQ ng?y {capture_date}",
             "kind": "text"
           },
           {

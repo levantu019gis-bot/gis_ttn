@@ -6,7 +6,6 @@ from collections.abc import Iterable
 from pathlib import Path
 
 from pptx import Presentation
-from pydantic import ValidationError
 
 from thucthengay.export.compare_text import resolve_compare_text_panes
 from thucthengay.export.pptx_slide_copy import (
@@ -16,6 +15,7 @@ from thucthengay.export.pptx_slide_copy import (
     replace_text,
 )
 from thucthengay.export.preflight import build_export_preflight_plan
+from thucthengay.export.template_selection import template_metadata_for_composition
 from thucthengay.export.txt_values import (
     SUPPORTED_TEXT_FIELDS,
     TxtLineResolution,
@@ -91,7 +91,7 @@ def export_combined_pptx(
     exported: list[ExportedComposition] = []
     for slide_number, composition in enumerate(exportable, start=1):
         target = target_map[composition.target_id]
-        template = _template_metadata(target)
+        template = _template_metadata(target, composition)
         if slide_number == 1:
             source_for_size = Presentation(template.template_pptx)
             destination.slide_width = source_for_size.slide_width
@@ -219,7 +219,7 @@ def _placeholder_issues(
             )
             continue
         try:
-            template = _template_metadata(target)
+            template = _template_metadata(target, composition)
         except ValueError as error:
             issues.append(
                 _issue(
@@ -369,11 +369,14 @@ def _should_fit_shape_to_text(placeholder: TemplatePlaceholder) -> bool:
     return placeholder.field in {"time", "time_label", "time_label_pane_A", "time_label_pane_B"}
 
 
-def _template_metadata(target: TargetConfig) -> TemplateMetadata:
+def _template_metadata(
+    target: TargetConfig,
+    composition: Composition,
+) -> TemplateMetadata:
     try:
-        return TemplateMetadata.model_validate(target.metadata["template_metadata"])
-    except (KeyError, ValidationError) as error:
-        msg = "target is missing derived template_metadata"
+        return template_metadata_for_composition(target, composition)
+    except ValueError as error:
+        msg = "target is missing derived template metadata for composition"
         raise ValueError(msg) from error
 
 

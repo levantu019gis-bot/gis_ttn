@@ -5,8 +5,10 @@ from __future__ import annotations
 from collections.abc import Callable, Iterable
 from math import ceil
 
-from pydantic import ValidationError
-
+from thucthengay.export.template_selection import (
+    template_metadata_for_composition,
+    template_pptx_file_for_composition,
+)
 from thucthengay.models import (
     Composition,
     ExportFinalRenderResult,
@@ -82,14 +84,14 @@ def build_export_final_render_spec(
     compare_compositions: list[Composition] | None = None,
 ) -> RenderSpec:
     """Build the canonical final ``RenderSpec`` used by export preparation."""
-    template = _template_metadata(target)
+    template = _template_metadata(target, composition)
     dpi = _target_final_render_dpi(target, override=final_dpi)
     width, height = final_render_output_size(template, final_dpi=dpi)
     return build_render_spec(
         composition=composition,
         target=target,
         template=template,
-        template_metadata_file=target.export.template_metadata_file,
+        template_metadata_file=template_pptx_file_for_composition(target, composition),
         output_width=width,
         output_height=height,
         compare_compositions=compare_compositions,
@@ -346,11 +348,11 @@ def _ensure_composition_final_render(
     )
 
 
-def _template_metadata(target: TargetConfig) -> TemplateMetadata:
+def _template_metadata(target: TargetConfig, composition: Composition) -> TemplateMetadata:
     try:
-        return TemplateMetadata.model_validate(target.metadata["template_metadata"])
-    except (KeyError, ValidationError) as error:
-        msg = "target is missing derived template_metadata"
+        return template_metadata_for_composition(target, composition)
+    except ValueError as error:
+        msg = "target is missing derived template metadata for composition"
         raise ValueError(msg) from error
 
 

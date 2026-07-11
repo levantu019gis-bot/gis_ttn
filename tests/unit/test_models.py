@@ -81,6 +81,42 @@ def test_project_config_supports_target_specific_template_pptx() -> None:
     assert target.grid.interval.minutes == 1
 
 
+def test_project_config_supports_compare_template_pptx() -> None:
+    config = ProjectConfig.model_validate(
+        {
+            "targets": [
+                {
+                    "id": "target_001",
+                    "name": "Target 001",
+                    "coordinate": [106.7, 10.8],
+                    "scale": 50000,
+                    "grid": {"interval": {"minutes": 1}},
+                    "export": {
+                        "template_pptx_file": "templates/target_001.pptx",
+                        "compare_template_pptx_file": "templates/target_001.compare.pptx",
+                        "placeholders": [
+                            {"field": "map_image", "kind": "map_image", "element_id": 2}
+                        ],
+                        "compare_placeholders": [
+                            {"field": "map_image", "kind": "map_image", "element_id": 2},
+                            {
+                                "field": "time_label_pane_A",
+                                "kind": "text",
+                                "element_id": 3,
+                            },
+                        ],
+                    },
+                }
+            ]
+        }
+    )
+
+    target = config.targets[0]
+    assert target.export.compare_template_pptx_file == "templates/target_001.compare.pptx"
+    assert target.export.compare_placeholders is not None
+    assert target.export.compare_placeholders[1].field == "time_label_pane_A"
+
+
 def test_project_config_accepts_inline_geojson_geometry_and_group() -> None:
     data = valid_target_dict()
     data.pop("geojson_file")
