@@ -20,7 +20,14 @@ from thucthengay.render.core import (
 from thucthengay.render.diagnostics import RenderDiagnostics
 from thucthengay.render.raster import CancelCallback, RasterRenderResult
 from thucthengay.render.spec import RenderSpec
-from thucthengay.render.tile import TileCache, TileCoverage, TileGrid, TileIndex, TileKey
+from thucthengay.render.tile import (
+    TileCache,
+    TileCoverage,
+    TileGrid,
+    TileIndex,
+    TileKey,
+    adaptive_tile_grid_for_viewport,
+)
 from thucthengay.render.tile_compositor import (
     TileComposedFrame,
     TileCompositorConfig,
@@ -41,6 +48,8 @@ class TilePreviewSettings:
 
     tile_pixels: int = 256
     max_decode_workers: int = 1
+    tile_grid_mode: str = "fixed_geo"
+    adaptive_tile_screen_pixels: int | None = None
     tile_width_degrees: float = 0.05
     tile_height_degrees: float = 0.05
     partial_repaint_threshold_px: int = 96
@@ -201,7 +210,7 @@ def _iter_normal_tile_preview_frames(
     with diagnostics.time("tile_preview.layout") if diagnostics is not None else nullcontext():
         render_spec, layout = inner_render_spec_and_layout(spec)
     inner = layout.inner_map
-    tile_index = _tile_index(settings)
+    tile_index = _tile_index(settings, render_spec, width=inner.width, height=inner.height)
     request_id = _tile_request_id(render_spec)
     revision = tile_scheduler.begin_request(request_id)
     with diagnostics.time("tile_preview.coverage") if diagnostics is not None else nullcontext():
@@ -283,13 +292,12 @@ def _iter_compare_tile_preview_frames(
 ) -> Iterator[TilePreviewProgressFrame]:
     with diagnostics.time("tile_preview.layout") if diagnostics is not None else nullcontext():
         plan = temporal_compare_render_plan(spec)
-    tile_index = _tile_index(settings)
     request_id = _tile_request_id(plan.spec)
     revision = tile_scheduler.begin_request(request_id)
     contexts = tuple(
         _pane_context(
             item,
-            tile_index=tile_index,
+            settings=settings,
             previous_state=previous_state,
             diagnostics=diagnostics,
         )
@@ -477,10 +485,16 @@ def _compare_progress_frame(
 def _pane_context(
     plan: TemporalComparePaneRenderPlan,
     *,
-    tile_index: TileIndex,
+    settings: TilePreviewSettings,
     previous_state: TilePreviewState,
     diagnostics: RenderDiagnostics | None,
 ) -> _PaneContext:
+    tile_index = _tile_index(
+        settings,
+        plan.spec,
+        width=plan.rect.width,
+        height=plan.rect.height,
+    )
     with diagnostics.time("tile_preview.coverage") if diagnostics is not None else nullcontext():
         coverages = tile_index.visible_tiles_for_spec(plan.spec)
     if diagnostics is not None:
@@ -669,7 +683,23 @@ def _frame_safe_result(
     )
 
 
-def _tile_index(settings: TilePreviewSettings) -> TileIndex:
+def _tile_index(
+    settings: TilePreviewSettings,
+    spec: RenderSpec,
+    *,
+    width: int,
+    height: int,
+) -> TileIndex:
+    if settings.tile_grid_mode == "adaptive_screen":
+        screen_pixels = settings.adaptive_tile_screen_pixels or settings.tile_pixels
+        return TileIndex(
+            adaptive_tile_grid_for_viewport(
+                spec.geo_window,
+                output_width=width,
+                output_height=height,
+                screen_tile_pixels=screen_pixels,
+            )
+        )
     return TileIndex(
         TileGrid(
             tile_width=settings.tile_width_degrees,

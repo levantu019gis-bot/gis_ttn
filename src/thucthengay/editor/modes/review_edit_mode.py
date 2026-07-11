@@ -2407,6 +2407,8 @@ def _tile_preview_settings(config) -> TilePreviewSettings:  # noqa: ANN001
     return TilePreviewSettings(
         tile_pixels=config.tile_pixels,
         max_decode_workers=_resolve_decode_workers(config.max_decode_workers),
+        tile_grid_mode=config.tile_grid_mode,
+        adaptive_tile_screen_pixels=config.adaptive_tile_screen_pixels,
         tile_width_degrees=config.tile_width_degrees,
         tile_height_degrees=config.tile_height_degrees,
         partial_repaint_threshold_px=config.partial_repaint_threshold_px,

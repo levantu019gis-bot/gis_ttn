@@ -73,6 +73,7 @@ from thucthengay.render.tile import (
     TileGrid,
     TileIndex,
     TileKey,
+    adaptive_tile_grid_for_viewport,
     scale_to_lod,
     tile_key_parts,
 )
@@ -164,6 +165,7 @@ __all__ = [
     "TilePreviewProgressFrame",
     "TemporalComparePaneRenderPlan",
     "TemporalCompareRenderPlan",
+    "adaptive_tile_grid_for_viewport",
     "assess_gpu_path",
     "build_render_spec",
     "build_progressive_tile_plan",

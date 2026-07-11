@@ -431,7 +431,9 @@ def test_load_project_config_applies_shared_defaults_with_target_overrides(
                         "enabled": True,
                         "max_cache_bytes": 123456,
                         "max_decode_workers": "auto",
+                        "tile_grid_mode": "adaptive_screen",
                         "tile_pixels": 384,
+                        "adaptive_tile_screen_pixels": 512,
                         "tile_width_degrees": 0.02,
                         "tile_height_degrees": 0.03,
                         "partial_repaint_threshold_px": 48,
@@ -471,7 +473,9 @@ def test_load_project_config_applies_shared_defaults_with_target_overrides(
     assert tile_preview.enabled is True
     assert tile_preview.max_cache_bytes == 123456
     assert tile_preview.max_decode_workers == "auto"
+    assert tile_preview.tile_grid_mode == "adaptive_screen"
     assert tile_preview.tile_pixels == 384
+    assert tile_preview.adaptive_tile_screen_pixels == 512
     assert tile_preview.tile_width_degrees == 0.02
     assert tile_preview.tile_height_degrees == 0.03
     assert tile_preview.partial_repaint_threshold_px == 48

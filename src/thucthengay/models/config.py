@@ -181,7 +181,9 @@ class TilePreviewConfig(BaseModel):
     enabled: bool = False
     max_cache_bytes: int = Field(default=512 * 1024 * 1024, ge=0)
     max_decode_workers: int | Literal["auto"] = Field(default=1)
+    tile_grid_mode: Literal["fixed_geo", "adaptive_screen"] = "fixed_geo"
     tile_pixels: int = Field(default=256, ge=1, le=2048)
+    adaptive_tile_screen_pixels: int | None = Field(default=None, ge=64, le=4096)
     tile_width_degrees: float = Field(default=0.05, gt=0)
     tile_height_degrees: float = Field(default=0.05, gt=0)
     partial_repaint_threshold_px: int = Field(default=96, ge=0)

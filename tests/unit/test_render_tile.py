@@ -16,6 +16,7 @@ from thucthengay.render import (
     TileGrid,
     TileIndex,
     TileKey,
+    adaptive_tile_grid_for_viewport,
     raster_file_signature,
     scale_to_lod,
     tile_key_parts,
@@ -218,3 +219,44 @@ def test_tile_index_for_render_spec_uses_existing_geo_window_without_layout_chan
     assert spec.output_height == 144
     assert all(tile.key.layer_id == "L1" for tile in tiles)
     assert all(100.0 <= tile.bounds.min_lon <= tile.bounds.max_lon <= 110.0 for tile in tiles)
+
+
+def test_adaptive_tile_grid_caps_visible_tiles_by_screen_size() -> None:
+    viewport = GeoWindow(min_lon=100.0, min_lat=10.0, max_lon=110.0, max_lat=15.0)
+    fixed_index = TileIndex(
+        TileGrid(
+            extent=GeoWindow(min_lon=90.0, min_lat=0.0, max_lon=120.0, max_lat=30.0),
+            tile_width=0.1,
+            tile_height=0.1,
+        )
+    )
+    adaptive_index = TileIndex(
+        adaptive_tile_grid_for_viewport(
+            viewport,
+            output_width=1600,
+            output_height=900,
+            screen_tile_pixels=512,
+            extent=GeoWindow(min_lon=90.0, min_lat=0.0, max_lon=120.0, max_lat=30.0),
+        )
+    )
+    signature = _signature()
+
+    fixed_tiles = fixed_index.visible_tiles(
+        viewport,
+        map_scale=50000,
+        layer_id="L1",
+        source_signature=signature,
+    )
+    adaptive_tiles = adaptive_index.visible_tiles(
+        viewport,
+        map_scale=50000,
+        layer_id="L1",
+        source_signature=signature,
+    )
+
+    assert len(fixed_tiles) > 1000
+    assert len(adaptive_tiles) <= 20
+    assert {tile.key.grid_id for tile in adaptive_tiles} != {"fixed"}
+    assert {tile.key.grid_id for tile in adaptive_tiles}.isdisjoint(
+        {tile.key.grid_id for tile in fixed_tiles}
+    )

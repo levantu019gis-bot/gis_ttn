@@ -24,6 +24,7 @@ class TileGrid:
     extent: GeoWindow = field(default_factory=lambda: WORLD_GEO_WINDOW.model_copy())
     tile_width: float = DEFAULT_TILE_SIZE_DEGREES
     tile_height: float = DEFAULT_TILE_SIZE_DEGREES
+    grid_id: str = "fixed"
 
     def __post_init__(self) -> None:
         if self.tile_width <= 0 or self.tile_height <= 0:
@@ -40,6 +41,7 @@ class TileKey:
     lod: int
     x: int
     y: int
+    grid_id: str = "fixed"
 
 
 @dataclass(frozen=True)
@@ -96,6 +98,7 @@ class TileIndex:
                             lod=lod,
                             x=x,
                             y=y,
+                            grid_id=self.grid.grid_id,
                         ),
                         bounds=bounds,
                     )
@@ -241,6 +244,42 @@ def tile_key_parts(key: TileKey) -> tuple[Hashable, ...]:
         key.lod,
         key.x,
         key.y,
+        key.grid_id,
+    )
+
+
+def adaptive_tile_grid_for_viewport(
+    viewport: GeoWindow,
+    *,
+    output_width: int,
+    output_height: int,
+    screen_tile_pixels: int,
+    extent: GeoWindow | None = None,
+) -> TileGrid:
+    """Build a world-anchored grid sized from the current screen-space viewport.
+
+    The grid remains anchored to the world extent so nearby pans at the same
+    zoom reuse overlapping tile keys. The tile dimensions are derived from the
+    current pane size to cap the number of visible jobs.
+    """
+
+    resolved_extent = extent or WORLD_GEO_WINDOW.model_copy()
+    pixels = max(1, int(screen_tile_pixels))
+    columns = max(1, math.ceil(max(1, int(output_width)) / pixels))
+    rows = max(1, math.ceil(max(1, int(output_height)) / pixels))
+    lon_span = max(viewport.max_lon - viewport.min_lon, 1e-12)
+    lat_span = max(viewport.max_lat - viewport.min_lat, 1e-12)
+    tile_width = lon_span / columns
+    tile_height = lat_span / rows
+    grid_id = (
+        f"adaptive-screen:{columns}x{rows}:"
+        f"{tile_width:.12g}:{tile_height:.12g}"
+    )
+    return TileGrid(
+        extent=resolved_extent,
+        tile_width=tile_width,
+        tile_height=tile_height,
+        grid_id=grid_id,
     )
 
 

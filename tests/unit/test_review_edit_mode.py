@@ -1784,6 +1784,8 @@ def test_review_edit_tile_preview_settings_resolves_auto_workers(monkeypatch) ->
         TilePreviewConfig(
             enabled=True,
             max_decode_workers="auto",
+            tile_grid_mode="adaptive_screen",
+            adaptive_tile_screen_pixels=640,
             progress_frame_interval_ms=80,
             progress_tile_batch_size=7,
             tile_decode_timeout_ms=250,
@@ -1791,6 +1793,8 @@ def test_review_edit_tile_preview_settings_resolves_auto_workers(monkeypatch) ->
     )
 
     assert settings.max_decode_workers == 2
+    assert settings.tile_grid_mode == "adaptive_screen"
+    assert settings.adaptive_tile_screen_pixels == 640
     assert settings.progress_frame_interval_ms == 80
     assert settings.progress_tile_batch_size == 7
     assert settings.tile_decode_timeout_ms == 250
