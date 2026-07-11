@@ -77,7 +77,11 @@ from thucthengay.models.template import (
     TemplatePlaceholder,
     TemplatePlaceholderSelector,
 )
-from thucthengay.models.workspace import WorkspaceManifest
+from thucthengay.models.workspace import (
+    WorkspaceManifest,
+    WorkspaceReviewSessionState,
+    WorkspaceSessionState,
+)
 
 __all__ = [
     "Composition",
@@ -148,4 +152,6 @@ __all__ = [
     "ValidationSummary",
     "ViewState",
     "WorkspaceManifest",
+    "WorkspaceReviewSessionState",
+    "WorkspaceSessionState",
 ]

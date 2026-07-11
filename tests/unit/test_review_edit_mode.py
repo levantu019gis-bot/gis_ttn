@@ -2851,6 +2851,73 @@ def test_review_edit_filter_bar_counts_empty_state_and_selection_restore(
     )
 
 
+def test_review_edit_restores_workspace_session_filter_composition_and_layer(
+    tmp_path: Path,
+) -> None:
+    qapp()
+    service = WorkspaceService(tmp_path / "workspace")
+    service.initialize(config_path="config.json")
+    service.write_composition(
+        composition("alpha__20260525", "alpha", date(2026, 5, 25), needs_revalidation=False)
+    )
+    selected = composition(
+        "alpha__20260526",
+        "alpha",
+        date(2026, 5, 26),
+        reviewed=True,
+        ready=True,
+        include=True,
+        needs_revalidation=False,
+    ).model_copy(
+        update={
+            "layers": [
+                ImageLayer(
+                    layer_id="L1",
+                    source_path="L1.tif",
+                    order=0,
+                    capture_date=date(2026, 5, 26),
+                    capture_time=time(8, 30),
+                    metadata_status=MetadataStatus.VALID,
+                    metadata_source=MetadataSource.FILENAME,
+                ),
+                ImageLayer(
+                    layer_id="L2",
+                    source_path="L2.tif",
+                    order=1,
+                    capture_date=date(2026, 5, 26),
+                    capture_time=time(9, 30),
+                    metadata_status=MetadataStatus.VALID,
+                    metadata_source=MetadataSource.FILENAME,
+                ),
+            ]
+        }
+    )
+    service.write_composition(selected)
+    targets = [target_config("alpha", sort_order=1, name="Alpha Target")]
+
+    mode = ReviewEditMode()
+    mode._request_canvas_render = lambda _composition: None  # noqa: SLF001
+    mode.load_workspace(service, targets=targets)
+    mode.tree_view.setCurrentIndex(mode.tree_model.index_for_composition_id("alpha__20260526"))
+    mode.layer_table.setCurrentIndex(mode.layer_model.index(1, 0))
+    mode.filter_buttons[QueueFilter.INCLUDE].click()
+
+    session = service.load_session_state()
+    assert session.review.selected_composition_id == "alpha__20260526"
+    assert session.review.selected_layer_id == "L2"
+    assert session.review.active_queue_filter == QueueFilter.INCLUDE.value
+
+    reopened = ReviewEditMode()
+    reopened._request_canvas_render = lambda _composition: None  # noqa: SLF001
+    reopened.load_workspace(service, targets=targets)
+
+    assert reopened.tree_model.active_queue_filter == QueueFilter.INCLUDE
+    assert reopened.tree_model.composition_id_for_index(reopened.tree_view.currentIndex()) == (
+        "alpha__20260526"
+    )
+    assert reopened.layer_model.layer_id_for_index(reopened.layer_table.currentIndex()) == "L2"
+
+
 def test_review_edit_action_bar_includes_and_advances_on_passing_gate(
     tmp_path: Path,
 ) -> None:

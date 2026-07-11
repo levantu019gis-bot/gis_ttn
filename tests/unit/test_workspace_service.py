@@ -16,6 +16,7 @@ from thucthengay.models import (
     PersistedValidationState,
     ValidationSummary,
     ViewState,
+    WorkspaceSessionState,
 )
 from thucthengay.workspace.atomic_write import atomic_write_json
 from thucthengay.workspace.service import WorkspaceClearNotConfirmedError, WorkspaceService
@@ -82,6 +83,35 @@ def test_write_composition_is_atomic_and_registers_manifest_id(tmp_path: Path) -
     assert service.read_composition("target_001__20260525").capture_date == date(2026, 5, 25)
 
 
+def test_session_state_is_atomic_and_survives_reopen(tmp_path: Path) -> None:
+    service = WorkspaceService(tmp_path / "workspace")
+    service.initialize(config_path="config.json")
+
+    service.update_review_session_state(
+        selected_composition_id="target_001__20260525",
+        selected_layer_id="L1",
+        active_queue_filter="include",
+    )
+
+    reopened = WorkspaceService(tmp_path / "workspace")
+    state = reopened.load_session_state()
+
+    assert reopened.paths.session_state.is_file()
+    assert state.review.selected_composition_id == "target_001__20260525"
+    assert state.review.selected_layer_id == "L1"
+    assert state.review.active_queue_filter == "include"
+    assert state.updated_at is not None
+
+
+def test_missing_session_state_returns_default(tmp_path: Path) -> None:
+    service = WorkspaceService(tmp_path / "workspace")
+    service.initialize(config_path="config.json")
+
+    state = service.load_session_state()
+
+    assert state == WorkspaceSessionState()
+
+
 def test_resolve_composition_layer_paths_keeps_json_relative_but_returns_absolute(
     tmp_path: Path,
 ) -> None:
@@ -135,6 +165,7 @@ def test_clear_app_owned_data_requires_confirmation_and_resets_manifest(
     service = WorkspaceService(tmp_path / "workspace")
     service.initialize(config_path="config.json")
     service.write_composition(valid_composition())
+    service.update_review_session_state(selected_composition_id="target_001__20260525")
     (service.paths.cache / "image.tif").write_text("cache", encoding="utf-8")
     (service.paths.renders / "preview.png").write_text("render", encoding="utf-8")
 
@@ -147,6 +178,7 @@ def test_clear_app_owned_data_requires_confirmation_and_resets_manifest(
     service.clear_app_owned_data(confirmed=True)
 
     assert service.load_manifest().composition_ids == []
+    assert not service.paths.session_state.exists()
     assert service.paths.cache.is_dir()
     assert service.paths.compositions.is_dir()
     assert not any(service.paths.cache.iterdir())

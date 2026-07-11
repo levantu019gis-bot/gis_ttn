@@ -173,7 +173,35 @@ def test_target_preview_spec_requires_at_least_one_visible_layer() -> None:
     assert exc_info.value.issues[0].issue_id == "target_preview.no_visible_layers"
 
 
-def test_target_preview_blocks_large_unoptimized_raster(tmp_path: Path) -> None:
+def test_target_preview_allows_large_unoptimized_raster_by_default(tmp_path: Path) -> None:
+    raster = tmp_path / "large-unoptimized.tif"
+    _write_raster(
+        raster,
+        (106.0, 10.0, 106.5, 10.5),
+        fill=30,
+        width=64,
+        height=64,
+        tiled=True,
+        overviews=False,
+    )
+    composition = _composition(
+        [ImageLayer(layer_id="large", source_path=str(raster), visible=True, order=0)]
+    )
+
+    spec = build_target_preview_spec(
+        composition=composition,
+        target=_target(),
+        output_width=320,
+        output_height=180,
+        expensive_dimension_threshold=32,
+    )
+
+    assert spec.visible_layers[0].source_path == str(raster)
+
+
+def test_target_preview_can_block_large_unoptimized_raster_when_requested(
+    tmp_path: Path,
+) -> None:
     raster = tmp_path / "large-unoptimized.tif"
     _write_raster(
         raster,
@@ -195,6 +223,7 @@ def test_target_preview_blocks_large_unoptimized_raster(tmp_path: Path) -> None:
             output_width=320,
             output_height=180,
             expensive_dimension_threshold=32,
+            block_unoptimized_large_rasters=True,
         )
 
     assert exc_info.value.issues[0].issue_id == "target_preview.raster_not_optimized"

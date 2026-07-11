@@ -56,6 +56,7 @@ def build_target_preview_spec(
     dataset_opener: DatasetOpener = rasterio.open,
     expensive_dimension_threshold: int = DEFAULT_EXPENSIVE_DIMENSION_THRESHOLD,
     expensive_pixel_threshold: int = DEFAULT_EXPENSIVE_PIXEL_THRESHOLD,
+    block_unoptimized_large_rasters: bool = False,
 ) -> RenderSpec:
     """Build a render spec covering all raster bounds for one target-date composition."""
     issues: list[Issue] = []
@@ -119,15 +120,16 @@ def build_target_preview_spec(
     if issues:
         raise RenderSpecError(issues)
 
-    readiness_issues = _target_preview_readiness_issues(
-        layers,
-        target_id=target.id,
-        composition_id=composition.composition_id,
-        expensive_dimension_threshold=expensive_dimension_threshold,
-        expensive_pixel_threshold=expensive_pixel_threshold,
-    )
-    if readiness_issues:
-        raise RenderSpecError(readiness_issues)
+    if block_unoptimized_large_rasters:
+        readiness_issues = _target_preview_readiness_issues(
+            layers,
+            target_id=target.id,
+            composition_id=composition.composition_id,
+            expensive_dimension_threshold=expensive_dimension_threshold,
+            expensive_pixel_threshold=expensive_pixel_threshold,
+        )
+        if readiness_issues:
+            raise RenderSpecError(readiness_issues)
 
     bboxes: list[Bbox] = []
     bbox_issues: list[Issue] = []

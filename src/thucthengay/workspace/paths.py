@@ -9,6 +9,7 @@ from thucthengay.utils.path_safety import validate_windows_safe_filename_compone
 
 APP_OWNED_DIRS = ("cache", "compositions", "renders", "exports")
 MANIFEST_FILENAME = "manifest.json"
+SESSION_STATE_FILENAME = "session_state.json"
 
 
 @dataclass(frozen=True)
@@ -20,6 +21,10 @@ class WorkspacePaths:
     @property
     def manifest(self) -> Path:
         return self.root / MANIFEST_FILENAME
+
+    @property
+    def session_state(self) -> Path:
+        return self.root / SESSION_STATE_FILENAME
 
     @property
     def cache(self) -> Path:

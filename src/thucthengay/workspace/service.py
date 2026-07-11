@@ -24,6 +24,7 @@ from thucthengay.models import (
     ValidationSummary,
     ViewState,
     WorkspaceManifest,
+    WorkspaceSessionState,
 )
 from thucthengay.workspace.atomic_write import atomic_write_json
 from thucthengay.workspace.paths import WorkspacePaths
@@ -53,6 +54,9 @@ class WorkspaceClearPlan:
     @property
     def paths(self) -> tuple[Path, ...]:
         return (self.cache, self.compositions, self.renders, self.exports)
+
+
+_UNCHANGED = object()
 
 
 class WorkspaceService:
@@ -120,6 +124,54 @@ class WorkspaceService:
         if manifest.created_at is None:
             manifest.created_at = manifest.updated_at
         atomic_write_json(self.paths.manifest, manifest.model_dump(mode="json"))
+
+    def load_session_state(self) -> WorkspaceSessionState:
+        """Load persisted UI session state, or return defaults for old workspaces."""
+        self._ensure_layout()
+        if not self.paths.session_state.exists():
+            return WorkspaceSessionState()
+        try:
+            raw = json.loads(self.paths.session_state.read_text(encoding="utf-8"))
+        except JSONDecodeError as error:
+            msg = f"Workspace session state is not valid JSON: {self.paths.session_state}"
+            raise WorkspaceError(msg) from error
+
+        try:
+            return WorkspaceSessionState.model_validate(raw)
+        except ValidationError as error:
+            msg = f"Workspace session state schema is invalid: {self.paths.session_state}"
+            raise WorkspaceError(msg) from error
+
+    def write_session_state(self, state: WorkspaceSessionState) -> Path:
+        """Atomically persist workspace-local UI session state."""
+        self._ensure_layout()
+        state.updated_at = _utc_now()
+        atomic_write_json(self.paths.session_state, state.model_dump(mode="json"))
+        return self.paths.session_state
+
+    def update_review_session_state(
+        self,
+        *,
+        selected_composition_id: str | None | object = _UNCHANGED,
+        selected_layer_id: str | None | object = _UNCHANGED,
+        active_queue_filter: str | object = _UNCHANGED,
+    ) -> WorkspaceSessionState:
+        """Persist the latest Review/Edit cursor without touching compositions."""
+        state = self.load_session_state()
+        review_updates: dict[str, object | None] = {}
+        if selected_composition_id is not _UNCHANGED:
+            review_updates["selected_composition_id"] = selected_composition_id
+        if selected_layer_id is not _UNCHANGED:
+            review_updates["selected_layer_id"] = selected_layer_id
+        if active_queue_filter is not _UNCHANGED:
+            review_updates["active_queue_filter"] = active_queue_filter
+        if not review_updates:
+            return state
+        updated = state.model_copy(
+            update={"review": state.review.model_copy(update=review_updates)}
+        )
+        self.write_session_state(updated)
+        return updated
 
     def write_composition(self, composition: Composition) -> Path:
         """Atomically persist one composition and register it in the manifest."""
@@ -742,6 +794,8 @@ class WorkspaceService:
             if path.exists():
                 shutil.rmtree(path)
             path.mkdir(parents=True, exist_ok=True)
+        if self.paths.session_state.exists():
+            self.paths.session_state.unlink()
 
         manifest = self.load_manifest()
         manifest.composition_ids = []

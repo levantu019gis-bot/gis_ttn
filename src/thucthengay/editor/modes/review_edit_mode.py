@@ -74,6 +74,7 @@ from thucthengay.models import (
     TargetConfig,
     TemplateMetadata,
     TemporalCompareOrientation,
+    WorkspaceSessionState,
 )
 from thucthengay.render.core import MapRenderCache, render_map_with_cache
 from thucthengay.render.raster import render_raster_layers
@@ -363,6 +364,7 @@ class ReviewEditMode(QWidget):
         layer_selection = self.layer_table.selectionModel()
         if layer_selection is not None:
             layer_selection.currentChanged.connect(self._update_metadata_edit_button)
+            layer_selection.currentChanged.connect(self._persist_selected_layer_session)
         self._update_review_action_state()
 
     def _persist_main_splitter_sizes(self, _position: int, _index: int) -> None:
@@ -373,6 +375,40 @@ class ReviewEditMode(QWidget):
     def set_history_service(self, history_service: HistoryService | None) -> None:
         """Set the SQLite-backed history service used by Include/Validate."""
         self._history_service = history_service or HistoryService.disabled()
+
+    def _load_workspace_session_state(
+        self,
+        workspace_service: WorkspaceService,
+    ) -> WorkspaceSessionState:
+        try:
+            return workspace_service.load_session_state()
+        except WorkspaceError as error:
+            self.action_summary.setText(f"Bỏ qua session state không hợp lệ: {error}")
+            return WorkspaceSessionState()
+
+    def _persist_review_session_state(
+        self,
+        *,
+        selected_layer_id: str | None = None,
+    ) -> None:
+        if self._workspace_service is None:
+            return
+        composition_id = self._current_or_selected_composition_id()
+        if selected_layer_id is None:
+            selected_layer_id = self.layer_model.layer_id_for_index(
+                self.layer_table.currentIndex()
+            )
+        try:
+            self._workspace_service.update_review_session_state(
+                selected_composition_id=composition_id,
+                selected_layer_id=selected_layer_id,
+                active_queue_filter=self.tree_model.active_queue_filter.value,
+            )
+        except WorkspaceError as error:
+            self.action_summary.setText(f"Không lưu được session state: {error}")
+
+    def _persist_selected_layer_session(self, *_args: object) -> None:
+        self._persist_review_session_state()
 
     def set_render_preview_config(self, config: RenderPreviewConfig | None) -> None:
         """Set Review/Edit preview rendering config without reloading the workspace."""
@@ -387,6 +423,12 @@ class ReviewEditMode(QWidget):
     ) -> None:
         """Load composition navigation from a workspace service."""
         selected_id = self._current_or_selected_composition_id()
+        session_state = self._load_workspace_session_state(workspace_service)
+        if selected_id is None:
+            selected_id = session_state.review.selected_composition_id
+            queue_filter = _queue_filter_from_session(session_state.review.active_queue_filter)
+        else:
+            queue_filter = self.tree_model.active_queue_filter
         self._workspace_service = workspace_service
         self._targets = list(targets) if targets is not None else None
         if render_preview_config is not None:
@@ -398,6 +440,7 @@ class ReviewEditMode(QWidget):
         self._compare_global_initialized = False
         compositions = workspace_service.list_compositions()
         self.tree_model.set_compositions(compositions, targets=targets)
+        self.tree_model.set_queue_filter(queue_filter)
         self.tree_view.expandAll()
         self._refresh_filter_controls()
         self._restore_selection(selected_id)
@@ -619,6 +662,7 @@ class ReviewEditMode(QWidget):
         self.tree_view.expandAll()
         self._refresh_filter_controls()
         self._restore_selection(selected_id)
+        self._persist_review_session_state()
 
     def _refresh_filter_controls(self) -> None:
         counts = self.tree_model.filter_counts()
@@ -703,6 +747,7 @@ class ReviewEditMode(QWidget):
         self._update_detail_panels(composition)
         if gate is not None:
             self._show_review_issues(gate.issues, update_action=False)
+        self._persist_review_session_state()
         self.compositionSelected.emit(composition)
 
     def keyPressEvent(self, event) -> None:  # noqa: ANN001, N802
@@ -1915,6 +1960,7 @@ class ReviewEditMode(QWidget):
             f"{composition.composition_id} | {composition.capture_date.isoformat()}"
         )
         self.layer_model.set_composition(composition)
+        self._restore_layer_selection_from_session(composition)
         self.layer_warning_label.setVisible(self.layer_model.has_no_visible_layers())
         self._update_metadata_edit_button()
         target_preview_needs_render = self.target_preview.set_composition(composition)
@@ -1944,6 +1990,20 @@ class ReviewEditMode(QWidget):
             self._request_target_preview(composition)
         if not composition.needs_revalidation or compare_state_synced:
             self._request_canvas_render(composition)
+
+    def _restore_layer_selection_from_session(self, composition: Composition) -> None:
+        if self._workspace_service is None:
+            return
+        try:
+            state = self._workspace_service.load_session_state()
+        except WorkspaceError:
+            return
+        review = state.review
+        if review.selected_composition_id != composition.composition_id:
+            return
+        layer_id = review.selected_layer_id
+        if layer_id:
+            self._select_layer_by_id(layer_id)
 
     def _load_canvas_compare_context(self, composition: Composition) -> None:
         if self._workspace_service is None or not composition.temporal_compare.enabled:
@@ -2281,6 +2341,13 @@ def _has_existing_visible_raster(composition: Composition) -> bool:
 
 def _has_visible_layer(composition: Composition) -> bool:
     return any(layer.visible for layer in composition.layers)
+
+
+def _queue_filter_from_session(value: str) -> QueueFilter:
+    try:
+        return QueueFilter(value)
+    except ValueError:
+        return QueueFilter.ALL
 
 
 def _compare_composition_label(composition: Composition) -> str:
