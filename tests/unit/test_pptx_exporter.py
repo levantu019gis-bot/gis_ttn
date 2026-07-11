@@ -391,6 +391,56 @@ def test_export_combined_pptx_uses_compare_pane_time_placeholders(
     assert "A 24.05.26 07.15/24.05.26 | B 26.05.26 09.45/26.05.26" in slide_text
 
 
+def test_export_combined_pptx_falls_back_pane_time_placeholders_for_normal_mode(
+    tmp_path: Path,
+) -> None:
+    map_id, title_id, _time_id = _write_contract_template(tmp_path / "templates" / "alpha.pptx")
+    target = TargetConfig(
+        id="alpha",
+        name="Alpha Name",
+        title="Alpha Title",
+        geojson_file="targets/alpha.geojson",
+        coordinate=[106.7, 10.8],
+        scale=50000,
+        grid=GridConfig(interval=GridInterval(minutes=1)),
+        export={
+            "template_pptx_file": str(tmp_path / "templates" / "alpha.pptx"),
+            "template_txt_value": "Tai {target_title} luc {time_label}",
+            "date_format": "dd.MM.yy",
+            "time_format": "HH.mm/dd.MM.yy",
+            "placeholders": [
+                {"field": "map_image", "element_id": str(map_id)},
+                {
+                    "field": "title",
+                    "element_id": str(title_id),
+                    "value": (
+                        "A {capture_date_A} {time_label_pane_A} | "
+                        "B {capture_date_B} {time_label_pane_B}"
+                    ),
+                },
+            ],
+        },
+    )
+    target.metadata["template_metadata"] = TemplateMetadata(
+        template_pptx=str(tmp_path / "templates" / "alpha.pptx"),
+        slide_index=0,
+        map_frame=MapFrame(x=36, y=54, width=288, height=216),
+        placeholders=target.export.placeholders,
+    ).model_dump(mode="json")
+    service = _workspace(tmp_path, _composition("alpha__20260525"))
+    ensure_final_renders_for_export(service, [target], render=_success_render)
+
+    output_path = service.paths.exports / "normal-time-pane-fallback.pptx"
+    result = export_combined_pptx(service, [target], output_path=output_path)
+
+    assert result.ok is True
+    presentation = Presentation(str(output_path))
+    slide_text = "\n".join(
+        shape.text for shape in presentation.slides[0].shapes if hasattr(shape, "text")
+    )
+    assert "A 25.05.26 08.30/25.05.26 | B 25.05.26 08.30/25.05.26" in slide_text
+
+
 def test_export_combined_pptx_time_placeholder_rectangle_fits_replaced_text(
     tmp_path: Path,
 ) -> None:
@@ -531,6 +581,44 @@ def test_export_combined_pptx_blocks_unresolved_required_text_placeholder(
     assert result.ok is False
     assert "export.pptx_placeholder_unresolved" in {issue.issue_id for issue in result.issues}
     assert not (service.paths.exports / "blocked.pptx").exists()
+
+
+def test_export_combined_pptx_skips_only_slide_with_unresolved_text_placeholder(
+    tmp_path: Path,
+) -> None:
+    alpha_map_id, alpha_text_id = _write_template(tmp_path / "templates" / "alpha.pptx")
+    beta_map_id, beta_text_id = _write_template(tmp_path / "templates" / "beta.pptx")
+    alpha = _target(
+        tmp_path / "templates" / "alpha.pptx",
+        alpha_map_id,
+        alpha_text_id,
+        target_id="alpha",
+    )
+    beta = _target(
+        tmp_path / "templates" / "beta.pptx",
+        beta_map_id,
+        beta_text_id,
+        target_id="beta",
+        text_field="unsupported_required_value",
+    )
+    service = _workspace(
+        tmp_path,
+        _composition("alpha__20260525", target_id="alpha", review_order=1),
+        _composition("beta__20260525", target_id="beta", review_order=2),
+    )
+    ensure_final_renders_for_export(service, [alpha, beta], render=_success_render)
+
+    output_path = service.paths.exports / "partial.pptx"
+    result = export_combined_pptx(service, [alpha, beta], output_path=output_path)
+
+    assert result.ok is True
+    assert output_path.exists()
+    assert [row.composition_id for row in result.exported] == ["alpha__20260525"]
+    assert result.exported[0].slide_number == 1
+    assert {
+        (issue.issue_id, issue.composition_id) for issue in result.issues
+    } == {("export.pptx_placeholder_unresolved", "beta__20260525")}
+    assert len(Presentation(str(output_path)).slides) == 1
 
 
 def test_export_combined_pptx_blocks_missing_final_png(tmp_path: Path) -> None:

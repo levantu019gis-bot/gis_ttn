@@ -41,11 +41,22 @@ def export_txt_report(
         return _blocked([_no_exportable_compositions_issue()])
 
     issues = _pre_write_issues(workspace_service, included, target_map)
-    if issues:
+    skipped_composition_ids, global_blocking_issues = _skippable_composition_ids(
+        issues,
+        included,
+    )
+    if global_blocking_issues:
         return _blocked(issues)
+    exportable = [
+        composition
+        for composition in included
+        if composition.composition_id not in skipped_composition_ids
+    ]
+    if not exportable:
+        return _blocked(issues or [_no_exportable_compositions_issue()])
 
     exported: list[ExportedTxtLine] = []
-    for line_number, composition in enumerate(included, start=1):
+    for line_number, composition in enumerate(exportable, start=1):
         target = target_map[composition.target_id]
         pane_a, pane_b = resolve_compare_text_panes(workspace_service, composition)
         resolution = resolve_txt_line(
@@ -71,8 +82,8 @@ def export_txt_report(
             )
         )
 
-    if issues:
-        return _blocked(issues)
+    if not exported:
+        return _blocked(issues or [_no_exportable_compositions_issue()])
 
     try:
         resolved_output = _resolve_output_path(workspace_service, output_path)
@@ -88,9 +99,12 @@ def export_txt_report(
         ok=True,
         txt_path=relative_output,
         exported=exported,
+        issues=issues,
         summary=ExportTxtSummary(
             line_count=len(exported),
             target_count=len({row.target_id for row in exported}),
+            error_count=sum(1 for issue in issues if issue.severity == IssueSeverity.ERROR),
+            warning_count=sum(1 for issue in issues if issue.severity == IssueSeverity.WARNING),
         ),
     )
 
@@ -155,6 +169,38 @@ def _pre_write_issues(
             for problem in resolution.problems
         )
     return issues
+
+
+def _skippable_composition_ids(
+    issues: Iterable[Issue],
+    compositions: list[Composition],
+) -> tuple[set[str], list[Issue]]:
+    compositions_by_target: dict[str, list[Composition]] = {}
+    for composition in compositions:
+        compositions_by_target.setdefault(composition.target_id, []).append(composition)
+    composition_ids = {composition.composition_id for composition in compositions}
+    skipped_ids: set[str] = set()
+    global_blocking: list[Issue] = []
+    for issue in issues:
+        if not issue.blocking:
+            continue
+        if issue.composition_id is not None:
+            if issue.composition_id in composition_ids:
+                skipped_ids.add(issue.composition_id)
+            else:
+                global_blocking.append(issue)
+            continue
+        if issue.target_id is not None:
+            target_compositions = compositions_by_target.get(issue.target_id, [])
+            if target_compositions:
+                skipped_ids.update(
+                    composition.composition_id for composition in target_compositions
+                )
+            else:
+                global_blocking.append(issue)
+            continue
+        global_blocking.append(issue)
+    return skipped_ids, global_blocking
 
 
 def _problem_issue(issue_id: str, field: str, composition: Composition) -> Issue:

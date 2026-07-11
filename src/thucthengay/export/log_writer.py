@@ -126,6 +126,7 @@ def _trace_entries(
 ) -> tuple[list[ExportTraceEntry], list[Issue]]:
     pptx_rows = {row.composition_id: row for row in pptx_result.exported}
     txt_rows = {row.composition_id: row for row in txt_result.exported}
+    result_issues = [*pptx_result.issues, *txt_result.issues]
     entries: list[ExportTraceEntry] = []
     issues: list[Issue] = []
     for row in preflight_plan.rows:
@@ -141,6 +142,16 @@ def _trace_entries(
             )
             continue
         if pptx_row is None or txt_row is None:
+            known_reason = _result_issue_reason(row, result_issues)
+            if known_reason:
+                entries.append(
+                    _skipped_entry(
+                        row,
+                        status=ExportTraceStatus.SKIPPED,
+                        reason=known_reason,
+                    )
+                )
+                continue
             entries.append(
                 _skipped_entry(
                     row,
@@ -160,6 +171,16 @@ def _trace_entries(
             )
         )
     return entries, issues
+
+
+def _result_issue_reason(row: ExportPlanRow, issues: list[Issue]) -> str | None:
+    for issue in issues:
+        if issue.composition_id == row.composition_id:
+            return issue.message
+    for issue in issues:
+        if issue.composition_id is None and issue.target_id == row.target_id:
+            return issue.message
+    return None
 
 
 def _plan_issues(preflight_plan: ExportPreflightPlan) -> list[Issue]:

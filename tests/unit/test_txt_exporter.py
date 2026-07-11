@@ -209,6 +209,29 @@ def test_export_txt_report_uses_compare_pane_time_placeholders(
     )
 
 
+def test_export_txt_report_falls_back_pane_time_placeholders_for_normal_mode(
+    tmp_path: Path,
+) -> None:
+    service = _workspace(tmp_path, _composition("alpha__20260525"))
+    output_path = service.paths.exports / "normal-pane-time.txt"
+    target = _target(
+        txt_template=(
+            "{capture_date_A}|{time_label_pane_A}|"
+            "{capture_date_B}|{time_label_pane_B}|"
+            "{capture_date}|{time_label}"
+        )
+    )
+    target.export.date_format = "dd.MM.yy"
+    target.export.time_format = "HH.mm/dd.MM.yy"
+
+    result = export_txt_report(service, [target], output_path=output_path)
+
+    assert result.ok is True
+    assert output_path.read_text(encoding="utf-8").strip() == (
+        "25.05.26|08.30/25.05.26|25.05.26|08.30/25.05.26|25.05.26|08.30/25.05.26"
+    )
+
+
 def test_export_txt_report_blocks_required_unknown_placeholder(tmp_path: Path) -> None:
     service = _workspace(tmp_path, _composition("alpha__20260525"))
     output_path = service.paths.exports / "blocked.txt"
@@ -222,6 +245,33 @@ def test_export_txt_report_blocks_required_unknown_placeholder(tmp_path: Path) -
     assert result.ok is False
     assert "export.txt_placeholder_unknown" in {issue.issue_id for issue in result.issues}
     assert not output_path.exists()
+
+
+def test_export_txt_report_skips_only_line_with_unresolved_placeholder(
+    tmp_path: Path,
+) -> None:
+    service = _workspace(
+        tmp_path,
+        _composition("alpha__20260525", review_order=1),
+        _composition(
+            "alpha__20260526",
+            capture_date=date(2026, 5, 26),
+            review_order=2,
+            layers=[_layer("missing-time", capture_time=None)],
+        ),
+    )
+    output_path = service.paths.exports / "partial.txt"
+
+    result = export_txt_report(service, [_target()], output_path=output_path)
+
+    assert result.ok is True
+    assert output_path.read_text(encoding="utf-8").splitlines() == [
+        "1|alpha|2026-05-25|08:30:00"
+    ]
+    assert [row.composition_id for row in result.exported] == ["alpha__20260525"]
+    assert {
+        (issue.issue_id, issue.composition_id) for issue in result.issues
+    } == {("export.txt_time_label_unresolved", "alpha__20260526")}
 
 
 def test_export_txt_report_optional_placeholder_renders_empty_only_when_marked(

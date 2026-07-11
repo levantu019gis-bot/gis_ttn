@@ -689,7 +689,8 @@ class GisCanvasWidget(QGraphicsView):
         )
         local_base_rect = _centered_pixmap_rect(base, width=width, height=height)
         base_rect = local_base_rect.translated(frame.topLeft())
-        inner_rect = self._display_inner_map_rect(base_rect)
+        raster_rect = self._display_inner_raster_rect(base_rect)
+        raster_source_rect = _relative_rect(raster_rect, base_rect)
         key = (
             int(round(frame.left())),
             int(round(frame.top())),
@@ -703,10 +704,18 @@ class GisCanvasWidget(QGraphicsView):
             or self._live_overlay_key != key
         ):
             self._live_overlay_key = key
+            static = _static_preview_pixmap(
+                base,
+                width,
+                height,
+                local_base_rect,
+                (_relative_rect(raster_rect, frame),),
+            )
+            self._live_static_item.setPixmap(static)
             if self._live_clip_item is not None:
                 self._scene.removeItem(self._live_clip_item)
             self._live_clip_item = self._scene.addRect(
-                inner_rect,
+                raster_rect,
                 QPen(Qt.PenStyle.NoPen),
                 QColor(0, 0, 0, 0),
             )
@@ -715,27 +724,26 @@ class GisCanvasWidget(QGraphicsView):
                 True,
             )
             self._live_clip_item.setZValue(10)
-            self._live_raster_item = QGraphicsPixmapItem(base, self._live_clip_item)
+            self._live_raster_item = QGraphicsPixmapItem(
+                base.copy(_to_qrect(raster_source_rect)),
+                self._live_clip_item,
+            )
             self._live_raster_item.setTransformationMode(
                 Qt.TransformationMode.FastTransformation
             )
         else:
-            self._live_clip_item.setRect(inner_rect)
-            self._live_raster_item.setPixmap(base)
+            self._live_clip_item.setRect(raster_rect)
+            self._live_raster_item.setPixmap(base.copy(_to_qrect(raster_source_rect)))
 
-        inner_relative = _relative_rect(inner_rect, base_rect)
         dest = _scaled_destination_rect(
-            inner_rect,
+            raster_rect,
             zoom=self._live_preview_transform.zoom,
             offset_x=self._live_preview_transform.offset_x,
             offset_y=self._live_preview_transform.offset_y,
         )
         zoom = max(0.001, self._live_preview_transform.zoom)
         self._live_raster_item.setScale(zoom)
-        self._live_raster_item.setPos(
-            dest.left() - inner_relative.left() * zoom,
-            dest.top() - inner_relative.top() * zoom,
-        )
+        self._live_raster_item.setPos(dest.left(), dest.top())
         return True
 
     def _displayed_image(self) -> QImage:
@@ -815,7 +823,6 @@ class GisCanvasWidget(QGraphicsView):
             if transform.is_identity():
                 painter.drawPixmap(base_rect.topLeft(), base)
             else:
-                inner_rect = self._display_inner_map_rect(base_rect)
                 if self._compare_panes:
                     self._paint_live_compare_preview(
                         painter,
@@ -826,13 +833,14 @@ class GisCanvasWidget(QGraphicsView):
                         transform,
                     )
                 else:
+                    raster_rect = self._display_inner_raster_rect(base_rect)
                     self._paint_live_raster_preview(
                         painter,
                         base,
                         width,
                         height,
                         base_rect,
-                        inner_rect,
+                        raster_rect,
                         transform,
                     )
         finally:
@@ -842,6 +850,35 @@ class GisCanvasWidget(QGraphicsView):
     def _display_inner_map_rect(self, base_rect: QRectF) -> QRectF:
         layout, source_width, source_height = self._source_layout_for_display(base_rect)
         return _scale_source_rect(layout.inner_map, base_rect, source_width, source_height)
+
+    def _display_inner_raster_rect(self, base_rect: QRectF) -> QRectF:
+        layout, source_width, source_height = self._source_layout_for_display(base_rect)
+        inner = layout.inner_map
+        stroke_width = _positive_int_setting(
+            self._map_surround_style,
+            "surround_inner_stroke_width",
+            fallback=4,
+        )
+        scale_x = base_rect.width() / max(1, source_width)
+        scale_y = base_rect.height() / max(1, source_height)
+        inner_width = inner.width * scale_x
+        inner_height = inner.height * scale_y
+        # The rendered pixmap already contains the coordinate frame. Keep the
+        # inner border in the static layer so only raster pixels move live.
+        inset_x = min(
+            inner_width / 2,
+            (stroke_width + 1) * scale_x,
+        )
+        inset_y = min(
+            inner_height / 2,
+            (stroke_width + 1) * scale_y,
+        )
+        return QRectF(
+            base_rect.left() + (inner.left * scale_x) + inset_x,
+            base_rect.top() + (inner.top * scale_y) + inset_y,
+            max(1.0, inner_width - inset_x * 2),
+            max(1.0, inner_height - inset_y * 2),
+        )
 
     def _source_layout_for_display(
         self,
@@ -1129,6 +1166,51 @@ def _draw_static_preview_regions(
         painter.drawPixmap(base_rect.topLeft(), base)
     finally:
         painter.restore()
+
+
+def _static_preview_pixmap(
+    base: QPixmap,
+    width: int,
+    height: int,
+    base_rect: QRectF,
+    dynamic_rects: tuple[QRectF, ...],
+) -> QPixmap:
+    output = QPixmap(width, height)
+    output.fill(Qt.GlobalColor.transparent)
+    painter = QPainter(output)
+    try:
+        _draw_static_preview_regions(
+            painter,
+            base,
+            width,
+            height,
+            base_rect,
+            dynamic_rects,
+        )
+    finally:
+        painter.end()
+    return output
+
+
+def _positive_int_setting(
+    settings: Mapping[str, object],
+    key: str,
+    *,
+    fallback: int,
+) -> int:
+    value = settings.get(key)
+    if isinstance(value, bool):
+        return fallback
+    if isinstance(value, int | float) and isfinite(float(value)):
+        return max(0, int(round(float(value))))
+    if isinstance(value, str):
+        try:
+            parsed = float(value.strip())
+        except ValueError:
+            return fallback
+        if isfinite(parsed):
+            return max(0, int(round(parsed)))
+    return fallback
 
 
 def _to_qrect(rect: QRectF) -> QRect:

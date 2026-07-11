@@ -195,6 +195,36 @@ def test_write_export_summary_and_trace_log_marks_missing_output_row_failed(
     assert "PPTX/TXT" in (failed.skipped_reason or "")
 
 
+def test_write_export_summary_and_trace_log_marks_known_output_issue_skipped(
+    tmp_path: Path,
+) -> None:
+    service = _workspace(tmp_path)
+    skipped_issue = _error("alpha__20260526")
+    pptx_result = _pptx_result("alpha__20260525").model_copy(
+        update={
+            "issues": [skipped_issue],
+            "summary": ExportPptxSummary(slide_count=1, target_count=1, error_count=1),
+        }
+    )
+
+    result = write_export_summary_and_trace_log(
+        service,
+        preflight_plan=_plan(_row("alpha__20260525"), _row("alpha__20260526", slide_number=2)),
+        pptx_result=pptx_result,
+        txt_result=_txt_result("alpha__20260525", "alpha__20260526"),
+        output_path=service.paths.exports / "known-skip.export-log.json",
+    )
+
+    assert result.ok is True
+    assert result.summary.state == ExportCompletionState.SUCCESS_WITH_WARNINGS
+    assert result.summary.skipped_count == 1
+    skipped = result.log.entries[1]
+    assert skipped.composition_id == "alpha__20260526"
+    assert skipped.status == "skipped"
+    assert "Khong co layer visible" in (skipped.skipped_reason or "")
+    assert "export.output_row_missing" not in {issue.issue_id for issue in result.log.issues}
+
+
 def test_write_export_summary_and_trace_log_skips_blocked_rows_without_cascade(
     tmp_path: Path,
 ) -> None:

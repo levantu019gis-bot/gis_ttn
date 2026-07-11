@@ -89,6 +89,33 @@ class _TimedTileDecodeResult:
     elapsed_ms: float
 
 
+@dataclass
+class _ProgressComposeGate:
+    """Coalesce tile decode completions before rebuilding a preview frame."""
+
+    settings: TilePreviewSettings
+    last_compose_at: float = field(default_factory=perf_counter)
+    last_compose_decoded: int = 0
+
+    def should_compose(self, *, decoded: int, done: bool) -> bool:
+        if done:
+            return True
+        elapsed_ms = (perf_counter() - self.last_compose_at) * 1000.0
+        interval_reached = (
+            self.settings.progress_frame_interval_ms <= 0
+            or elapsed_ms >= self.settings.progress_frame_interval_ms
+        )
+        batch_reached = (
+            decoded - self.last_compose_decoded
+        ) >= self.settings.progress_tile_batch_size
+        # OR semantics: compose when either time or decoded-tile batch reaches its threshold.
+        return interval_reached or batch_reached
+
+    def mark_composed(self, *, decoded: int) -> None:
+        self.last_compose_at = perf_counter()
+        self.last_compose_decoded = decoded
+
+
 def render_tile_preview_map(
     spec: RenderSpec,
     *,
@@ -190,21 +217,29 @@ def _iter_normal_tile_preview_frames(
     )
     total = len(jobs)
     decoded = 0
-    yield _normal_progress_frame(
-        spec,
-        render_spec=render_spec,
-        coverages=coverages,
-        tile_cache=tile_cache,
-        render_cache=render_cache,
-        previous_frame=previous_state.normal_frame,
-        width=inner.width,
-        height=inner.height,
-        settings=settings,
-        diagnostics=diagnostics,
-        decoded=decoded,
-        total=total,
-        done=total == 0,
+    compose_gate = _ProgressComposeGate(settings)
+    has_initial_content = (
+        total == 0
+        or previous_state.normal_frame is not None
+        or total < len(coverages)
     )
+    if has_initial_content:
+        yield _normal_progress_frame(
+            spec,
+            render_spec=render_spec,
+            coverages=coverages,
+            tile_cache=tile_cache,
+            render_cache=render_cache,
+            previous_frame=previous_state.normal_frame,
+            width=inner.width,
+            height=inner.height,
+            settings=settings,
+            diagnostics=diagnostics,
+            decoded=decoded,
+            total=total,
+            done=total == 0,
+        )
+        compose_gate.mark_composed(decoded=decoded)
     for result in _iter_decode_results(
         jobs,
         max_workers=settings.max_decode_workers,
@@ -214,6 +249,9 @@ def _iter_normal_tile_preview_frames(
     ):
         tile_scheduler.apply_result(result)
         decoded += 1
+        done = decoded >= total or revision != tile_scheduler.revision
+        if not compose_gate.should_compose(decoded=decoded, done=done):
+            continue
         yield _normal_progress_frame(
             spec,
             render_spec=render_spec,
@@ -227,8 +265,9 @@ def _iter_normal_tile_preview_frames(
             diagnostics=diagnostics,
             decoded=decoded,
             total=total,
-            done=decoded >= total or revision != tile_scheduler.revision,
+            done=done,
         )
+        compose_gate.mark_composed(decoded=decoded)
 
 
 def _iter_compare_tile_preview_frames(
@@ -270,27 +309,14 @@ def _iter_compare_tile_preview_frames(
         pane_jobs.extend(_PaneJob(context.pane_key, job) for job in jobs)
     total = len(pane_jobs)
     decoded = 0
-    yield _compare_progress_frame(
-        spec,
-        plan=plan,
-        contexts=contexts,
-        tile_cache=tile_cache,
-        render_cache=render_cache,
-        settings=settings,
-        diagnostics=diagnostics,
-        decoded=decoded,
-        total=total,
-        done=total == 0,
+    compose_gate = _ProgressComposeGate(settings)
+    coverage_total = sum(len(context.coverages) for context in contexts)
+    has_initial_content = (
+        total == 0
+        or any(context.previous_frame is not None for context in contexts)
+        or total < coverage_total
     )
-    for result in _iter_decode_results(
-        tuple(pane_job.job for pane_job in pane_jobs),
-        max_workers=settings.max_decode_workers,
-        timeout_ms=settings.tile_decode_timeout_ms,
-        is_cancelled=is_cancelled,
-        diagnostics=diagnostics,
-    ):
-        tile_scheduler.apply_result(result)
-        decoded += 1
+    if has_initial_content:
         yield _compare_progress_frame(
             spec,
             plan=plan,
@@ -301,8 +327,34 @@ def _iter_compare_tile_preview_frames(
             diagnostics=diagnostics,
             decoded=decoded,
             total=total,
-            done=decoded >= total or revision != tile_scheduler.revision,
+            done=total == 0,
         )
+        compose_gate.mark_composed(decoded=decoded)
+    for result in _iter_decode_results(
+        tuple(pane_job.job for pane_job in pane_jobs),
+        max_workers=settings.max_decode_workers,
+        timeout_ms=settings.tile_decode_timeout_ms,
+        is_cancelled=is_cancelled,
+        diagnostics=diagnostics,
+    ):
+        tile_scheduler.apply_result(result)
+        decoded += 1
+        done = decoded >= total or revision != tile_scheduler.revision
+        if not compose_gate.should_compose(decoded=decoded, done=done):
+            continue
+        yield _compare_progress_frame(
+            spec,
+            plan=plan,
+            contexts=contexts,
+            tile_cache=tile_cache,
+            render_cache=render_cache,
+            settings=settings,
+            diagnostics=diagnostics,
+            decoded=decoded,
+            total=total,
+            done=done,
+        )
+        compose_gate.mark_composed(decoded=decoded)
 
 
 def _normal_progress_frame(

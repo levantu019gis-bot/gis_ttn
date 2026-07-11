@@ -172,10 +172,10 @@
       "name": "CCHQ HAO GIANG 2",
       "alias": "CCHQ HAO GIANG 2",
       "coordinate": [
-        116.65421564,
-        23.33759129
+        116.58146867,
+        23.32834767
       ],
-      "scale": 50000,
+      "scale": 48084,
       "grid": {
         "interval": {
           "minutes": 5

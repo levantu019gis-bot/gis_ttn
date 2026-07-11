@@ -839,10 +839,15 @@ def test_gis_canvas_live_pan_flush_uses_fast_overlay_without_full_redraw() -> No
         )
     )
     token = canvas.begin_render_request()
+    width, height = 330, 234
+    rendered = np.zeros((height, width, 3), dtype=np.uint8)
+    rendered[:, :] = (210, 20, 20)
+    inner = build_map_surround_layout(width, height).inner_map
+    rendered[inner.top : inner.bottom, inner.left : inner.right, :] = (20, 180, 70)
     assert canvas.apply_render_result(
         token,
         "preview render",
-        canvas=np.full((90, 160, 3), 120, dtype=np.uint8),
+        canvas=rendered,
     )
     assert canvas._live_static_item is not None  # noqa: SLF001
 
@@ -855,6 +860,8 @@ def test_gis_canvas_live_pan_flush_uses_fast_overlay_without_full_redraw() -> No
 
     assert canvas._live_clip_item is not None  # noqa: SLF001
     assert canvas._live_raster_item is not None  # noqa: SLF001
+    raster_pixel = canvas._live_raster_item.pixmap().toImage().pixelColor(0, 0)  # noqa: SLF001
+    assert (raster_pixel.red(), raster_pixel.green(), raster_pixel.blue()) == (20, 180, 70)
 
 
 def test_gis_canvas_live_preview_transforms_inner_map_not_static_frame() -> None:

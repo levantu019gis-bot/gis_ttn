@@ -13,7 +13,7 @@ def resolve_compare_text_panes(
     """Return pane A/B compositions used by compare export text placeholders."""
     state = composition.temporal_compare
     if not state.enabled:
-        return None, None
+        return composition, composition
     return (
         _read_optional_composition(workspace_service, state.pane_a_composition_id),
         _read_optional_composition(workspace_service, state.pane_b_composition_id),
