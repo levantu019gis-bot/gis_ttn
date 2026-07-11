@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+import threading
+import time
 from pathlib import Path
 
 import numpy as np
 import rasterio
 from rasterio.transform import from_origin
 
+import thucthengay.render.tile_preview as tile_preview_module
 from thucthengay.models import GridConfig, GridInterval, TemporalCompareOrientation
 from thucthengay.models.template import MapFrame
 from thucthengay.render import RenderDiagnostics
@@ -19,13 +22,19 @@ from thucthengay.render.spec import (
     RenderLayerRef,
     RenderSpec,
 )
-from thucthengay.render.tile import TileCache
+from thucthengay.render.tile import RasterFileSignature, TileCache, TileCoverage, TileKey
 from thucthengay.render.tile_preview import (
     TilePreviewSettings,
+    _iter_decode_results,
     iter_tile_preview_frames,
     render_tile_preview_map,
 )
-from thucthengay.render.tile_scheduler import TileScheduler
+from thucthengay.render.tile_scheduler import (
+    TileDecodeJob,
+    TileDecodeResult,
+    TileDecodeState,
+    TileScheduler,
+)
 
 
 def test_render_tile_preview_decodes_tiles_and_reuses_cache(tmp_path: Path) -> None:
@@ -194,6 +203,62 @@ def test_iter_tile_preview_frames_batches_compose_work(
     assert summary.counters["tile_preview.decode.jobs"] == total
     assert summary.counters["tile_preview.compose.full_recompose"] == len(frames)
     assert len(frames) < total + 1
+
+
+def test_iter_decode_results_polls_cancel_when_decode_has_no_timeout(monkeypatch) -> None:
+    signature = RasterFileSignature(path="source.tif", size_bytes=1, mtime_ns=2)
+    coverage = TileCoverage(
+        key=TileKey("L1", signature, 1, 0, 0),
+        bounds=GeoWindow(min_lon=0.0, min_lat=0.0, max_lon=1.0, max_lat=1.0),
+    )
+    jobs = tuple(
+        TileDecodeJob(
+            request_id="request",
+            revision=1,
+            coverage=coverage,
+            source_path=f"source-{index}.tif",
+        )
+        for index in range(2)
+    )
+    cancelled = False
+
+    def slow_decode(*_args, is_cancelled=None, **_kwargs):  # noqa: ANN001, ANN002, ANN003
+        while is_cancelled is None or not is_cancelled():
+            time.sleep(0.01)
+        return tile_preview_module._TimedTileDecodeResult(  # noqa: SLF001
+            result=TileDecodeResult(
+                request_id="request",
+                revision=1,
+                key=coverage.key,
+                bounds=coverage.bounds,
+                state=TileDecodeState.CANCELLED,
+            ),
+            elapsed_ms=0.0,
+        )
+
+    def cancel() -> None:
+        nonlocal cancelled
+        cancelled = True
+
+    monkeypatch.setattr(tile_preview_module, "_decode_tile_job_timed", slow_decode)
+    timer = threading.Timer(0.1, cancel)
+    timer.start()
+    started = time.perf_counter()
+    try:
+        results = list(
+            _iter_decode_results(
+                jobs,
+                max_workers=2,
+                timeout_ms=0,
+                is_cancelled=lambda: cancelled,
+                diagnostics=None,
+            )
+        )
+    finally:
+        timer.cancel()
+
+    assert all(result.state == TileDecodeState.CANCELLED for result in results)
+    assert time.perf_counter() - started < 1.0
 
 
 def _write_geotiff(path: Path, *, offset: int = 0) -> None:

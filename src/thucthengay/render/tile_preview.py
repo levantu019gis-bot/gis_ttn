@@ -553,22 +553,34 @@ def _iter_decode_results(
     ]
     pending = set(futures)
     timeout_seconds = timeout_ms / 1000.0 if timeout_ms > 0 else None
+    poll_seconds = 0.05
+    last_progress_at = perf_counter()
     aborted = False
     try:
         while pending:
             if _is_cancelled(is_cancelled):
                 aborted = True
                 break
+            wait_timeout = poll_seconds
+            if timeout_seconds is not None:
+                elapsed = perf_counter() - last_progress_at
+                remaining = max(0.0, timeout_seconds - elapsed)
+                wait_timeout = min(poll_seconds, remaining)
             done, pending = wait(
                 pending,
-                timeout=timeout_seconds,
+                timeout=wait_timeout,
                 return_when=FIRST_COMPLETED,
             )
             if not done:
-                if diagnostics is not None:
-                    diagnostics.increment("tile_preview.decode.timeouts", len(pending))
-                aborted = True
-                break
+                if timeout_seconds is not None and (
+                    perf_counter() - last_progress_at
+                ) >= timeout_seconds:
+                    if diagnostics is not None:
+                        diagnostics.increment("tile_preview.decode.timeouts", len(pending))
+                    aborted = True
+                    break
+                continue
+            last_progress_at = perf_counter()
             for future in done:
                 timed = future.result()
                 _record_decode_timing(timed, diagnostics=diagnostics)

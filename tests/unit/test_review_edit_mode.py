@@ -1635,6 +1635,62 @@ def test_review_edit_canvas_render_request_keeps_export_size(tmp_path: Path) -> 
     assert started == [(PreviewRenderQuality.SETTLED_HIGH_RES, 3306, 2340)]
 
 
+def test_review_edit_canvas_render_request_starts_latest_when_previous_is_running(
+    tmp_path: Path,
+) -> None:
+    qapp()
+    raster_path = tmp_path / "alpha.tif"
+    raster_path.touch()
+    selected = composition(
+        "alpha__20260525",
+        "alpha",
+        date(2026, 5, 25),
+        needs_revalidation=False,
+    ).model_copy(
+        update={
+            "layers": [
+                ImageLayer(
+                    layer_id="alpha-layer",
+                    source_path=str(raster_path),
+                    order=0,
+                    capture_date=date(2026, 5, 25),
+                    capture_time=time(8, 30),
+                    metadata_status=MetadataStatus.VALID,
+                )
+            ]
+        }
+    )
+    service = WorkspaceService(tmp_path / "workspace")
+    service.initialize(config_path="config.json")
+    service.write_composition(selected)
+
+    mode = ReviewEditMode()
+    mode.load_workspace(service, targets=[target_config("alpha", sort_order=1, name="Alpha")])
+
+    class FakeWorker:
+        cancelled = False
+
+        def cancel(self) -> None:
+            self.cancelled = True
+
+    old_worker = FakeWorker()
+    mode._render_threads["canvas:old"] = object()  # type: ignore[assignment]  # noqa: SLF001
+    mode._render_workers["canvas:old"] = old_worker  # type: ignore[assignment]  # noqa: SLF001
+    mode._render_tokens["canvas:old"] = object()  # noqa: SLF001
+    started: list[PreviewRenderRequest] = []
+    mode._start_canvas_render = (  # type: ignore[method-assign]  # noqa: SLF001
+        lambda request, _token: started.append(request)
+    )
+
+    mode._request_canvas_render(selected)  # noqa: SLF001
+
+    assert old_worker.cancelled is True
+    assert mode._pending_canvas_render_composition is None  # noqa: SLF001
+    assert len(started) == 1
+    assert started[0].composition_id == selected.composition_id
+    assert started[0].job_id.endswith(":1")
+
+
 def test_review_edit_tile_preview_flag_falls_back_to_full_frame_renderer(monkeypatch) -> None:
     qapp()
     mode = ReviewEditMode()

@@ -120,6 +120,7 @@ class ReviewEditMode(QWidget):
         self._render_threads: dict[str, QThread] = {}
         self._render_workers: dict[str, RenderWorker] = {}
         self._render_tokens: dict[str, object] = {}
+        self._canvas_render_epoch = 0
         self._canvas_render_cache = MapRenderCache()
         self._render_preview_config = RenderPreviewConfig()
         self._canvas_tile_cache = TileCache(
@@ -882,11 +883,8 @@ class ReviewEditMode(QWidget):
     def _request_canvas_render(self, composition: Composition) -> None:
         """Build a RenderSpec and submit a background render for the GIS canvas."""
         if self._render_threads:
-            self._pending_canvas_render_composition = composition
             self._cancel_render()
-            return
         self._pending_canvas_render_composition = None
-        self._cancel_render()
         visible = [layer for layer in composition.layers if layer.visible]
         if not visible:
             return
@@ -924,8 +922,12 @@ class ReviewEditMode(QWidget):
         except (RenderSpecError, ValidationError) as error:
             self.gis_canvas.set_error(_render_spec_error_message(error))
             return
+        self._canvas_render_epoch += 1
         request = PreviewRenderRequest(
-            job_id=f"canvas:{composition.composition_id}:{self.gis_canvas.generation}",
+            job_id=(
+                f"canvas:{composition.composition_id}:"
+                f"{self.gis_canvas.generation}:{self._canvas_render_epoch}"
+            ),
             composition_id=composition.composition_id,
             revision=self.gis_canvas.generation,
             quality=PreviewRenderQuality.SETTLED_HIGH_RES,
@@ -960,7 +962,7 @@ class ReviewEditMode(QWidget):
         worker = TilePreviewWorker(
             request,
             tile_cache=self._canvas_tile_cache,
-            tile_scheduler=self._canvas_tile_scheduler,
+            tile_scheduler=TileScheduler(cache=self._canvas_tile_cache),
             render_cache=self._canvas_render_cache,
             previous_state=self._canvas_tile_state,
             settings=_tile_preview_settings(tile_config),

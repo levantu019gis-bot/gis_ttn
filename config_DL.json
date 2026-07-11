@@ -1041,10 +1041,10 @@
       "name": "CCHQ DUONG PHO",
       "alias": "CCHQ DUONG PHO",
       "coordinate": [
-        121.552291,
-        31.311075
+        121.54392398,
+        31.45882448
       ],
-      "scale": 50000,
+      "scale": 119081,
       "grid": {
         "interval": {
           "minutes": 5
