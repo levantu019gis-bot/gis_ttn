@@ -486,6 +486,7 @@ def _layer_key(layer: RenderLayerRef) -> tuple[Hashable, ...]:
         layer.order,
         layer.source_path,
         layer.cache_path,
+        _freeze_jsonish(layer.render_bands.model_dump(mode="json") if layer.render_bands else None),
         _path_signature(path),
     )
 

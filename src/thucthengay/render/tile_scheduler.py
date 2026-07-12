@@ -15,6 +15,7 @@ from rasterio.vrt import WarpedVRT
 from rasterio.windows import from_bounds
 
 from thucthengay.gis.crs import GEOGRAPHIC_CRS, normalize_crs_key
+from thucthengay.models import LayerRenderBands
 from thucthengay.render.spec import GeoWindow, RenderLayerRef
 from thucthengay.render.tile import TileCache, TileCoverage, TileKey
 
@@ -41,6 +42,7 @@ class TileDecodeJob:
     revision: int
     coverage: TileCoverage
     source_path: str
+    render_bands: LayerRenderBands | None = None
     output_width: int = DEFAULT_DECODE_TILE_PIXELS
     output_height: int = DEFAULT_DECODE_TILE_PIXELS
     priority: float = 0.0
@@ -90,6 +92,7 @@ class TileScheduler:
 
         revision = self._revision
         layer_paths = {layer.layer_id: layer.cache_path or layer.source_path for layer in layers}
+        layer_bands = {layer.layer_id: layer.render_bands for layer in layers}
         center_lon = (viewport.min_lon + viewport.max_lon) / 2.0
         center_lat = (viewport.min_lat + viewport.max_lat) / 2.0
         jobs: list[TileDecodeJob] = []
@@ -106,6 +109,7 @@ class TileScheduler:
                     revision=revision,
                     coverage=coverage,
                     source_path=source_path,
+                    render_bands=layer_bands.get(coverage.key.layer_id),
                     output_width=max(1, int(tile_pixels)),
                     output_height=max(1, int(tile_pixels)),
                     priority=priority,
@@ -213,7 +217,7 @@ def _read_dataset_tile(
             read_bounds.max_lat,
             transform=src.transform,
         )
-        band_indexes, alpha_index = _resolve_band_indexes(src)
+        band_indexes, alpha_index = _resolve_band_indexes(src, job.render_bands)
         if _is_cancelled(is_cancelled):
             return None
         read_height = dst_row1 - dst_row0
@@ -262,7 +266,14 @@ def _geographic_dataset(dataset: Any) -> Any:
     return WarpedVRT(dataset, crs=GEOGRAPHIC_CRS, resampling=Resampling.bilinear, warp_mem_limit=64)
 
 
-def _resolve_band_indexes(src: Any) -> tuple[tuple[int, ...], int | None]:
+def _resolve_band_indexes(
+    src: Any,
+    render_bands: LayerRenderBands | None = None,
+) -> tuple[tuple[int, ...], int | None]:
+    if render_bands is not None:
+        _validate_render_bands(src, render_bands)
+        return (render_bands.red, render_bands.green, render_bands.blue), render_bands.alpha
+
     colorinterp = tuple(getattr(src, "colorinterp", ()) or ())
     alpha_index = None
     for index, interp in enumerate(colorinterp, start=1):
@@ -281,6 +292,20 @@ def _resolve_band_indexes(src: Any) -> tuple[tuple[int, ...], int | None]:
     if count >= 3:
         return (1, 2, 3), alpha_index
     return (1,), alpha_index
+
+
+def _validate_render_bands(src: Any, render_bands: LayerRenderBands) -> None:
+    count = int(getattr(src, "count", 0) or 0)
+    requested: list[int] = [render_bands.red, render_bands.green, render_bands.blue]
+    if render_bands.alpha is not None:
+        requested.append(render_bands.alpha)
+    invalid = [band for band in requested if band > count]
+    if invalid:
+        msg = (
+            "Render bands vuot qua so band cua raster "
+            f"(count={count}, requested={sorted(set(invalid))})."
+        )
+        raise ValueError(msg)
 
 
 def _scale_to_uint8(data: np.ma.MaskedArray | np.ndarray) -> np.ndarray:

@@ -2,13 +2,16 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from datetime import date, time
 from pathlib import Path
 from typing import Any
 
+import rasterio
 from PySide6.QtCore import QDate, Qt, QTime, Signal
 from PySide6.QtWidgets import (
     QCheckBox,
+    QComboBox,
     QDateEdit,
     QDialog,
     QDialogButtonBox,
@@ -24,8 +27,9 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
+from rasterio.enums import ColorInterp
 
-from thucthengay.models import ImageLayer, MetadataSource, MetadataStatus
+from thucthengay.models import ImageLayer, LayerRenderBands, MetadataSource, MetadataStatus
 
 _STATE_LABELS = {
     MetadataStatus.VALID: "Đã parse",
@@ -41,6 +45,13 @@ _SOURCE_LABELS = {
     MetadataSource.MANUAL: "Đã sửa thủ công",
     MetadataSource.UNKNOWN: "Chưa rõ",
 }
+
+
+@dataclass(frozen=True)
+class _BandOption:
+    index: int
+    label: str
+    colorinterp: ColorInterp | None = None
 
 
 class MetadataEditorDialog(QDialog):
@@ -60,6 +71,7 @@ class MetadataEditorDialog(QDialog):
         self._source_path_browse_button = QPushButton("Chọn")
         self._source_path_browse_button.setObjectName("metadataSourcePathBrowse")
         self._source_path_browse_button.clicked.connect(self._browse_source_path)
+        self._source_path_edit.editingFinished.connect(self._refresh_band_combos)
         self._parsed_source_label = QLabel(_SOURCE_LABELS[layer.metadata_source])
         self._state_label = QLabel(_state_pill_text(layer))
         self._state_label.setObjectName("metadataStatePill")
@@ -107,6 +119,17 @@ class MetadataEditorDialog(QDialog):
         self._cloud_spin.setEnabled(self._cloud_checkbox.isChecked())
         self._cloud_checkbox.toggled.connect(self._cloud_spin.setEnabled)
 
+        self._red_band_combo = QComboBox()
+        self._red_band_combo.setObjectName("metadataRedBandCombo")
+        self._green_band_combo = QComboBox()
+        self._green_band_combo.setObjectName("metadataGreenBandCombo")
+        self._blue_band_combo = QComboBox()
+        self._blue_band_combo.setObjectName("metadataBlueBandCombo")
+        self._alpha_band_combo = QComboBox()
+        self._alpha_band_combo.setObjectName("metadataAlphaBandCombo")
+        self._band_status_label = QLabel("")
+        self._band_status_label.setObjectName("metadataBandStatus")
+
         self._validation_label = QLabel("")
         self._validation_label.setObjectName("metadataEditorValidation")
         self._validation_label.setWordWrap(True)
@@ -126,11 +149,17 @@ class MetadataEditorDialog(QDialog):
         form.addRow(self._capture_date_checkbox, self._capture_date_edit)
         form.addRow(self._capture_time_checkbox, self._capture_time_edit)
         form.addRow(self._cloud_checkbox, self._cloud_spin)
+        form.addRow("Red band:", self._red_band_combo)
+        form.addRow("Green band:", self._green_band_combo)
+        form.addRow("Blue band:", self._blue_band_combo)
+        form.addRow("Alpha band:", self._alpha_band_combo)
+        form.addRow("Bands:", self._band_status_label)
 
         layout = QVBoxLayout(self)
         layout.addLayout(form)
         layout.addWidget(self._validation_label)
         layout.addWidget(button_box)
+        self._refresh_band_combos()
 
     @property
     def validation_text(self) -> str:
@@ -144,6 +173,11 @@ class MetadataEditorDialog(QDialog):
             self._validation_label.setText(error)
             return
 
+        payload["render_bands"] = _render_bands_from_payload(payload)
+        payload.pop("_red_band", None)
+        payload.pop("_green_band", None)
+        payload.pop("_blue_band", None)
+        payload.pop("_alpha_band", None)
         payload["metadata_status"] = MetadataStatus.VALID
         payload["metadata_source"] = MetadataSource.MANUAL
 
@@ -171,6 +205,10 @@ class MetadataEditorDialog(QDialog):
             "capture_date": capture_date,
             "capture_time": capture_time,
             "cloud_percent": cloud_percent,
+            "_red_band": self._red_band_combo.currentData(),
+            "_green_band": self._green_band_combo.currentData(),
+            "_blue_band": self._blue_band_combo.currentData(),
+            "_alpha_band": self._alpha_band_combo.currentData(),
         }
 
     @staticmethod
@@ -184,6 +222,10 @@ class MetadataEditorDialog(QDialog):
             return "Cần nhập ngày chụp."
         if payload.get("capture_time") is None:
             return "Cần nhập giờ chụp."
+        try:
+            _render_bands_from_payload(payload)
+        except ValueError as exc:
+            return str(exc)
         return None
 
     def _build_source_path_row(self) -> QWidget:
@@ -206,12 +248,163 @@ class MetadataEditorDialog(QDialog):
         )
         if selected:
             self._source_path_edit.setText(selected)
+            self._refresh_band_combos()
+
+    def _refresh_band_combos(self) -> None:
+        options, status = _read_band_options(self._source_path_edit.text().strip())
+        if not options and self._layer.render_bands is not None:
+            options = _options_for_existing_bands(self._layer.render_bands)
+            status = f"{status} Dang dung band da luu."
+        defaults = self._layer.render_bands or _default_render_bands(options)
+        _populate_band_combo(self._red_band_combo, options, defaults.red if defaults else None)
+        _populate_band_combo(
+            self._green_band_combo,
+            options,
+            defaults.green if defaults else None,
+        )
+        _populate_band_combo(self._blue_band_combo, options, defaults.blue if defaults else None)
+        _populate_band_combo(
+            self._alpha_band_combo,
+            options,
+            defaults.alpha if defaults else None,
+            include_none=True,
+        )
+        self._band_status_label.setText(status)
 
 
 def _state_pill_text(layer: ImageLayer) -> str:
     if layer.metadata_source is MetadataSource.MANUAL:
         return "Đã sửa thủ công"
     return _STATE_LABELS.get(layer.metadata_status, "Chưa rõ")
+
+
+def _render_bands_from_payload(payload: dict[str, Any]) -> LayerRenderBands | None:
+    red = payload.get("_red_band")
+    green = payload.get("_green_band")
+    blue = payload.get("_blue_band")
+    alpha = payload.get("_alpha_band")
+    if red is None and green is None and blue is None and alpha is None:
+        return None
+    if red is None or green is None or blue is None:
+        msg = "Can chon du 3 kenh Red, Green, Blue."
+        raise ValueError(msg)
+    try:
+        red_band = int(red)
+        green_band = int(green)
+        blue_band = int(blue)
+        alpha_band = int(alpha) if alpha is not None else None
+    except ValueError as exc:
+        msg = "Render bands khong hop le."
+        raise ValueError(msg) from exc
+    try:
+        return LayerRenderBands(
+            red=red_band,
+            green=green_band,
+            blue=blue_band,
+            alpha=alpha_band,
+        )
+    except ValueError as exc:
+        msg = f"Render bands khong hop le: {exc}"
+        raise ValueError(msg) from exc
+
+
+def _read_band_options(source_path: str) -> tuple[list[_BandOption], str]:
+    if not source_path:
+        return [], "Chua co file nguon."
+    try:
+        with rasterio.open(source_path) as dataset:
+            descriptions = tuple(dataset.descriptions or ())
+            colorinterp = tuple(dataset.colorinterp or ())
+            options = [
+                _BandOption(
+                    index=index,
+                    label=_band_label(index, descriptions, colorinterp),
+                    colorinterp=colorinterp[index - 1] if index <= len(colorinterp) else None,
+                )
+                for index in range(1, int(dataset.count) + 1)
+            ]
+    except (OSError, rasterio.errors.RasterioError) as exc:
+        return [], f"Khong doc duoc band tu file nguon: {exc}"
+    if not options:
+        return [], "File nguon khong co band raster."
+    return options, f"Da doc {len(options)} band tu file nguon."
+
+
+def _band_label(
+    index: int,
+    descriptions: tuple[str | None, ...],
+    colorinterp: tuple[ColorInterp, ...],
+) -> str:
+    parts = [f"Band {index}"]
+    if index <= len(colorinterp):
+        interp = colorinterp[index - 1]
+        if interp is not ColorInterp.undefined:
+            parts.append(str(interp.name))
+    if index <= len(descriptions) and descriptions[index - 1]:
+        parts.append(str(descriptions[index - 1]))
+    return " - ".join(parts)
+
+
+def _default_render_bands(options: list[_BandOption]) -> LayerRenderBands | None:
+    if not options:
+        return None
+    red = _index_for_colorinterp(options, ColorInterp.red)
+    green = _index_for_colorinterp(options, ColorInterp.green)
+    blue = _index_for_colorinterp(options, ColorInterp.blue)
+    alpha = _index_for_colorinterp(options, ColorInterp.alpha)
+    indexes = [option.index for option in options]
+    return LayerRenderBands(
+        red=red or indexes[0],
+        green=green or (indexes[1] if len(indexes) >= 2 else indexes[0]),
+        blue=blue or (indexes[2] if len(indexes) >= 3 else indexes[0]),
+        alpha=alpha,
+    )
+
+
+def _options_for_existing_bands(render_bands: LayerRenderBands) -> list[_BandOption]:
+    indexes = sorted(
+        {
+            render_bands.red,
+            render_bands.green,
+            render_bands.blue,
+            *({render_bands.alpha} if render_bands.alpha is not None else set()),
+        }
+    )
+    return [_BandOption(index=index, label=f"Band {index}") for index in indexes]
+
+
+def _index_for_colorinterp(options: list[_BandOption], interp: ColorInterp) -> int | None:
+    for option in options:
+        if option.colorinterp == interp:
+            return option.index
+    return None
+
+
+def _populate_band_combo(
+    combo: QComboBox,
+    options: list[_BandOption],
+    selected: int | None,
+    *,
+    include_none: bool = False,
+) -> None:
+    combo.blockSignals(True)
+    combo.clear()
+    if include_none:
+        combo.addItem("None", None)
+    for option in options:
+        combo.addItem(option.label, option.index)
+    _set_combo_data(combo, selected)
+    combo.setEnabled(bool(options))
+    combo.blockSignals(False)
+
+
+def _set_combo_data(combo: QComboBox, value: int | None) -> None:
+    for index in range(combo.count()):
+        if combo.itemData(index) == value:
+            combo.setCurrentIndex(index)
+            return
+    if combo.count():
+        combo.setCurrentIndex(0)
 
 
 def confirm_date_change_dialog(

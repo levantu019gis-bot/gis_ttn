@@ -121,7 +121,6 @@ class SetupMode(QWidget):
         form = QFormLayout()
         form.setContentsMargins(0, 0, 0, 0)
         form.setSpacing(10)
-        form.addRow("Dự án gần đây", self._build_recent_project_row())
         form.addRow(self.config_row)
         form.addRow(self.imagery_row)
         form.addRow(self.workspace_row)

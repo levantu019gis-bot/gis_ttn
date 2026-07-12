@@ -107,6 +107,15 @@ def test_setup_mode_disables_ingest_until_all_required_paths_are_valid(tmp_path:
     assert selected_paths.historical_loading_enabled is False
 
 
+def test_setup_mode_does_not_show_recent_project_picker() -> None:
+    qapp()
+    setup = SetupMode()
+
+    assert setup.recent_project_combo.parent() is None
+    assert setup.apply_recent_button.parent() is None
+    assert setup.remove_recent_button.parent() is None
+
+
 def test_setup_mode_exposes_historical_loading_choice_from_config(tmp_path: Path) -> None:
     qapp()
     config_file = tmp_path / "project.json"

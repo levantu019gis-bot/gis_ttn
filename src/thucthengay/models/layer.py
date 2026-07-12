@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import date, time
 from enum import StrEnum
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 class MetadataStatus(StrEnum):
@@ -34,6 +34,27 @@ class ImageLayerSourceKind(StrEnum):
     HISTORICAL = "historical"
 
 
+class LayerRenderBands(BaseModel):
+    """Manual raster band selection used when drawing a layer as RGB."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    red: int = Field(ge=1)
+    green: int = Field(ge=1)
+    blue: int = Field(ge=1)
+    alpha: int | None = Field(default=None, ge=1)
+
+    @model_validator(mode="after")
+    def alpha_must_not_duplicate_rgb(self) -> LayerRenderBands:
+        if self.alpha is not None and self.alpha in {self.red, self.green, self.blue}:
+            msg = "alpha band must be different from red/green/blue bands"
+            raise ValueError(msg)
+        return self
+
+    def signature(self) -> tuple[int, int, int, int | None]:
+        return (self.red, self.green, self.blue, self.alpha)
+
+
 class ImageLayer(BaseModel):
     """GeoTIFF layer included in a target-date composition."""
 
@@ -51,3 +72,4 @@ class ImageLayer(BaseModel):
     metadata_source: MetadataSource = MetadataSource.UNKNOWN
     source_kind: ImageLayerSourceKind = ImageLayerSourceKind.CURRENT
     image_asset_id: int | None = Field(default=None, ge=1)
+    render_bands: LayerRenderBands | None = None

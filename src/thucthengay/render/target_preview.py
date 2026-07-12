@@ -196,6 +196,7 @@ def build_target_preview_spec(
             source_path=layer.source_path,
             cache_path=layer.cache_path,
             order=layer.order,
+            render_bands=layer.render_bands,
         )
         for layer in layers
     ]

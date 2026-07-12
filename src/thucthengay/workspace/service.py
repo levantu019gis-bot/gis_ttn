@@ -17,6 +17,7 @@ from thucthengay.models import (
     GridConfig,
     GridInterval,
     ImageLayer,
+    LayerRenderBands,
     MetadataSource,
     MetadataStatus,
     TemporalCompareOrientation,
@@ -343,6 +344,7 @@ class WorkspaceService:
         cloud_percent: float | None,
         metadata_source: MetadataSource,
         metadata_status: MetadataStatus,
+        render_bands: LayerRenderBands | None | object = _UNCHANGED,
     ) -> Composition:
         """Persist manual layer metadata correction and mark composition stale."""
         if capture_date is None and capture_time is not None:
@@ -360,6 +362,8 @@ class WorkspaceService:
             "metadata_source": metadata_source,
             "metadata_status": metadata_status,
         }
+        if render_bands is not _UNCHANGED:
+            metadata_updates["render_bands"] = render_bands
         if source_path is not None:
             metadata_updates["source_path"] = source_path.strip()
         if cache_path is not None:
@@ -400,6 +404,7 @@ class WorkspaceService:
         metadata_status: MetadataStatus,
         source_path: str | None = None,
         cache_path: str | None = None,
+        render_bands: LayerRenderBands | None | object = _UNCHANGED,
     ) -> tuple[Composition, Composition]:
         """Move a layer from one composition to another (creating dest if needed)."""
         if new_capture_date is None:
@@ -464,6 +469,8 @@ class WorkspaceService:
                 "order": len(dest_layers),
             }
         )
+        if render_bands is not _UNCHANGED:
+            layer_data["render_bands"] = render_bands
         if source_path is not None:
             layer_data["source_path"] = source_path.strip()
         if cache_path is not None:

@@ -113,11 +113,19 @@ class TileIndex:
         layer: RenderLayerRef,
     ) -> tuple[TileCoverage, ...]:
         path = layer.cache_path or layer.source_path
+        source_signature = raster_file_signature(path)
+        if layer.render_bands is not None:
+            band_sig = "-".join(str(value) for value in layer.render_bands.signature())
+            source_signature = RasterFileSignature(
+                path=f"{source_signature.path}#bands:{band_sig}",
+                size_bytes=source_signature.size_bytes,
+                mtime_ns=source_signature.mtime_ns,
+            )
         return self.visible_tiles(
             viewport,
             map_scale=map_scale,
             layer_id=layer.layer_id,
-            source_signature=raster_file_signature(path),
+            source_signature=source_signature,
         )
 
     def visible_tiles_for_spec(self, spec: RenderSpec) -> tuple[TileCoverage, ...]:

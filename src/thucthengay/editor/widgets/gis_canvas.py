@@ -1048,6 +1048,7 @@ def _visible_layer_signature(layers: list[ImageLayer]) -> tuple[tuple[object, ..
             layer.cache_path,
             layer.visible,
             layer.order,
+            layer.render_bands.model_dump(mode="json") if layer.render_bands else None,
         )
         for layer in layers
     )

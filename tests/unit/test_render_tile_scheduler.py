@@ -7,6 +7,7 @@ from rasterio.enums import ColorInterp
 from rasterio.transform import from_bounds
 
 from thucthengay.gis.crs import GEOGRAPHIC_CRS
+from thucthengay.models import LayerRenderBands
 from thucthengay.render import (
     GeoWindow,
     RasterFileSignature,
@@ -122,6 +123,23 @@ def test_decode_tile_job_uses_window_and_target_out_shape() -> None:
     assert (window.width, window.height) != (dataset.width, dataset.height)
 
 
+def test_decode_tile_job_uses_manual_render_bands() -> None:
+    dataset = _FakeDataset(band_count=4)
+    job = scheduler_job(
+        request_id="req-1",
+        revision=1,
+        coverage=_coverages()[0],
+        output_size=16,
+        render_bands=LayerRenderBands(red=3, green=2, blue=1, alpha=4),
+    )
+
+    result = decode_tile_job(job, opener=lambda _path: dataset)
+
+    assert result.state == TileDecodeState.SUCCESS
+    assert dataset.read_calls[0][0] == (3, 2, 1)
+    assert dataset.read_calls[1][0] == 4
+
+
 def test_decode_tile_job_returns_valid_mask_for_nodata_pixels() -> None:
     result = decode_tile_job(
         _job(output_size=4),
@@ -201,7 +219,13 @@ def _job(request_id: str = "req-1", output_size: int = 8):
     )
 
 
-def scheduler_job(request_id, revision, coverage, output_size):  # noqa: ANN001
+def scheduler_job(  # noqa: ANN001
+    request_id,
+    revision,
+    coverage,
+    output_size,
+    render_bands=None,
+):
     from thucthengay.render import TileDecodeJob
 
     return TileDecodeJob(
@@ -209,6 +233,7 @@ def scheduler_job(request_id, revision, coverage, output_size):  # noqa: ANN001
         revision=revision,
         coverage=coverage,
         source_path="source.tif",
+        render_bands=render_bands,
         output_width=output_size,
         output_height=output_size,
     )
@@ -222,12 +247,13 @@ class _FakeDataset:
         height: int = 100,
         bounds: tuple[float, float, float, float] = (0.0, 0.0, 4.0, 4.0),
         mask_left_half: bool = False,
+        band_count: int = 3,
     ) -> None:
         self.width = width
         self.height = height
         self._bounds = bounds
         self.mask_left_half = mask_left_half
-        self.count = 3
+        self.count = band_count
         self.crs = GEOGRAPHIC_CRS
         self.bounds = bounds
         self.transform = from_bounds(*bounds, width, height)

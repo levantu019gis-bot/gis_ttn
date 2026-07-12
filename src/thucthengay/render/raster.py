@@ -35,6 +35,7 @@ from thucthengay.gis.crs import (
     geographic_window_to_raster_window,
     normalize_crs_key,
 )
+from thucthengay.models import LayerRenderBands
 from thucthengay.models.issue import Issue, IssueScope, IssueSeverity
 from thucthengay.render.diagnostics import RenderDiagnostics
 from thucthengay.render.spec import MAX_RENDER_PIXELS, RenderLayerRef, RenderSpec
@@ -148,7 +149,14 @@ def _geo_to_pixel(
     return row0, row1, col0, col1
 
 
-def _resolve_band_indexes(src: DatasetReader) -> tuple[tuple[int, ...], int | None]:
+def _resolve_band_indexes(
+    src: DatasetReader,
+    render_bands: LayerRenderBands | None = None,
+) -> tuple[tuple[int, ...], int | None]:
+    if render_bands is not None:
+        _validate_render_bands(src, render_bands)
+        return (render_bands.red, render_bands.green, render_bands.blue), render_bands.alpha
+
     colorinterp = tuple(src.colorinterp or ())
     alpha_index = None
     for index, interp in enumerate(colorinterp, start=1):
@@ -169,6 +177,20 @@ def _resolve_band_indexes(src: DatasetReader) -> tuple[tuple[int, ...], int | No
     if src.count >= 3:
         return (1, 2, 3), alpha_index
     return (1,), alpha_index
+
+
+def _validate_render_bands(src: DatasetReader, render_bands: LayerRenderBands) -> None:
+    count = int(getattr(src, "count", 0) or 0)
+    requested: list[int] = [render_bands.red, render_bands.green, render_bands.blue]
+    if render_bands.alpha is not None:
+        requested.append(render_bands.alpha)
+    invalid = [band for band in requested if band > count]
+    if invalid:
+        msg = (
+            "Render bands vuot qua so band cua raster "
+            f"(count={count}, requested={sorted(set(invalid))})."
+        )
+        raise ValueError(msg)
 
 
 def _scale_to_uint8(data: np.ma.MaskedArray | np.ndarray) -> np.ndarray:
@@ -230,6 +252,7 @@ def _read_layer_into(
     geo_bbox: tuple[float, float, float, float],
     canvas: np.ndarray,
     covered_mask: np.ndarray,
+    render_bands: LayerRenderBands | None,
     diagnostics: RenderDiagnostics | None,
 ) -> _LayerReadResult:
     """Read ``dataset`` into the ``canvas`` region corresponding to its overlap.
@@ -290,7 +313,7 @@ def _read_layer_into(
         if read_out_h <= 0 or read_out_w <= 0:
             return _LayerReadResult(written=False, fully_occluded=True)
 
-        read_bands, alpha_index = _resolve_band_indexes(src)
+        read_bands, alpha_index = _resolve_band_indexes(src, render_bands)
         if diagnostics is not None:
             diagnostics.increment("rasterio.read.calls")
             diagnostics.increment("raster.window_read.output_pixels", read_out_h * read_out_w)
@@ -564,6 +587,7 @@ def _render_raster_layers_result(
                     geo_bbox=geo_bbox,
                     canvas=canvas,
                     covered_mask=covered_mask,
+                    render_bands=layer.render_bands,
                     diagnostics=diagnostics,
                 )
                 if layer_result.written or layer_result.fully_occluded:

@@ -13,6 +13,7 @@ from rasterio.io import MemoryFile
 from rasterio.transform import from_bounds
 
 from thucthengay.gis.crs import GEOGRAPHIC_CRS, get_transformer
+from thucthengay.models import LayerRenderBands
 from thucthengay.models.config import GridConfig, GridInterval
 from thucthengay.models.template import MapFrame
 from thucthengay.render import (
@@ -86,19 +87,23 @@ def _make_memfile(
     dtype: str = "uint8",
     nodata: int | float | None = None,
     alpha: np.ndarray | None = None,
+    extra_bands: tuple[int, ...] = (),
     transform: Affine | None = None,
     nodata_right_half: bool = False,
 ) -> MemoryFile:
     """Return an open MemoryFile holding a tiny GeoTIFF; caller closes it."""
     left, bottom, right, top = bounds
     transform = transform or from_bounds(left, bottom, right, top, width, height)
-    band_count = 4 if alpha is not None else 3
+    band_count = 4 if alpha is not None else 3 + len(extra_bands)
     data = np.zeros((band_count, height, width), dtype=np.dtype(dtype))
     data[0, :, :] = rgb[0]
     data[1, :, :] = rgb[1]
     data[2, :, :] = rgb[2]
     if alpha is not None:
         data[3, :, :] = alpha.astype(data.dtype)
+    else:
+        for offset, value in enumerate(extra_bands, start=3):
+            data[offset, :, :] = value
     if nodata is not None and nodata_right_half:
         data[:, :, width // 2 :] = nodata
     profile = {
@@ -201,6 +206,27 @@ class TestSingleLayerHappyPath:
         # Center pixel should be from the layer, not the background
         cy, cx = 8, 8
         assert tuple(canvas[cy, cx].tolist()) == (10, 20, 30)
+
+    def test_manual_render_bands_override_default_band_order(self) -> None:
+        memfile = _make_memfile(
+            bounds=(106.0, 10.0, 107.0, 11.0),
+            crs=GEOGRAPHIC_CRS,
+            rgb=(10, 20, 30),
+            extra_bands=(40,),
+        )
+        layer = RenderLayerRef(
+            layer_id="L1",
+            source_path="L1.tif",
+            cache_path="L1.tif",
+            order=0,
+            render_bands=LayerRenderBands(red=4, green=3, blue=2),
+        )
+        spec = _spec(layers=[layer], width=16, height=16, bg_color="#FFFFFF")
+
+        with _opener_for({"L1.tif": memfile}) as opener:
+            result = render_raster_layers(spec, dataset_opener=opener)
+
+        assert tuple(result.canvas[8, 8].tolist()) == (40, 30, 20)
 
 
 class TestCrsMismatch:

@@ -59,6 +59,7 @@ from thucthengay.models.issue import Issue, IssueScope, IssueSeverity
 from thucthengay.models.layer import (
     ImageLayer,
     ImageLayerSourceKind,
+    LayerRenderBands,
     MetadataSource,
     MetadataStatus,
 )
@@ -125,6 +126,7 @@ __all__ = [
     "HistoricalSelectionMode",
     "ImageLayer",
     "ImageLayerSourceKind",
+    "LayerRenderBands",
     "Issue",
     "IssueScope",
     "IssueSeverity",
