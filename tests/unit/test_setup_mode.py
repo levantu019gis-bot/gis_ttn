@@ -200,6 +200,71 @@ def test_setup_mode_exposes_historical_date_range_from_config(tmp_path: Path) ->
     assert selected_paths.historical_image_selection.end_date == date(2026, 5, 31)
 
 
+def test_setup_mode_exposes_latest_historical_images_from_config(tmp_path: Path) -> None:
+    qapp()
+    config_file = tmp_path / "project.json"
+    config_file.write_text(
+        (
+            '{"historical_loading": {"enabled": true, "image_selection": {'
+            '"mode": "latest_images", "limit_per_target": 5}}, "targets": []}'
+        ),
+        encoding="utf-8",
+    )
+    imagery_folder = tmp_path / "imagery"
+    imagery_folder.mkdir()
+    workspace_folder = tmp_path / "workspace"
+    workspace_folder.mkdir()
+
+    setup = SetupMode()
+    setup.config_row.set_path(config_file)
+    setup.imagery_row.set_path(imagery_folder)
+    setup.workspace_row.set_path(workspace_folder)
+
+    selected_paths = setup.selected_paths()
+
+    assert selected_paths is not None
+    assert setup.historical_mode_combo.currentData() == "latest_images"
+    assert setup.historical_limit_spin.isEnabled()
+    assert setup.historical_limit_spin.value() == 5
+    assert selected_paths.historical_image_selection is not None
+    assert selected_paths.historical_image_selection.mode == (
+        HistoricalSelectionMode.LATEST_IMAGES
+    )
+    assert selected_paths.historical_image_selection.limit_per_target == 5
+
+
+def test_setup_mode_can_select_latest_historical_images_manually(
+    tmp_path: Path,
+) -> None:
+    qapp()
+    config_file = tmp_path / "project.json"
+    config_file.write_text("{}", encoding="utf-8")
+    imagery_folder = tmp_path / "imagery"
+    imagery_folder.mkdir()
+    workspace_folder = tmp_path / "workspace"
+    workspace_folder.mkdir()
+
+    setup = SetupMode()
+    setup.config_row.set_path(config_file)
+    setup.imagery_row.set_path(imagery_folder)
+    setup.workspace_row.set_path(workspace_folder)
+    setup.historical_loading_checkbox.setChecked(True)
+    setup.historical_mode_combo.setCurrentIndex(
+        setup.historical_mode_combo.findData("latest_images")
+    )
+    setup.historical_limit_spin.setValue(7)
+
+    selected_paths = setup.selected_paths()
+
+    assert selected_paths is not None
+    assert selected_paths.historical_loading_enabled is True
+    assert selected_paths.historical_image_selection is not None
+    assert selected_paths.historical_image_selection.mode == (
+        HistoricalSelectionMode.LATEST_IMAGES
+    )
+    assert selected_paths.historical_image_selection.limit_per_target == 7
+
+
 def test_setup_mode_can_request_opening_existing_workspace_with_workspace_only(
     tmp_path: Path,
 ) -> None:

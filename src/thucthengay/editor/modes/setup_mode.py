@@ -15,6 +15,7 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QPushButton,
+    QSpinBox,
     QVBoxLayout,
     QWidget,
 )
@@ -33,6 +34,7 @@ from thucthengay.models import HistoricalImageSelectionConfig, HistoricalSelecti
 from thucthengay.workspace import WorkspaceService
 
 _HISTORICAL_MODE_LATEST_DATE = "latest_date"
+_HISTORICAL_MODE_LATEST_IMAGES = "latest_images"
 _HISTORICAL_MODE_DATE_RANGE = "date_range"
 
 
@@ -97,8 +99,19 @@ class SetupMode(QWidget):
             _HISTORICAL_MODE_LATEST_DATE,
         )
         self.historical_mode_combo.addItem(
+            "Latest images",
+            _HISTORICAL_MODE_LATEST_IMAGES,
+        )
+        self.historical_mode_combo.addItem(
             "Date range",
             _HISTORICAL_MODE_DATE_RANGE,
+        )
+        self.historical_limit_spin = QSpinBox()
+        self.historical_limit_spin.setObjectName("setupHistoricalLimitPerTarget")
+        self.historical_limit_spin.setRange(1, 999)
+        self.historical_limit_spin.setValue(5)
+        self.historical_limit_spin.setToolTip(
+            "Maximum number of newest historical images to load for each target."
         )
         self.historical_start_date_edit = QDateEdit()
         self.historical_start_date_edit.setObjectName("setupHistoricalStartDate")
@@ -161,6 +174,9 @@ class SetupMode(QWidget):
         self.historical_mode_combo.currentIndexChanged.connect(
             self._update_historical_controls_state
         )
+        self.historical_mode_combo.currentIndexChanged.connect(
+            self._update_historical_mode_row_visibility
+        )
         self.historical_start_date_edit.dateChanged.connect(self._sync_historical_date_bounds)
         self.historical_end_date_edit.dateChanged.connect(self._sync_historical_date_bounds)
         self.ingest_button.clicked.connect(self._emit_ingest_requested)
@@ -171,6 +187,7 @@ class SetupMode(QWidget):
         self.stop_button.clicked.connect(self._emit_stop_requested)
         self.set_recent_projects([])
         self._update_action_state()
+        self._update_historical_mode_row_visibility()
 
     @property
     def path_rows(self) -> tuple[PathPickerRow, PathPickerRow, PathPickerRow]:
@@ -296,6 +313,9 @@ class SetupMode(QWidget):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(8)
         layout.addWidget(self.historical_mode_combo)
+        self.historical_limit_label = QLabel("Count")
+        layout.addWidget(self.historical_limit_label)
+        layout.addWidget(self.historical_limit_spin)
         layout.addWidget(QLabel("From"))
         layout.addWidget(self.historical_start_date_edit)
         layout.addWidget(QLabel("To"))
@@ -354,7 +374,14 @@ class SetupMode(QWidget):
 
         settings = read_historical_loading_settings(config_file)
         self.historical_loading_checkbox.setChecked(settings.enabled)
-        if settings.image_selection.mode == HistoricalSelectionMode.DATE_RANGE:
+        if settings.image_selection.mode == HistoricalSelectionMode.LATEST_IMAGES:
+            self.historical_mode_combo.setCurrentIndex(
+                max(0, self.historical_mode_combo.findData(_HISTORICAL_MODE_LATEST_IMAGES))
+            )
+            self.historical_limit_spin.setValue(
+                settings.image_selection.limit_per_target or 5
+            )
+        elif settings.image_selection.mode == HistoricalSelectionMode.DATE_RANGE:
             self.historical_mode_combo.setCurrentIndex(
                 max(0, self.historical_mode_combo.findData(_HISTORICAL_MODE_DATE_RANGE))
             )
@@ -371,13 +398,25 @@ class SetupMode(QWidget):
                 max(0, self.historical_mode_combo.findData(_HISTORICAL_MODE_LATEST_DATE))
             )
         self._update_historical_controls_state()
+        self._update_historical_mode_row_visibility()
 
     def _update_historical_controls_state(self, *_args: object) -> None:
         enabled = self.historical_loading_checkbox.isChecked() and not self._ingestion_running
+        latest_images = (
+            self.historical_mode_combo.currentData() == _HISTORICAL_MODE_LATEST_IMAGES
+        )
         date_range = self.historical_mode_combo.currentData() == _HISTORICAL_MODE_DATE_RANGE
         self.historical_mode_combo.setEnabled(enabled)
+        self.historical_limit_spin.setEnabled(enabled and latest_images)
         self.historical_start_date_edit.setEnabled(enabled and date_range)
         self.historical_end_date_edit.setEnabled(enabled and date_range)
+
+    def _update_historical_mode_row_visibility(self, *_args: object) -> None:
+        latest_images = (
+            self.historical_mode_combo.currentData() == _HISTORICAL_MODE_LATEST_IMAGES
+        )
+        self.historical_limit_label.setVisible(latest_images)
+        self.historical_limit_spin.setVisible(latest_images)
 
     def _sync_historical_date_bounds(self, *_args: object) -> None:
         start = self.historical_start_date_edit.date()
@@ -398,6 +437,11 @@ class SetupMode(QWidget):
         self.historical_end_date_edit.setDate(end)
 
     def _selected_historical_image_selection(self) -> HistoricalImageSelectionConfig:
+        if self.historical_mode_combo.currentData() == _HISTORICAL_MODE_LATEST_IMAGES:
+            return HistoricalImageSelectionConfig(
+                mode=HistoricalSelectionMode.LATEST_IMAGES,
+                limit_per_target=self.historical_limit_spin.value(),
+            )
         if self.historical_mode_combo.currentData() == _HISTORICAL_MODE_DATE_RANGE:
             return HistoricalImageSelectionConfig(
                 mode=HistoricalSelectionMode.DATE_RANGE,

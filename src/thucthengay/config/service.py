@@ -210,6 +210,14 @@ def _historical_selection_for_setup(raw_selection: object) -> HistoricalImageSel
     if not isinstance(raw_selection, dict):
         return _latest_historical_date_selection()
 
+    if raw_selection.get("mode") == HistoricalSelectionMode.LATEST_IMAGES.value:
+        limit_per_target = raw_selection.get("limit_per_target")
+        if isinstance(limit_per_target, int) and limit_per_target >= 1:
+            return HistoricalImageSelectionConfig(
+                mode=HistoricalSelectionMode.LATEST_IMAGES,
+                limit_per_target=limit_per_target,
+            )
+
     if raw_selection.get("mode") == HistoricalSelectionMode.DATE_RANGE.value:
         start_date = _date_from_raw(raw_selection.get("start_date"))
         end_date = _date_from_raw(raw_selection.get("end_date"))
