@@ -158,6 +158,37 @@ def test_missing_template_metadata_blocks_with_target_remediation() -> None:
     assert "PPTX template" in issue.remediation
 
 
+def test_missing_target_still_blocks_regular_composition() -> None:
+    result = validate_composition_readiness(
+        ValidationContext(
+            composition=composition(),
+            target=None,
+            template_metadata=None,
+        )
+    )
+
+    assert "target.missing" in issue_ids(result)
+    assert result.blocking is True
+
+
+def test_unmatched_geometry_composition_does_not_require_target_config() -> None:
+    unmatched = composition(
+        composition_id="__unmatched__abc123__20260525",
+        target_id="__unmatched__abc123",
+    )
+
+    result = validate_composition_readiness(
+        ValidationContext(
+            composition=unmatched,
+            target=None,
+            template_metadata=None,
+        )
+    )
+
+    assert "target.missing" not in issue_ids(result)
+    assert result.passed is True
+
+
 def test_invalid_template_metadata_error_blocks_readiness() -> None:
     result = validate_composition_readiness(context(template_error="bad json"))
 

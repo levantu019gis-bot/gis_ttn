@@ -34,7 +34,7 @@ from thucthengay.models import (
     TemplateMetadata,
     target_order_key,
 )
-from thucthengay.models.config import GridInterval
+from thucthengay.models.config import GridConfig, GridInterval
 
 
 class ConfigUpdateError(RuntimeError):
@@ -150,6 +150,7 @@ def load_project_config(config_path: str | Path) -> ConfigLoadResult:
     for target in result.enabled_targets:
         _resolve_runtime_target_assets(config_file, target)
         _validate_target_references(config_file, target, result)
+    _validate_unmatched_template_references(config_file, result)
 
     result.issues.extend(template_compatibility_issues(result.loaded_templates.values()))
     return result
@@ -444,6 +445,79 @@ def _validate_target_references(
             compare_loaded_template.metadata.model_dump(mode="json")
         )
     result.target_paths[target.id] = target_paths
+
+
+def _validate_unmatched_template_references(
+    config_file: Path,
+    result: ConfigLoadResult,
+) -> None:
+    config = result.config
+    if config is None:
+        return
+    unmatched = config.unmatched_images
+    if not unmatched.enabled or not unmatched.allow_export or unmatched.export is None:
+        return
+
+    grid = unmatched.grid or GridConfig(
+        interval=GridInterval(minutes=1),
+        label_format=config.defaults.grid.label_format,
+        style=dict(config.defaults.grid.style),
+    )
+    target = TargetConfig.model_validate(
+        {
+            "id": unmatched.target_id_prefix,
+            "enabled": False,
+            "group": unmatched.review_group.model_dump(mode="python"),
+            "sort_order": 10_000,
+            "name": unmatched.target_name,
+            "alias": unmatched.target_name,
+            "coordinate": [0.0, 0.0],
+            "scale": unmatched.view.scale,
+            "grid": grid.model_dump(mode="python"),
+            "export": unmatched.export.model_dump(mode="python", by_alias=True),
+            "metadata": dict(unmatched.metadata),
+        }
+    )
+    template_pptx_file = resolve_config_asset_path(
+        config_file,
+        target.export.template_pptx_file,
+    )
+    compare_template_pptx_file = (
+        resolve_config_asset_path(config_file, target.export.compare_template_pptx_file)
+        if target.export.compare_template_pptx_file
+        else None
+    )
+
+    try:
+        loaded_template = load_target_template(target, template_pptx_file)
+    except TemplateLoadError as error:
+        result.issues.append(_template_load_issue(target.id, error))
+        return
+
+    unmatched.metadata["template_metadata"] = loaded_template.metadata.model_dump(mode="json")
+    if compare_template_pptx_file is not None:
+        try:
+            compare_placeholders = (
+                target.export.compare_placeholders or target.export.placeholders
+            )
+            if (
+                compare_template_pptx_file == template_pptx_file
+                and target.export.compare_placeholders is None
+            ):
+                compare_loaded_template = loaded_template
+            else:
+                compare_loaded_template = load_target_template(
+                    target,
+                    compare_template_pptx_file,
+                    placeholders=compare_placeholders,
+                    metadata_source="compare_template_pptx_file",
+                )
+        except TemplateLoadError as error:
+            result.issues.append(_template_load_issue(target.id, error))
+            return
+        unmatched.metadata[COMPARE_TEMPLATE_METADATA_KEY] = (
+            compare_loaded_template.metadata.model_dump(mode="json")
+        )
 
 
 def _resolve_historical_registry_path(

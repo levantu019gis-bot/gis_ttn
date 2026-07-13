@@ -391,6 +391,41 @@ class TargetConfig(BaseModel):
         return validate_windows_safe_filename_component(value, field_name="target id")
 
 
+class UnmatchedImagesViewConfig(BaseModel):
+    """Default view settings for images outside configured target geometry."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    center_mode: Literal["raster_center"] = "raster_center"
+    scale: int = Field(default=50000, gt=0)
+
+
+class UnmatchedImagesConfig(BaseModel):
+    """Review/export defaults for images that do not intersect any configured target."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    enabled: bool = False
+    review_group: TargetGroupConfig = Field(
+        default_factory=lambda: TargetGroupConfig(key="999", title="Anh ngoai geometry")
+    )
+    target_id_prefix: Literal["__unmatched__"] = "__unmatched__"
+    target_name: str = "Anh ngoai geometry"
+    allow_include: bool = False
+    allow_export: bool = False
+    view: UnmatchedImagesViewConfig = Field(default_factory=UnmatchedImagesViewConfig)
+    grid: GridConfig | None = None
+    export: TargetExportConfig | None = None
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+    @model_validator(mode="after")
+    def export_requires_export_config(self) -> UnmatchedImagesConfig:
+        if (self.allow_include or self.allow_export) and self.export is None:
+            msg = "unmatched_images.export is required when allow_include or allow_export is true"
+            raise ValueError(msg)
+        return self
+
+
 def target_group_order_key(target: TargetConfig) -> tuple[int, tuple[int, ...], str]:
     """Return the primary ordering key for a target group."""
     group = target.group
@@ -431,6 +466,7 @@ class ProjectConfig(BaseModel):
     historical_loading: HistoricalLoadingConfig = Field(
         default_factory=HistoricalLoadingConfig
     )
+    unmatched_images: UnmatchedImagesConfig = Field(default_factory=UnmatchedImagesConfig)
     filename_patterns: list[FilenamePatternConfig] = Field(default_factory=list)
     targets: list[TargetConfig]
 
@@ -458,6 +494,13 @@ class ProjectConfig(BaseModel):
             )
             for target in targets
         ]
+        unmatched = normalized.get("unmatched_images")
+        if isinstance(unmatched, dict):
+            normalized["unmatched_images"] = _unmatched_with_project_defaults(
+                unmatched,
+                grid_defaults=grid_defaults if isinstance(grid_defaults, dict) else {},
+                export_defaults=export_defaults if isinstance(export_defaults, dict) else {},
+            )
         return normalized
 
 
@@ -471,6 +514,24 @@ def _target_with_project_defaults(
         return target
 
     normalized = dict(target)
+    grid = normalized.get("grid")
+    if isinstance(grid, dict) and grid_defaults:
+        normalized["grid"] = _grid_with_project_defaults(grid, grid_defaults)
+
+    export = normalized.get("export")
+    if isinstance(export, dict) and export_defaults:
+        normalized["export"] = _export_with_project_defaults(export, export_defaults)
+
+    return normalized
+
+
+def _unmatched_with_project_defaults(
+    unmatched: dict[str, Any],
+    *,
+    grid_defaults: dict[str, Any],
+    export_defaults: dict[str, Any],
+) -> dict[str, Any]:
+    normalized = dict(unmatched)
     grid = normalized.get("grid")
     if isinstance(grid, dict) and grid_defaults:
         normalized["grid"] = _grid_with_project_defaults(grid, grid_defaults)

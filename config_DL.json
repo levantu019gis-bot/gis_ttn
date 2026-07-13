@@ -71,6 +71,85 @@
       "mode": "latest_date"
     }
   },
+  "unmatched_images": {
+    "enabled": true,
+    "review_group": {
+      "key": "999",
+      "title": "Anh ngoai geometry"
+    },
+    "target_id_prefix": "__unmatched__",
+    "target_name": "Anh ngoai geometry",
+    "allow_include": true,
+    "allow_export": true,
+    "view": {
+      "center_mode": "raster_center",
+      "scale": 50000
+    },
+    "grid": {
+      "interval": {
+        "minutes": 5
+      }
+    },
+    "export": {
+      "template_pptx_file": "data/templates/target_001.template.pptx",
+      "compare_template_pptx_file": "data/templates/target_003.template.pptx",
+      "template_txt_value": "xx",
+      "placeholders": [
+        {
+          "field": "map_image",
+          "kind": "map_image"
+        },
+        {
+          "field": "title",
+          "value": "Anh ngoai geometry ngay {capture_date}",
+          "kind": "text"
+        },
+        {
+          "field": "time",
+          "kind": "text"
+        },
+        {
+          "field": "comment",
+          "value": "",
+          "kind": "text"
+        }
+      ],
+      "compare_placeholders": [
+        {
+          "field": "map_image",
+          "kind": "map_image"
+        },
+        {
+          "field": "title",
+          "value": "Anh ngoai geometry ngay {capture_date}",
+          "kind": "text"
+        },
+        {
+          "field": "time_label_pane_A",
+          "value": "{time_label_pane_A}",
+          "kind": "text"
+        },
+        {
+          "field": "time_label_pane_B",
+          "value": "{time_label_pane_B}",
+          "kind": "text"
+        },
+        {
+          "field": "comment_label_pane_A",
+          "value": "",
+          "kind": "text"
+        },
+        {
+          "field": "comment_label_pane_B",
+          "value": "",
+          "kind": "text"
+        }
+      ]
+    },
+    "metadata": {
+      "fallback_kind": "unmatched_geometry"
+    }
+  },
   "filename_patterns": [
     {
       "name": "PlanetScope PSScene",

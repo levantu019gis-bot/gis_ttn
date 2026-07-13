@@ -89,6 +89,10 @@ from thucthengay.render.tile_preview import (
     render_tile_preview_map,
 )
 from thucthengay.render.tile_scheduler import TileScheduler
+from thucthengay.unmatched import (
+    is_unmatched_target_id,
+    unmatched_target_allows_include,
+)
 from thucthengay.validation import (
     ValidationContext,
     ValidationResult,
@@ -384,6 +388,11 @@ class ReviewEditMode(QWidget):
             layer_selection.currentChanged.connect(self._update_metadata_edit_button)
             layer_selection.currentChanged.connect(self._persist_selected_layer_session)
         self._update_review_action_state()
+
+    @property
+    def workspace_service(self) -> WorkspaceService | None:
+        """Return the currently opened workspace service, if any."""
+        return self._workspace_service
 
     def _persist_main_splitter_sizes(self, _position: int, _index: int) -> None:
         if self._preferences_service is None:
@@ -797,6 +806,14 @@ class ReviewEditMode(QWidget):
     def _include_selected(self) -> None:
         if self._workspace_service is None or self.selected_composition is None:
             return
+        target = self._target_for_composition(self.selected_composition)
+        if is_unmatched_target_id(
+            self.selected_composition.target_id
+        ) and not unmatched_target_allows_include(target):
+            self.action_summary.setText(
+                "Anh outside geometry chua gan voi target that nen khong the Include/Export."
+            )
+            return
 
         gate = self._review_gate(self.selected_composition)
         composition_id = self.selected_composition.composition_id
@@ -823,6 +840,13 @@ class ReviewEditMode(QWidget):
             return
 
         self.selected_composition = updated
+        if is_unmatched_target_id(updated.target_id):
+            self._advance_after_transition(updated.composition_id)
+            self.action_summary.setText(
+                "Da include anh outside geometry va chuyen sang muc ke tiep neu co. "
+                "Database history khong duoc cap nhat cho nhom nay."
+            )
+            return
         try:
             self._persist_included_target_alignment(updated)
         except (ConfigUpdateError, WorkspaceError) as error:
@@ -907,6 +931,13 @@ class ReviewEditMode(QWidget):
         target = self._target_for_composition(composition)
         template_metadata: TemplateMetadata | None = None
         template_error: str | None = None
+        if target is None and is_unmatched_target_id(composition.target_id):
+            return ValidationContext(
+                target=None,
+                composition=composition,
+                template_metadata=_fallback_template_metadata_for_composition(composition),
+                template_metadata_error=None,
+            )
         if target is not None:
             try:
                 template_metadata = template_metadata_for_composition(target, composition)
@@ -946,6 +977,15 @@ class ReviewEditMode(QWidget):
                 return target
         return None
 
+    def _render_target_for_composition(self, composition: Composition) -> TargetConfig | None:
+        target = self._target_for_composition(composition)
+        if target is not None:
+            return target
+        if is_unmatched_target_id(composition.target_id):
+            grid, _source = self._effective_grid_for_composition(composition)
+            return _fallback_target_for_composition(composition, grid=grid)
+        return None
+
     def _request_canvas_render(self, composition: Composition) -> None:
         """Build a RenderSpec and submit a background render for the GIS canvas."""
         if self._render_threads:
@@ -954,8 +994,9 @@ class ReviewEditMode(QWidget):
         visible = [layer for layer in composition.layers if layer.visible]
         if not visible:
             return
-        target = self._target_for_composition(composition)
+        target = self._render_target_for_composition(composition)
         if target is None:
+            self.gis_canvas.set_error("Khong tim thay cau hinh target cho composition.")
             return
         if self._workspace_service is None:
             return
@@ -980,7 +1021,9 @@ class ReviewEditMode(QWidget):
                 template_metadata_file=template_pptx_file_for_composition(
                     target,
                     composition,
-                ),
+                )
+                if not is_unmatched_target_id(composition.target_id)
+                else "",
                 output_width=canvas_width,
                 output_height=canvas_height,
                 compare_compositions=compare_compositions,
@@ -1213,7 +1256,7 @@ class ReviewEditMode(QWidget):
     def _request_target_preview(self, composition: Composition) -> None:
         """Build a full-coverage target preview and render it in a background thread."""
         self._cancel_target_render()
-        target = self._target_for_composition(composition)
+        target = self._render_target_for_composition(composition)
         if target is None or self._workspace_service is None:
             return
 
@@ -1227,7 +1270,9 @@ class ReviewEditMode(QWidget):
                 template_metadata_file=template_pptx_file_for_composition(
                     target,
                     composition,
-                ),
+                )
+                if not is_unmatched_target_id(composition.target_id)
+                else "",
                 output_width=self.target_preview.render_width(),
                 output_height=self.target_preview.render_height(),
             )
@@ -1794,7 +1839,20 @@ class ReviewEditMode(QWidget):
 
         self.previous_button.setEnabled(previous_available)
         self.skip_button.setEnabled(has_selection)
-        self.include_validate_button.setEnabled(has_selection)
+        is_unmatched = (
+            has_selection
+            and self.selected_composition is not None
+            and is_unmatched_target_id(self.selected_composition.target_id)
+        )
+        unmatched_target = (
+            self._target_for_composition(self.selected_composition)
+            if self.selected_composition is not None
+            else None
+        )
+        unmatched_blocked = is_unmatched and not unmatched_target_allows_include(
+            unmatched_target
+        )
+        self.include_validate_button.setEnabled(has_selection and not unmatched_blocked)
         self.refresh_canvas_button.setEnabled(has_selection)
         self.export_canvas_button.setEnabled(has_selection)
         self.revalidate_button.setEnabled(
@@ -1810,6 +1868,16 @@ class ReviewEditMode(QWidget):
             )
         else:
             self.action_summary.setText("Sẵn sàng: Include/Validate là action chính.")
+
+        if (
+            unmatched_blocked
+            and self.selected_composition is not None
+            and not self.selected_composition.needs_revalidation
+        ):
+            self.action_summary.setText(
+                "Anh outside geometry dang o che do review-only; "
+                "can gan target that truoc khi Include/Export."
+            )
 
     def _persist_layer_visibility(self, top_left, bottom_right, roles) -> None:  # noqa: ANN001
         if (
@@ -2265,6 +2333,11 @@ class ReviewEditMode(QWidget):
             explicit_aspect = target.metadata.get("map_frame_aspect")
             if _is_positive_number(explicit_aspect):
                 return float(explicit_aspect), 1.0
+        if is_unmatched_target_id(composition.target_id):
+            return (
+                GisCanvasWidget.DEFAULT_MAP_FRAME_WIDTH_POINTS,
+                GisCanvasWidget.DEFAULT_MAP_FRAME_HEIGHT_POINTS,
+            )
         return None
 
     def _load_temporal_compare_controls(self, composition: Composition) -> Composition:
@@ -2485,6 +2558,48 @@ class ReviewEditMode(QWidget):
 
 def _is_positive_number(value: object) -> bool:
     return isinstance(value, int | float) and not isinstance(value, bool) and value > 0
+
+
+def _fallback_template_metadata_for_composition(composition: Composition) -> TemplateMetadata:
+    return TemplateMetadata.model_validate(
+        {
+            "template_pptx": "",
+            "slide_index": 0,
+            "map_frame": {
+                "x": 0,
+                "y": 0,
+                "width": GisCanvasWidget.DEFAULT_MAP_FRAME_WIDTH_POINTS,
+                "height": GisCanvasWidget.DEFAULT_MAP_FRAME_HEIGHT_POINTS,
+            },
+            "metadata": {
+                "fallback_kind": "unmatched_geometry",
+                "composition_id": composition.composition_id,
+            },
+        }
+    )
+
+
+def _fallback_target_for_composition(
+    composition: Composition,
+    *,
+    grid: GridConfig,
+) -> TargetConfig:
+    return TargetConfig.model_validate(
+        {
+            "id": composition.target_id,
+            "enabled": False,
+            "name": "Images outside configured geometry",
+            "coordinate": list(composition.view.center),
+            "scale": composition.view.scale,
+            "grid": grid.model_dump(mode="python"),
+            "export": {
+                "template_pptx_file": "",
+                "final_render_dpi": 200,
+                "map_background_color": "#FFFFFF",
+            },
+            "metadata": {"fallback_kind": "unmatched_geometry"},
+        }
+    )
 
 
 def _map_frame_size(map_frame: object) -> tuple[float, float] | None:

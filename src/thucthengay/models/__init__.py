@@ -28,6 +28,8 @@ from thucthengay.models.config import (
     TargetExportConfig,
     TargetGroupConfig,
     TilePreviewConfig,
+    UnmatchedImagesConfig,
+    UnmatchedImagesViewConfig,
     target_group_order_key,
     target_order_key,
 )
@@ -146,6 +148,8 @@ __all__ = [
     "TargetExportConfig",
     "TargetGroupConfig",
     "TilePreviewConfig",
+    "UnmatchedImagesConfig",
+    "UnmatchedImagesViewConfig",
     "TemporalCompareOrientation",
     "TemporalCompareState",
     "target_group_order_key",

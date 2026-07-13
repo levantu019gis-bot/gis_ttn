@@ -15,6 +15,7 @@ from thucthengay.models import (
     IssueSeverity,
     TargetConfig,
 )
+from thucthengay.unmatched import is_unmatched_target_id
 from thucthengay.workspace import WorkspaceError, WorkspaceService
 
 HistorySyncProgressCallback = Callable[[str, str, int, int, bool], None]
@@ -95,6 +96,8 @@ def sync_export_history(
         )
         issues.extend(pane_issues)
         for history_composition in history_compositions:
+            if is_unmatched_target_id(history_composition.target_id):
+                continue
             if history_composition.composition_id in seen:
                 continue
             seen.add(history_composition.composition_id)

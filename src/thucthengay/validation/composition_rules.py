@@ -160,6 +160,8 @@ def _template_issues(context: ValidationContext) -> Iterable[Issue]:
     composition_id = composition.composition_id if composition is not None else None
 
     if context.target is None:
+        if target_id is not None and _is_unmatched_target_id(target_id):
+            return ()
         return (
             Issue(
                 issue_id="target.missing",
@@ -214,6 +216,10 @@ def _template_issues(context: ValidationContext) -> Iterable[Issue]:
         )
 
     return tuple(_map_frame_issues(context.template_metadata, context.target.id, composition_id))
+
+
+def _is_unmatched_target_id(target_id: str) -> bool:
+    return target_id.startswith("__unmatched__")
 
 
 def _map_frame_issues(

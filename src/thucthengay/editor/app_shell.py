@@ -26,7 +26,8 @@ from thucthengay.jobs import (
     JobState,
     run_satellite_download_job,
 )
-from thucthengay.models import Issue, IssueScope, RenderPreviewConfig
+from thucthengay.models import Issue, IssueScope, RenderPreviewConfig, TargetConfig
+from thucthengay.unmatched import targets_with_unmatched
 from thucthengay.utils.path_safety import is_absolute_path_text
 from thucthengay.workspace import WorkspaceError, WorkspaceService
 
@@ -217,17 +218,21 @@ class AppShell(QMainWindow):
             )
 
         history_service = _history_service_from_config(config_result)
+        review_targets = _workspace_targets_with_unmatched(
+            workspace_service,
+            config_result,
+        )
         self.review_edit_mode.set_render_preview_config(
             _render_preview_config_from_config_result(config_result)
         )
         self.review_edit_mode.load_workspace(
             workspace_service,
-            targets=config_result.enabled_targets,
+            targets=review_targets,
         )
         self.review_edit_mode.set_history_service(history_service)
         self.export_mode.load_workspace(
             workspace_service,
-            targets=config_result.enabled_targets,
+            targets=review_targets,
             template_issues=_export_template_issues(config_result),
             history_service=history_service,
         )
@@ -254,17 +259,21 @@ class AppShell(QMainWindow):
             return
 
         history_service = _history_service_from_config(config_result)
+        review_targets = _workspace_targets_with_unmatched(
+            workspace_service,
+            config_result,
+        )
         self.review_edit_mode.set_render_preview_config(
             _render_preview_config_from_config_result(config_result)
         )
         self.review_edit_mode.load_workspace(
             workspace_service,
-            targets=config_result.enabled_targets,
+            targets=review_targets,
         )
         self.review_edit_mode.set_history_service(history_service)
         self.export_mode.load_workspace(
             workspace_service,
-            targets=config_result.enabled_targets,
+            targets=review_targets,
             template_issues=_export_template_issues(config_result),
             history_service=history_service,
         )
@@ -315,9 +324,15 @@ class AppShell(QMainWindow):
         self.review_edit_mode.set_render_preview_config(
             _render_preview_config_from_config_result(config_result)
         )
-        self.review_edit_mode.refresh_config_targets(config_result.enabled_targets)
+        workspace_service = self.review_edit_mode.workspace_service
+        review_targets = (
+            _workspace_targets_with_unmatched(workspace_service, config_result)
+            if workspace_service is not None
+            else config_result.enabled_targets
+        )
+        self.review_edit_mode.refresh_config_targets(review_targets)
         self.export_mode.refresh_config_targets(
-            config_result.enabled_targets,
+            review_targets,
             template_issues=_export_template_issues(config_result),
         )
         self.config_mode.downstream_label.setText(
@@ -419,6 +434,24 @@ def _render_preview_config_from_config_result(
 
 def _export_template_issues(config_result: ConfigLoadResult) -> list[Issue]:
     return [issue for issue in config_result.issues if issue.scope == IssueScope.TEMPLATE]
+
+
+def _workspace_targets_with_unmatched(
+    workspace_service: WorkspaceService,
+    config_result: ConfigLoadResult,
+) -> list[TargetConfig]:
+    config = config_result.config
+    if config is None:
+        return list(config_result.enabled_targets)
+    try:
+        compositions = workspace_service.list_compositions()
+    except WorkspaceError:
+        compositions = []
+    return targets_with_unmatched(
+        config_result.enabled_targets,
+        compositions,
+        config.unmatched_images,
+    )
 
 
 def _fallback_manifest_config_path(config_path: str, workspace_root: Path) -> Path | None:
