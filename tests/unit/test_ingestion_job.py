@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from datetime import date, time
 from pathlib import Path
+from types import SimpleNamespace
 
 import numpy as np
 import rasterio
@@ -211,6 +212,65 @@ def test_ingestion_job_emits_progress_counters_and_success_state(tmp_path: Path)
     assert match_events[-1].matched_image_count == 1
     assert events[-1].state == JobState.SUCCESS
     assert events[-1].warning_count == 0
+
+
+def test_ingestion_job_auto_prepares_large_cached_rasters(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    imagery = tmp_path / "imagery"
+    geotiff = imagery / "20260525_101112_scene_cloud12.tif"
+    boundary = tmp_path / "target_001.geojson"
+    write_geotiff(geotiff)
+    write_geojson(boundary)
+    target = target_config()
+    config_result = config_result_for(target, boundary)
+    config_result.config = ProjectConfig.model_validate(
+        {
+            "defaults": {
+                "render_preview": {
+                    "prepared_raster_root": "prepared",
+                    "auto_prepare_min_size_mb": 0.000001,
+                }
+            },
+            "targets": [target.model_dump(mode="json")],
+        }
+    )
+    workspace = WorkspaceService(tmp_path / "workspace")
+    prepared_calls: list[tuple[Path, Path]] = []
+
+    def fake_prepare_raster_copy(source_path: Path, *, prepared_root: Path):
+        prepared_calls.append((Path(source_path), Path(prepared_root)))
+        prepared_path = Path(prepared_root) / f"{Path(source_path).stem}.prepared.tif"
+        prepared_path.parent.mkdir(parents=True, exist_ok=True)
+        prepared_path.write_bytes(b"prepared")
+        return SimpleNamespace(prepared_path=str(prepared_path))
+
+    monkeypatch.setattr(
+        "thucthengay.jobs.ingestion_job.prepare_raster_copy",
+        fake_prepare_raster_copy,
+    )
+    events: list[ProgressEvent] = []
+
+    result = run_ingestion_job(
+        job_id="job-auto-prepare",
+        config_result=config_result,
+        imagery_folder=imagery,
+        workspace_service=workspace,
+        publish=events.append,
+    )
+
+    composition = workspace.read_composition("target_001__20260525")
+    assert result.state == JobState.SUCCESS
+    assert len(prepared_calls) == 1
+    prepared_source, prepared_root = prepared_calls[0]
+    assert prepared_source.is_relative_to(workspace.paths.cache)
+    assert prepared_root == workspace.paths.root / "prepared"
+    assert composition.layers[0].prepared_path is not None
+    assert composition.layers[0].prepared_path.startswith("prepared/")
+    prepare_events = [event for event in events if event.stage == "prepare"]
+    assert prepare_events[-1].prepared_raster_count == 1
+    assert prepare_events[-1].total_prepare_raster_count == 1
 
 
 def test_ingestion_job_can_keep_images_outside_all_target_geometry(

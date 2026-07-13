@@ -21,6 +21,7 @@ from thucthengay.history import (
 from thucthengay.ingestion import (
     UNMATCHED_TARGET_ID_PREFIX,
     CacheImageInput,
+    CachePopulationResult,
     CompositionCreationResult,
     ScannedGeoTiff,
     TargetMatchingResult,
@@ -42,9 +43,11 @@ from thucthengay.models import (
     MetadataStatus,
     TargetConfig,
 )
+from thucthengay.render.preparation import prepare_raster_copy
 from thucthengay.workspace import WorkspaceError, WorkspaceService
 
 ProgressPublisher = Callable[[ProgressEvent], None]
+CheckpointCallback = Callable[[], None]
 HistoricalLoader = Callable[[HistoricalLoadingPlan], HistoricalLoadingResult]
 
 
@@ -214,12 +217,36 @@ def run_ingestion_job(
         progress.update(issues=issues)
         progress.emit(stage="cache", message="Đã copy ảnh phù hợp vào workspace cache.")
 
+        cache_result, prepare_issues = _auto_prepare_large_rasters(
+            cache_result,
+            config_result,
+            workspace_service,
+            progress=progress,
+            checkpoint=checkpoint,
+        )
+        if prepare_issues:
+            issues.extend(prepare_issues)
+            progress.update(issues=issues)
+
+        composition_total = len(cache_result.layers_by_target_date)
+        progress.emit(
+            stage="composition",
+            current=0,
+            total=composition_total,
+            message=f"Dang tao/cap nhat {composition_total} composition trong workspace.",
+        )
         composition_result = create_target_date_compositions(
             cache_result,
             _targets_by_id(config_result.enabled_targets),
             workspace_service,
             merge_existing=merge_existing and not clear_existing,
             checkpoint=checkpoint,
+        )
+        progress.emit(
+            stage="composition",
+            current=composition_total,
+            total=composition_total,
+            message=f"Da tao/cap nhat {composition_total} composition trong workspace.",
         )
     except JobCancelled:
         return _finish_with_cancelled(progress, job_id=job_id)
@@ -272,6 +299,8 @@ class _ProgressBuilder:
     warning_count: int = 0
     issues: list[Issue] | None = None
     created_composition_count: int = 0
+    prepared_raster_count: int = 0
+    total_prepare_raster_count: int = 0
 
     def update(
         self,
@@ -285,6 +314,8 @@ class _ProgressBuilder:
         total_target_count: int | None = None,
         issues: list[Issue] | None = None,
         created_composition_count: int | None = None,
+        prepared_raster_count: int | None = None,
+        total_prepare_raster_count: int | None = None,
     ) -> None:
         if scanned_image_count is not None:
             self.scanned_image_count = scanned_image_count
@@ -305,6 +336,10 @@ class _ProgressBuilder:
             self.warning_count = len(issues)
         if created_composition_count is not None:
             self.created_composition_count = created_composition_count
+        if prepared_raster_count is not None:
+            self.prepared_raster_count = prepared_raster_count
+        if total_prepare_raster_count is not None:
+            self.total_prepare_raster_count = total_prepare_raster_count
 
     def emit(
         self,
@@ -337,10 +372,180 @@ class _ProgressBuilder:
             current_target_name=current_target.name if current_target else None,
             current_target_matched_count=current_target_matched_count,
             created_composition_count=self.created_composition_count,
+            prepared_raster_count=self.prepared_raster_count,
+            total_prepare_raster_count=self.total_prepare_raster_count,
         )
         if self.publish is not None:
             self.publish(event)
         return event
+
+
+def _auto_prepare_large_rasters(
+    cache_result: CachePopulationResult,
+    config_result: ConfigLoadResult,
+    workspace_service: WorkspaceService,
+    *,
+    progress: _ProgressBuilder,
+    checkpoint: CheckpointCallback | None,
+) -> tuple[CachePopulationResult, list[Issue]]:
+    config = config_result.config
+    if config is None:
+        return cache_result, []
+    render_preview = config.defaults.render_preview
+    min_size_mb = render_preview.auto_prepare_min_size_mb
+    if min_size_mb is None:
+        return cache_result, []
+
+    threshold_bytes = int(float(min_size_mb) * 1024 * 1024)
+    candidates = _large_cached_layers(
+        cache_result,
+        workspace_root=workspace_service.paths.root,
+        threshold_bytes=threshold_bytes,
+    )
+    if not candidates:
+        progress.update(prepared_raster_count=0, total_prepare_raster_count=0)
+        progress.emit(
+            stage="prepare",
+            message=(
+                "Khong co raster nao vuot nguong auto prepare "
+                f"{min_size_mb:g} MB."
+            ),
+        )
+        return cache_result, []
+
+    prepared_root = _auto_prepared_raster_root(
+        workspace_service,
+        configured_root=render_preview.prepared_raster_root,
+    )
+    issues: list[Issue] = []
+    prepared_by_layer_id: dict[str, str] = {}
+    total = len(candidates)
+    progress.update(prepared_raster_count=0, total_prepare_raster_count=total)
+    progress.emit(
+        stage="prepare",
+        current=0,
+        total=total,
+        message=f"Dang auto prepare {total} raster lon hon {min_size_mb:g} MB.",
+    )
+
+    for index, layer in enumerate(candidates, start=1):
+        if checkpoint is not None:
+            checkpoint()
+        source_path = _preferred_layer_source_path(
+            layer,
+            workspace_root=workspace_service.paths.root,
+        )
+        try:
+            result = prepare_raster_copy(source_path, prepared_root=prepared_root)
+            prepared_by_layer_id[layer.layer_id] = _workspace_relative_or_absolute(
+                Path(result.prepared_path),
+                workspace_root=workspace_service.paths.root,
+            )
+        except (OSError, ValueError) as error:
+            issues.append(_auto_prepare_failed_issue(layer, source_path, error))
+        progress.update(prepared_raster_count=index, total_prepare_raster_count=total)
+        progress.emit(
+            stage="prepare",
+            current=index,
+            total=total,
+            message=f"Da auto prepare {index}/{total} raster lon.",
+        )
+        if checkpoint is not None:
+            checkpoint()
+
+    if not prepared_by_layer_id:
+        return cache_result, issues
+    return _cache_result_with_prepared_paths(cache_result, prepared_by_layer_id), issues
+
+
+def _large_cached_layers(
+    cache_result: CachePopulationResult,
+    *,
+    workspace_root: Path,
+    threshold_bytes: int,
+) -> list[ImageLayer]:
+    candidates: list[ImageLayer] = []
+    seen_layer_ids: set[str] = set()
+    for layers in cache_result.layers_by_target_date.values():
+        for layer in layers:
+            if layer.layer_id in seen_layer_ids:
+                continue
+            seen_layer_ids.add(layer.layer_id)
+            source_path = _preferred_layer_source_path(layer, workspace_root=workspace_root)
+            try:
+                size_bytes = source_path.stat().st_size
+            except OSError:
+                continue
+            if size_bytes > threshold_bytes:
+                candidates.append(layer)
+    return candidates
+
+
+def _preferred_layer_source_path(layer: ImageLayer, *, workspace_root: Path) -> Path:
+    raw_path = layer.cache_path or layer.source_path
+    path = Path(raw_path)
+    if not path.is_absolute():
+        path = workspace_root / path
+    return path
+
+
+def _auto_prepared_raster_root(
+    workspace_service: WorkspaceService,
+    *,
+    configured_root: str | None,
+) -> Path:
+    if configured_root:
+        root = Path(configured_root)
+        if not root.is_absolute():
+            root = workspace_service.paths.root / root
+        return root
+    return workspace_service.paths.root / "prepared_rasters"
+
+
+def _workspace_relative_or_absolute(path: Path, *, workspace_root: Path) -> str:
+    try:
+        return path.resolve().relative_to(workspace_root.resolve()).as_posix()
+    except ValueError:
+        return str(path)
+
+
+def _cache_result_with_prepared_paths(
+    cache_result: CachePopulationResult,
+    prepared_by_layer_id: dict[str, str],
+) -> CachePopulationResult:
+    return CachePopulationResult(
+        layers_by_target_date={
+            key: [
+                layer.model_copy(
+                    update={"prepared_path": prepared_by_layer_id[layer.layer_id]}
+                )
+                if layer.layer_id in prepared_by_layer_id
+                else layer
+                for layer in layers
+            ]
+            for key, layers in cache_result.layers_by_target_date.items()
+        },
+        issues=cache_result.issues,
+        cache_recreated=cache_result.cache_recreated,
+    )
+
+
+def _auto_prepare_failed_issue(
+    layer: ImageLayer,
+    source_path: Path,
+    error: Exception,
+) -> Issue:
+    return Issue(
+        issue_id="ingestion.auto_prepare_failed",
+        severity=IssueSeverity.WARNING,
+        scope=IssueScope.LAYER,
+        layer_id=layer.layer_id,
+        message=f"Khong auto prepare duoc raster lon: {source_path}",
+        remediation=(
+            "Kiem tra dung luong o dia/quyen ghi thu muc prepared_rasters. "
+            f"Chi tiet: {error}"
+        ),
+    )
 
 
 def _emit_target_match_progress(

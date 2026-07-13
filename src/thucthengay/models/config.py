@@ -239,6 +239,7 @@ class RenderPreviewConfig(BaseModel):
     diagnostics_enabled: bool = False
     prepared_raster_root: str | None = None
     auto_prefer_prepared_rasters: bool = True
+    auto_prepare_min_size_mb: float | None = Field(default=None, gt=0)
 
 
 class ProjectDefaultsConfig(BaseModel):

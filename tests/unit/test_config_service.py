@@ -427,6 +427,9 @@ def test_load_project_config_applies_shared_defaults_with_target_overrides(
                     "managed_source_root": "managed/sources",
                 },
                 "render_preview": {
+                    "prepared_raster_root": "prepared_rasters",
+                    "auto_prefer_prepared_rasters": True,
+                    "auto_prepare_min_size_mb": 200,
                     "tile_preview": {
                         "enabled": True,
                         "max_cache_bytes": 123456,
@@ -485,6 +488,10 @@ def test_load_project_config_applies_shared_defaults_with_target_overrides(
     assert tile_preview.live_preview_max_fps == 24
     assert tile_preview.cancel_on_interaction is False
     assert tile_preview.tile_decode_timeout_ms == 5000
+    render_preview = result.config.defaults.render_preview
+    assert render_preview.prepared_raster_root == "prepared_rasters"
+    assert render_preview.auto_prefer_prepared_rasters is True
+    assert render_preview.auto_prepare_min_size_mb == 200
 
 
 def test_load_project_config_resolves_historical_registry_database_path(

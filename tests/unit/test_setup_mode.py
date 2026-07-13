@@ -551,6 +551,54 @@ def test_setup_mode_shows_live_ingestion_progress_and_locks_action(tmp_path: Pat
     assert setup.stop_button.isHidden()
 
 
+def test_setup_mode_shows_workspace_and_prepare_progress() -> None:
+    qapp()
+    setup = SetupMode()
+    setup.start_ingestion_progress()
+
+    setup.show_ingestion_progress(
+        ProgressEvent(
+            job_id="job",
+            stage="composition",
+            current=3,
+            total=3,
+            message="Da tao composition.",
+        )
+    )
+    assert setup.progress_widget.workspace_progress.value() == 6
+    assert setup.progress_widget.workspace_progress.maximum() == 7
+    assert setup.progress_widget.workspace_count_label.text() == (
+        "Workspace: create compositions (6/7)"
+    )
+    assert setup.progress_widget.prepare_progress.isHidden()
+
+    setup.show_ingestion_progress(
+        ProgressEvent(
+            job_id="job",
+            stage="prepare",
+            current=2,
+            total=5,
+            message="Dang prepare raster.",
+            prepared_raster_count=2,
+            total_prepare_raster_count=5,
+        )
+    )
+    assert not setup.progress_widget.prepare_progress.isHidden()
+    assert setup.progress_widget.prepare_progress.value() == 2
+    assert setup.progress_widget.prepare_progress.maximum() == 5
+    assert setup.progress_widget.prepare_count_label.text() == "Prepare raster: 2/5"
+    assert setup.progress_widget.workspace_progress.value() == 5
+    assert setup.progress_widget.workspace_count_label.text() == (
+        "Workspace: prepare raster (5/7)"
+    )
+
+    setup.show_review_workspace_loading(3)
+    assert setup.progress_widget.workspace_progress.value() == 7
+    assert setup.progress_widget.workspace_count_label.text() == (
+        "Workspace: load Review/Edit (3 composition)"
+    )
+
+
 def test_setup_mode_emits_pause_resume_and_stop_controls(tmp_path: Path) -> None:
     qapp()
     setup = SetupMode()

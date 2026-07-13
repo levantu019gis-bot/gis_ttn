@@ -225,6 +225,8 @@ class AppShell(QMainWindow):
         self.review_edit_mode.set_render_preview_config(
             _render_preview_config_from_config_result(config_result)
         )
+        self.setup_mode.show_review_workspace_loading(len(result.composition_ids))
+        QApplication.processEvents()
         self.review_edit_mode.load_workspace(
             workspace_service,
             targets=review_targets,

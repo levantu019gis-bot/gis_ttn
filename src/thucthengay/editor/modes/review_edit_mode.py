@@ -183,11 +183,18 @@ class ReviewEditMode(QWidget):
         self.composition_title.setWordWrap(True)
 
         self.layer_model = LayerStackModel(self)
+        self.layer_model.reorderRequested.connect(self._reorder_layers_from_table)
         self.layer_table = QTableView()
         self.layer_table.setObjectName("reviewLayerStackTable")
         self.layer_table.setModel(self.layer_model)
         self.layer_table.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
         self.layer_table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
+        self.layer_table.setDragEnabled(True)
+        self.layer_table.setAcceptDrops(True)
+        self.layer_table.setDropIndicatorShown(True)
+        self.layer_table.setDragDropOverwriteMode(False)
+        self.layer_table.setDragDropMode(QAbstractItemView.DragDropMode.InternalMove)
+        self.layer_table.setDefaultDropAction(Qt.DropAction.MoveAction)
         self.layer_table.setAlternatingRowColors(True)
         self.layer_table.setTextElideMode(Qt.TextElideMode.ElideMiddle)
         self.layer_table.verticalHeader().setVisible(False)
@@ -195,8 +202,15 @@ class ReviewEditMode(QWidget):
         self.layer_table.setMinimumHeight(156)
         layer_header = self.layer_table.horizontalHeader()
         layer_header.setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
+        for column in (
+            LayerStackColumn.ORDER,
+            LayerStackColumn.FILENAME,
+            LayerStackColumn.ISSUE,
+            LayerStackColumn.ACTIONS,
+        ):
+            self.layer_table.setColumnHidden(int(column), True)
         layer_header.setSectionResizeMode(
-            int(LayerStackColumn.FILENAME),
+            int(LayerStackColumn.TIMESTAMP),
             QHeaderView.ResizeMode.Stretch,
         )
 
@@ -781,11 +795,21 @@ class ReviewEditMode(QWidget):
         self.compositionSelected.emit(composition)
 
     def keyPressEvent(self, event) -> None:  # noqa: ANN001, N802
+        key = event.key()
+        if event.modifiers() & Qt.KeyboardModifier.AltModifier:
+            if key == Qt.Key.Key_Up:
+                self._move_selected_layer(-1)
+                event.accept()
+                return
+            if key == Qt.Key.Key_Down:
+                self._move_selected_layer(1)
+                event.accept()
+                return
+
         if self._focus_needs_arrow_keys():
             super().keyPressEvent(event)
             return
 
-        key = event.key()
         if key == Qt.Key.Key_Right:
             self._include_selected()
             event.accept()
@@ -1920,6 +1944,24 @@ class ReviewEditMode(QWidget):
         if ordered_layer_ids is None:
             return
 
+        self._persist_layer_order(ordered_layer_ids, focus_layer_id=layer_id)
+
+    def _reorder_layers_from_table(
+        self,
+        focus_layer_id: str,
+        ordered_layer_ids: list[str],
+    ) -> None:
+        self._persist_layer_order(ordered_layer_ids, focus_layer_id=focus_layer_id)
+
+    def _persist_layer_order(
+        self,
+        ordered_layer_ids: list[str],
+        *,
+        focus_layer_id: str,
+    ) -> None:
+        if self._workspace_service is None or self.layer_model.composition_id is None:
+            return
+
         try:
             updated = self._workspace_service.reorder_layers(
                 self.layer_model.composition_id,
@@ -1932,10 +1974,8 @@ class ReviewEditMode(QWidget):
         self.selected_composition = updated
         self._update_detail_panels(updated)
         self._refresh_workspace_projection(updated.composition_id, validate_selection=False)
-        new_row = max(0, self.layer_table.currentIndex().row() + offset)
-        new_index = self.layer_model.index(new_row, 0)
-        if new_index.isValid():
-            self.layer_table.setCurrentIndex(new_index)
+        self._select_layer_by_id(focus_layer_id)
+        self.layer_table.setFocus()
 
     def _persist_canvas_view(self, center: list[float], scale: int) -> None:
         if self.selected_composition is None:

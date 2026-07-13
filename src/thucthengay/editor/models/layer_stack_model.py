@@ -8,7 +8,7 @@ from enum import IntEnum
 from pathlib import PurePath
 from typing import Any
 
-from PySide6.QtCore import QAbstractTableModel, QModelIndex, QObject, Qt
+from PySide6.QtCore import QAbstractTableModel, QMimeData, QModelIndex, QObject, Qt, Signal
 
 from thucthengay.models import (
     Composition,
@@ -49,6 +49,10 @@ class LayerStackModel(QAbstractTableModel):
     """Projection of composition layers for visibility/order review controls."""
 
     HEADERS = ("Hiện", "Thứ tự", "Thời gian", "Mây", "Metadata", "File", "Lỗi", "Menu")
+
+    LAYER_MIME_TYPE = "application/x-thucthengay-layer-id"
+
+    reorderRequested = Signal(str, list)
 
     def __init__(self, parent: QObject | None = None) -> None:
         super().__init__(parent)
@@ -192,16 +196,69 @@ class LayerStackModel(QAbstractTableModel):
 
     def flags(self, index: QModelIndex) -> Qt.ItemFlag:
         if not index.isValid():
-            return Qt.ItemFlag.NoItemFlags
+            return Qt.ItemFlag.ItemIsDropEnabled
 
         flags = (
             Qt.ItemFlag.ItemIsEnabled
             | Qt.ItemFlag.ItemIsSelectable
             | Qt.ItemFlag.ItemNeverHasChildren
+            | Qt.ItemFlag.ItemIsDragEnabled
+            | Qt.ItemFlag.ItemIsDropEnabled
         )
         if LayerStackColumn(index.column()) is LayerStackColumn.VISIBILITY:
             flags |= Qt.ItemFlag.ItemIsUserCheckable
         return flags
+
+    def supportedDragActions(self) -> Qt.DropAction:  # noqa: N802
+        return Qt.DropAction.MoveAction
+
+    def supportedDropActions(self) -> Qt.DropAction:  # noqa: N802
+        return Qt.DropAction.MoveAction
+
+    def mimeTypes(self) -> list[str]:  # noqa: N802
+        return [self.LAYER_MIME_TYPE]
+
+    def mimeData(self, indexes: list[QModelIndex]) -> QMimeData:  # noqa: N802
+        mime_data = QMimeData()
+        rows = sorted({index.row() for index in indexes if index.isValid()})
+        if len(rows) != 1:
+            return mime_data
+        layer_id = self.layer_id_for_index(self.index(rows[0], 0))
+        if layer_id is not None:
+            mime_data.setData(self.LAYER_MIME_TYPE, layer_id.encode("utf-8"))
+        return mime_data
+
+    def canDropMimeData(  # noqa: N802
+        self,
+        data: QMimeData,
+        action: Qt.DropAction,
+        row: int,
+        column: int,
+        parent: QModelIndex,
+    ) -> bool:
+        del row, column, parent
+        return action == Qt.DropAction.MoveAction and data.hasFormat(self.LAYER_MIME_TYPE)
+
+    def dropMimeData(  # noqa: N802
+        self,
+        data: QMimeData,
+        action: Qt.DropAction,
+        row: int,
+        column: int,
+        parent: QModelIndex,
+    ) -> bool:
+        del column
+        if action == Qt.DropAction.IgnoreAction:
+            return True
+        if action != Qt.DropAction.MoveAction or not data.hasFormat(self.LAYER_MIME_TYPE):
+            return False
+        layer_id = bytes(data.data(self.LAYER_MIME_TYPE)).decode("utf-8")
+        drop_row = _drop_row(row, parent, self.rowCount())
+        ordered_layer_ids = self.reordered_layer_ids_for_drop(layer_id, drop_row)
+        if ordered_layer_ids is None:
+            return False
+        self.reorderRequested.emit(layer_id, ordered_layer_ids)
+        return True
 
     def layer_id_for_index(self, index: QModelIndex) -> str | None:
         """Return the layer id for a table index, if valid."""
@@ -232,6 +289,27 @@ class LayerStackModel(QAbstractTableModel):
         layer_ids[index], layer_ids[new_index] = layer_ids[new_index], layer_ids[index]
         return layer_ids
 
+    def reordered_layer_ids_for_drop(
+        self,
+        layer_id: str,
+        drop_row: int,
+    ) -> list[str] | None:
+        """Return layer ids after moving ``layer_id`` before ``drop_row``."""
+        layer_ids = self.ordered_layer_ids()
+        try:
+            old_row = layer_ids.index(layer_id)
+        except ValueError:
+            return None
+
+        target_row = max(0, min(int(drop_row), len(layer_ids)))
+        moving_id = layer_ids.pop(old_row)
+        if old_row < target_row:
+            target_row -= 1
+        if target_row == old_row:
+            return None
+        layer_ids.insert(target_row, moving_id)
+        return layer_ids
+
     def has_no_visible_layers(self) -> bool:
         """Return true when selected composition has layers but none are visible."""
         return bool(self._layers) and not any(layer.visible for layer in self._layers)
@@ -253,6 +331,14 @@ def _display_text(layer: ImageLayer, column: LayerStackColumn, row: int) -> str:
     if column is LayerStackColumn.ACTIONS:
         return "..."
     return ""
+
+
+def _drop_row(row: int, parent: QModelIndex, row_count: int) -> int:
+    if row >= 0:
+        return row
+    if parent.isValid():
+        return parent.row()
+    return row_count
 
 
 def _coerce_check_state(value: Any) -> Qt.CheckState | None:

@@ -350,8 +350,6 @@ def _layer_signature(layers: list[ImageLayer]) -> tuple[tuple[object, ...], ...]
             layer.capture_date.isoformat() if layer.capture_date is not None else None,
             layer.capture_time.isoformat() if layer.capture_time is not None else None,
             layer.cloud_percent,
-            layer.render_bands.model_dump(mode="json") if layer.render_bands else None,
-            layer.symbology.model_dump(mode="json") if layer.symbology else None,
         )
         for layer in sorted(layers, key=lambda item: (item.order, item.layer_id))
     )

@@ -55,6 +55,8 @@ class ProgressEvent(BaseModel):
     current_geojson: str | None = None
     current_match_context: str | None = None
     created_composition_count: int = 0
+    prepared_raster_count: int = 0
+    total_prepare_raster_count: int = 0
 
     @property
     def percent(self) -> int | None:

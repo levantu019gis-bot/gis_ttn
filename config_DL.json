@@ -57,7 +57,10 @@
         "live_preview_max_fps": 30,
         "cancel_on_interaction": true,
         "tile_decode_timeout_ms": 0
-      }
+      },
+      "prepared_raster_root": "prepared_rasters",
+      "auto_prefer_prepared_rasters": true,
+      "auto_prepare_min_size_mb": 50
     }
   },
   "historical_registry": {

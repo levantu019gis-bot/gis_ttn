@@ -514,6 +514,10 @@ class SetupMode(QWidget):
             self._ingestion_stopping = False
             self._update_action_state()
 
+    def show_review_workspace_loading(self, composition_count: int) -> None:
+        """Show the main-thread handoff from ingestion to Review/Edit."""
+        self.progress_widget.show_review_loading(composition_count)
+
     def show_ingestion_summary(self, summary: IngestionSummary) -> None:
         """Show the latest ingestion summary in Setup mode."""
         self._ingestion_running = False

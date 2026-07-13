@@ -12,7 +12,7 @@ from rasterio.transform import from_origin
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
-from PySide6.QtCore import QPoint, QPointF, QRectF, Qt
+from PySide6.QtCore import QModelIndex, QPoint, QPointF, QRectF, Qt
 from PySide6.QtGui import QBrush, QFont, QImage, QKeyEvent, QWheelEvent
 from PySide6.QtWidgets import (
     QApplication,
@@ -65,6 +65,8 @@ from thucthengay.models import (
     GridInterval,
     ImageLayer,
     ImageLayerSourceKind,
+    LayerRenderBands,
+    LayerSymbology,
     MetadataSource,
     MetadataStatus,
     ProjectConfig,
@@ -769,6 +771,38 @@ def test_layer_stack_model_accepts_integer_check_state_values() -> None:
     assert visibility_index.data(Qt.ItemDataRole.CheckStateRole) == Qt.CheckState.Checked
     assert visibility_index.data(LayerStackRole.VISIBLE) is True
     assert model.has_no_visible_layers() is False
+
+
+def test_layer_stack_model_emits_reorder_for_internal_drop() -> None:
+    qapp()
+    model = LayerStackModel()
+    model.set_composition(
+        Composition(
+            composition_id="alpha__20260525",
+            target_id="alpha",
+            capture_date=date(2026, 5, 25),
+            view=ViewState(center=[106.7, 10.8], scale=50000),
+            layers=[
+                ImageLayer(layer_id="old", source_path="/imagery/old.tif", order=0),
+                ImageLayer(layer_id="new", source_path="/imagery/new.tif", order=1),
+            ],
+        )
+    )
+    requests: list[tuple[str, list[str]]] = []
+    model.reorderRequested.connect(
+        lambda layer_id, ordered: requests.append((layer_id, list(ordered)))
+    )
+
+    mime_data = model.mimeData([model.index(0, int(LayerStackColumn.TIMESTAMP))])
+
+    assert model.dropMimeData(
+        mime_data,
+        Qt.DropAction.MoveAction,
+        2,
+        0,
+        QModelIndex(),
+    )
+    assert requests == [("old", ["new", "old"])]
 
 
 def test_gis_canvas_states_fixed_frame_and_stale_render_guard() -> None:
@@ -2278,6 +2312,34 @@ def test_target_preview_updates_when_layer_source_or_cache_changes() -> None:
     assert preview.state() == TargetPreviewState.NEEDS_UPDATE
 
 
+def test_target_preview_ignores_layer_render_band_and_symbology_changes() -> None:
+    qapp()
+    preview = TargetPreviewWidget()
+    selected = composition(
+        "alpha__20260525",
+        "alpha",
+        date(2026, 5, 25),
+        needs_revalidation=False,
+    )
+    assert preview.set_composition(selected) is True
+    token = preview.set_loading()
+    preview.apply_render_result(
+        token,
+        "done",
+        canvas=np.full((12, 12, 3), 80, dtype=np.uint8),
+    )
+    changed_layer = selected.layers[0].model_copy(
+        update={
+            "render_bands": LayerRenderBands(red=3, green=2, blue=1),
+            "symbology": LayerSymbology(stretch_mode="none"),
+        }
+    )
+    changed = selected.model_copy(update={"layers": [changed_layer]})
+
+    assert preview.set_composition(changed) is False
+    assert preview.state() == TargetPreviewState.RENDERED
+
+
 def test_review_edit_target_preview_overlays_single_canvas_view(tmp_path: Path) -> None:
     qapp()
     service = WorkspaceService(tmp_path / "workspace")
@@ -2530,8 +2592,20 @@ def test_review_edit_layer_stack_saves_visibility_order_and_warning(
     reordered = service.read_composition("alpha__20260525")
     assert [layer.layer_id for layer in reordered.layers] == ["new", "old"]
     assert [layer.order for layer in reordered.layers] == [0, 1]
+    assert mode.layer_model.layer_id_for_index(mode.layer_table.currentIndex()) == "new"
     assert len(target_preview_requests) == 4
     assert target_preview_requests[-1] == (("new", 0, True), ("old", 1, False))
+
+    mode.keyPressEvent(
+        QKeyEvent(QKeyEvent.Type.KeyPress, Qt.Key.Key_Down, Qt.KeyboardModifier.AltModifier)
+    )
+
+    reordered = service.read_composition("alpha__20260525")
+    assert [layer.layer_id for layer in reordered.layers] == ["old", "new"]
+    assert [layer.order for layer in reordered.layers] == [0, 1]
+    assert mode.layer_model.layer_id_for_index(mode.layer_table.currentIndex()) == "new"
+    assert len(target_preview_requests) == 5
+    assert target_preview_requests[-1] == (("old", 0, False), ("new", 1, True))
 
 
 def test_review_edit_gis_canvas_saves_pan_zoom_and_marks_preview_stale(
@@ -3864,6 +3938,10 @@ def test_review_edit_layout_and_app_shell_expose_review_mode(tmp_path: Path) -> 
     assert isinstance(shell.review_edit_mode.tree_view, QTreeView)
     assert QueueFilter.ALL in shell.review_edit_mode.filter_buttons
     assert isinstance(shell.review_edit_mode.layer_table, QTableView)
+    assert shell.review_edit_mode.layer_table.isColumnHidden(int(LayerStackColumn.ORDER))
+    assert shell.review_edit_mode.layer_table.isColumnHidden(int(LayerStackColumn.FILENAME))
+    assert shell.review_edit_mode.layer_table.isColumnHidden(int(LayerStackColumn.ISSUE))
+    assert shell.review_edit_mode.layer_table.isColumnHidden(int(LayerStackColumn.ACTIONS))
     assert isinstance(shell.review_edit_mode.gis_canvas, QGraphicsView)
     assert shell.review_edit_mode.tree_view.uniformRowHeights()
     assert shell.review_edit_mode.minimumWidth() >= 960
