@@ -541,7 +541,7 @@ def _visible_layer_refs(composition: Composition) -> list[RenderLayerRef]:
         RenderLayerRef(
             layer_id=layer.layer_id,
             source_path=layer.source_path,
-            cache_path=layer.cache_path,
+            cache_path=layer.prepared_path or layer.cache_path,
             order=layer.order,
             render_bands=layer.render_bands,
             symbology=layer.symbology,

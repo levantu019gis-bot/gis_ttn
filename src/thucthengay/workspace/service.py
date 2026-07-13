@@ -226,6 +226,11 @@ class WorkspaceService:
                         if layer.cache_path is not None
                         else None
                     ),
+                    "prepared_path": (
+                        self._resolve_layer_path(layer.prepared_path)
+                        if layer.prepared_path is not None
+                        else None
+                    ),
                 }
             )
             for layer in composition.layers
@@ -587,6 +592,41 @@ class WorkspaceService:
         view = ViewState(center=center, scale=scale, rotation=0)
         updated = _mark_composition_edit_stale(
             _validated_composition_update(composition, {"view": view})
+        )
+        self.write_composition(updated)
+        return updated
+
+    def update_layer_prepared_path(
+        self,
+        composition_id: str,
+        layer_id: str,
+        *,
+        prepared_path: str | None,
+    ) -> Composition:
+        """Persist a prepared raster path while keeping the original source path."""
+
+        composition = self.read_composition(composition_id)
+        found = False
+        updated_layers: list[ImageLayer] = []
+        for layer in composition.layers:
+            if layer.layer_id == layer_id:
+                found = True
+                updated_layers.append(
+                    layer.model_copy(
+                        update={
+                            "prepared_path": prepared_path.strip()
+                            if prepared_path
+                            else None
+                        }
+                    )
+                )
+            else:
+                updated_layers.append(layer)
+        if not found:
+            msg = f"Layer not found in composition {composition_id}: {layer_id}"
+            raise WorkspaceError(msg)
+        updated = _mark_composition_edit_stale(
+            _validated_composition_update(composition, {"layers": updated_layers})
         )
         self.write_composition(updated)
         return updated

@@ -5,6 +5,10 @@ from __future__ import annotations
 import os
 import sys
 from pathlib import Path
+import sqlite3
+
+
+MIN_PROJ_DB_MINOR = 6
 
 
 def _bundle_root() -> Path:
@@ -19,11 +23,41 @@ def _first_existing(paths: list[Path]) -> Path | None:
 
 
 def _set_if_missing(name: str, paths: list[Path]) -> None:
-    if os.environ.get(name):
+    current = os.environ.get(name)
+    if current and _valid_existing_path(name, Path(current)):
         return
     path = _first_existing(paths)
     if path is not None:
         os.environ[name] = str(path)
+
+
+def _valid_existing_path(name: str, path: Path) -> bool:
+    if not path.exists():
+        return False
+    if name in {"PROJ_DATA", "PROJ_LIB"}:
+        return _valid_proj_path(path)
+    return True
+
+
+def _valid_proj_path(path: Path) -> bool:
+    text = str(path).lower()
+    if "postgresql" in text or "postgis" in text:
+        return False
+    proj_db = path / "proj.db"
+    if not proj_db.exists():
+        return False
+    try:
+        with sqlite3.connect(f"file:{proj_db}?mode=ro", uri=True) as connection:
+            row = connection.execute(
+                "SELECT value FROM metadata WHERE key = ?",
+                ("DATABASE.LAYOUT.VERSION.MINOR",),
+            ).fetchone()
+    except sqlite3.Error:
+        return False
+    try:
+        return row is not None and int(row[0]) >= MIN_PROJ_DB_MINOR
+    except (TypeError, ValueError):
+        return False
 
 
 def _prepend_path(paths: list[Path]) -> None:

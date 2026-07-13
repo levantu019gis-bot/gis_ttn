@@ -5,9 +5,12 @@ from __future__ import annotations
 import os
 import sys
 
+from thucthengay.runtime import initialize_gis_runtime
+
 
 def main(argv: list[str] | None = None) -> int:
     """Run the desktop app when possible, or a headless smoke check."""
+    initialize_gis_runtime()
     args = sys.argv[1:] if argv is None else argv
     if "--smoke" in args or "--no-gui" in args or _is_headless_linux():
         print("3.ThucTheNgay app ready.")

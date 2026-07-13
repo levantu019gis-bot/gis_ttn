@@ -346,10 +346,18 @@ class GisCanvasWidget(QGraphicsView):
             self._redraw()
         return token
 
-    def set_error(self, message: str) -> None:
+    def set_error(self, message: str, token: RenderRequestToken | None = None) -> bool:
+        if token is not None and token != self.begin_render_request():
+            return False
         self._state = GisCanvasState.ERROR
         self._state_message = message
         self._redraw()
+        return True
+
+    def invalidate_render_requests(self) -> RenderRequestToken:
+        """Advance the render generation and return the new current token."""
+        self._bump_generation()
+        return self.begin_render_request()
 
     def begin_render_request(self) -> RenderRequestToken:
         """Capture the current generation and view for async render application."""
@@ -1046,6 +1054,7 @@ def _visible_layer_signature(layers: list[ImageLayer]) -> tuple[tuple[object, ..
             layer.layer_id,
             layer.source_path,
             layer.cache_path,
+            layer.prepared_path,
             layer.visible,
             layer.order,
             layer.render_bands.model_dump(mode="json") if layer.render_bands else None,

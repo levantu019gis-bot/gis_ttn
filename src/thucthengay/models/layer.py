@@ -143,6 +143,7 @@ class ImageLayer(BaseModel):
     layer_id: str
     source_path: str
     cache_path: str | None = None
+    prepared_path: str | None = None
     visible: bool = True
     order: int = Field(ge=0)
     capture_date: date | None = None

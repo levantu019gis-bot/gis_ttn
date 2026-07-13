@@ -46,6 +46,11 @@ from thucthengay.render.overview import (
     prepare_raster_overview_output,
     raster_file_signature,
 )
+from thucthengay.render.preparation import (
+    PreparedRasterResult,
+    prepare_raster_copy,
+    prepared_raster_path,
+)
 from thucthengay.render.raster import (
     RasterRenderResult,
     RenderError,
@@ -137,6 +142,7 @@ __all__ = [
     "RasterOverviewReadinessCache",
     "RasterReadinessStatus",
     "RasterBaseCache",
+    "PreparedRasterResult",
     "DEFAULT_TILE_SIZE_DEGREES",
     "WORLD_GEO_WINDOW",
     "TileCache",
@@ -193,6 +199,8 @@ __all__ = [
     "inspect_raster_overview_readiness",
     "inspect_render_spec_overview_readiness",
     "prepare_raster_overview_output",
+    "prepare_raster_copy",
+    "prepared_raster_path",
     "raster_file_signature",
     "compose_cached_tiles",
     "compose_progressive_tiles",

@@ -77,6 +77,8 @@ from thucthengay.models import (
     WorkspaceSessionState,
 )
 from thucthengay.render.core import MapRenderCache, render_map_with_cache
+from thucthengay.render.diagnostics import RenderDiagnostics, RenderDiagnosticSummary
+from thucthengay.render.preparation import prepare_raster_copy
 from thucthengay.render.raster import render_raster_layers
 from thucthengay.render.spec import RenderSpecError, build_render_spec
 from thucthengay.render.target_preview import build_target_preview_spec
@@ -121,6 +123,7 @@ class ReviewEditMode(QWidget):
         self._render_threads: dict[str, QThread] = {}
         self._render_workers: dict[str, RenderWorker] = {}
         self._render_tokens: dict[str, object] = {}
+        self._render_diagnostics_by_job: dict[str, RenderDiagnostics] = {}
         self._canvas_render_epoch = 0
         self._canvas_render_cache = MapRenderCache()
         self._render_preview_config = RenderPreviewConfig()
@@ -204,6 +207,13 @@ class ReviewEditMode(QWidget):
         self.edit_metadata_button.setToolTip("Sửa ngày/giờ/cloud cho layer đang chọn")
         self.edit_metadata_button.clicked.connect(self._open_metadata_editor)
         self.edit_metadata_button.setEnabled(False)
+        self.prepare_raster_button = QPushButton("Prepare raster")
+        self.prepare_raster_button.setObjectName("reviewLayerPrepareRaster")
+        self.prepare_raster_button.setToolTip(
+            "Tao ban copy tiled GeoTIFF/overview cho layer dang chon"
+        )
+        self.prepare_raster_button.clicked.connect(self._prepare_selected_raster)
+        self.prepare_raster_button.setEnabled(False)
 
         self.layer_warning_label = QLabel(
             "Không còn layer nào đang bật. Cần bật ít nhất 1 layer."
@@ -270,6 +280,14 @@ class ReviewEditMode(QWidget):
         )
         self.refresh_canvas_button.clicked.connect(self._refresh_canvas_render)
         self.refresh_canvas_button.setEnabled(False)
+        self.render_diagnostics_checkbox = QCheckBox("Diagnostics")
+        self.render_diagnostics_checkbox.setObjectName("reviewRenderDiagnosticsToggle")
+        self.render_diagnostics_checkbox.setToolTip("Hien thi thong tin render/cache/tile")
+        self.render_diagnostics_checkbox.toggled.connect(self._toggle_render_diagnostics)
+        self.render_diagnostics_label = QLabel("")
+        self.render_diagnostics_label.setObjectName("reviewRenderDiagnostics")
+        self.render_diagnostics_label.setWordWrap(True)
+        self.render_diagnostics_label.setVisible(False)
         self.export_canvas_button = QPushButton("Xuất ảnh")
         self.export_canvas_button.setObjectName("reviewGisExportImage")
         self.export_canvas_button.setToolTip("Xuất ảnh đang hiển thị trong GIS editor")
@@ -531,12 +549,14 @@ class ReviewEditMode(QWidget):
         header = QHBoxLayout()
         header.addWidget(QLabel("GIS editor"))
         header.addStretch(1)
+        header.addWidget(self.render_diagnostics_checkbox)
         header.addWidget(self.refresh_canvas_button)
         header.addWidget(self.export_canvas_button)
 
         layout.addLayout(header)
         layout.addWidget(self._build_compare_panel())
         layout.addWidget(self.gis_canvas, 1)
+        layout.addWidget(self.render_diagnostics_label)
         return frame
 
     def _build_compare_panel(self) -> QWidget:
@@ -616,6 +636,7 @@ class ReviewEditMode(QWidget):
         toolbar.addWidget(QLabel("Layers"))
         toolbar.addStretch(1)
         toolbar.addWidget(self.edit_metadata_button)
+        toolbar.addWidget(self.prepare_raster_button)
         toolbar.addWidget(self.move_layer_up_button)
         toolbar.addWidget(self.move_layer_down_button)
 
@@ -968,6 +989,7 @@ class ReviewEditMode(QWidget):
             self.gis_canvas.set_error(_render_spec_error_message(error))
             return
         self._canvas_render_epoch += 1
+        diagnostics = self._new_render_diagnostics(spec) if self._diagnostics_enabled() else None
         request = PreviewRenderRequest(
             job_id=(
                 f"canvas:{composition.composition_id}:"
@@ -977,7 +999,11 @@ class ReviewEditMode(QWidget):
             revision=self.gis_canvas.generation,
             quality=PreviewRenderQuality.SETTLED_HIGH_RES,
             spec=spec,
+            diagnostics=diagnostics,
         )
+        if diagnostics is not None:
+            self._render_diagnostics_by_job[request.job_id] = diagnostics
+            self.gis_canvas.set_render_diagnostics(diagnostics)
         token = self.gis_canvas.set_loading("Đang render preview...")
         self._start_canvas_render(request, token)
 
@@ -1064,6 +1090,10 @@ class ReviewEditMode(QWidget):
             self.gis_canvas.set_live_preview_max_fps(
                 self._render_preview_config.tile_preview.live_preview_max_fps
             )
+        if hasattr(self, "render_diagnostics_checkbox"):
+            enabled = self._render_preview_config.diagnostics_enabled
+            self.render_diagnostics_checkbox.setChecked(enabled)
+            self.render_diagnostics_label.setVisible(enabled)
         self._canvas_tile_cache = TileCache(
             max_bytes=self._render_preview_config.tile_preview.max_cache_bytes
         )
@@ -1075,6 +1105,73 @@ class ReviewEditMode(QWidget):
         self._canvas_tile_scheduler = TileScheduler(cache=self._canvas_tile_cache)
         self._canvas_tile_state = TilePreviewState()
 
+    def _toggle_render_diagnostics(self, enabled: bool) -> None:
+        self.render_diagnostics_label.setVisible(enabled)
+        if not enabled:
+            self.gis_canvas.set_render_diagnostics(None)
+            self._update_render_diagnostics_label(None)
+
+    def _diagnostics_enabled(self) -> bool:
+        return bool(
+            self._render_preview_config.diagnostics_enabled
+            or self.render_diagnostics_checkbox.isChecked()
+        )
+
+    def _new_render_diagnostics(self, spec) -> RenderDiagnostics:  # noqa: ANN001
+        diagnostics = RenderDiagnostics(
+            enabled=True,
+            composition_id=getattr(spec, "composition_id", None),
+            target_id=getattr(spec, "target_id", None),
+            output_width=getattr(spec, "output_width", None),
+            output_height=getattr(spec, "output_height", None),
+        )
+        diagnostics.record_render_spec(spec)
+        return diagnostics
+
+    def _show_render_diagnostics_for_job(self, job_id: str) -> None:
+        diagnostics = self._render_diagnostics_by_job.get(job_id)
+        if diagnostics is None:
+            self._update_render_diagnostics_label(None)
+            return
+        self._update_render_diagnostics_label(diagnostics.summary())
+
+    def _update_render_diagnostics_label(
+        self,
+        summary: RenderDiagnosticSummary | None,
+    ) -> None:
+        if summary is None or not self.render_diagnostics_checkbox.isChecked():
+            self.render_diagnostics_label.setText("")
+            return
+        counters = summary.counters
+        timings = summary.timings_ms
+        jobs = counters.get("tile_preview.decode.jobs", 0)
+        workers = counters.get("tile_preview.decode.workers", 0)
+        reads = counters.get("rasterio.read.calls", 0)
+        cache_hits = sum(summary.cache_hits.values())
+        cache_misses = sum(summary.cache_misses.values())
+        cache_mb = self._canvas_tile_cache.used_bytes / (1024 * 1024)
+        cache_entries = self._canvas_tile_cache.entry_count
+        missing_overviews = sum(
+            1 for source in summary.raster_sources if not source.has_usable_overviews
+        )
+        timing_text = ", ".join(
+            f"{key}={value:.0f}ms"
+            for key, value in sorted(timings.items())
+            if value > 0
+        )
+        overview_text = (
+            f" | {missing_overviews} raster chua co overview"
+            if missing_overviews
+            else ""
+        )
+        self.render_diagnostics_label.setText(
+            "Render diagnostics: "
+            f"tiles={jobs}, workers={workers}, reads={reads}, "
+            f"cache hit/miss={cache_hits}/{cache_misses}, "
+            f"cache={cache_entries} entries/{cache_mb:.1f} MB{overview_text}"
+            + (f" | {timing_text}" if timing_text else "")
+        )
+
     def _refresh_canvas_render(self) -> None:
         """Force a clean render of the currently selected GIS canvas."""
         if self.selected_composition is None or self._workspace_service is None:
@@ -1083,6 +1180,9 @@ class ReviewEditMode(QWidget):
         self._cancel_render()
         self._canvas_render_cache.clear()
         self._reset_tile_preview_state()
+        self.gis_canvas.invalidate_render_requests()
+        self._render_diagnostics_by_job.clear()
+        self._update_render_diagnostics_label(None)
 
         self._flush_pending_canvas_view(request_render=False)
         composition = self.selected_composition
@@ -1187,9 +1287,17 @@ class ReviewEditMode(QWidget):
         if result.state in {JobState.SUCCESS, JobState.WARNING} and result.canvas is not None:
             if isinstance(result.tile_preview_state, TilePreviewState):
                 self._canvas_tile_state = result.tile_preview_state
-            self.gis_canvas.apply_render_result(token, result.message, canvas=result.canvas)
+            applied = self.gis_canvas.apply_render_result(
+                token,
+                result.message,
+                canvas=result.canvas,
+            )
+            if applied:
+                self._show_render_diagnostics_for_job(result.job_id)
         elif result.state == JobState.ERROR:
-            self.gis_canvas.set_error(result.message)
+            applied = self.gis_canvas.set_error(result.message, token=token)
+            if applied:
+                self._show_render_diagnostics_for_job(result.job_id)
 
     def _handle_canvas_view_interaction(self, *_args) -> None:  # noqa: ANN002
         self._sync_target_preview_viewport_overlays()
@@ -1220,6 +1328,7 @@ class ReviewEditMode(QWidget):
 
     def _cancel_render(self, *, wait: bool = False) -> None:
         self._render_tokens.clear()
+        self.gis_canvas.set_render_diagnostics(None)
         for worker in list(self._render_workers.values()):
             worker.cancel()
         if not wait:
@@ -1245,6 +1354,7 @@ class ReviewEditMode(QWidget):
         self._render_threads.pop(job_id, None)
         self._render_workers.pop(job_id, None)
         self._render_tokens.pop(job_id, None)
+        self._render_diagnostics_by_job.pop(job_id, None)
         if self._render_threads:
             return
         pending = self._pending_canvas_render_composition
@@ -1314,11 +1424,13 @@ class ReviewEditMode(QWidget):
 
     def _update_metadata_edit_button(self, *_args) -> None:  # noqa: ANN002
         layer_id = self.layer_model.layer_id_for_index(self.layer_table.currentIndex())
-        self.edit_metadata_button.setEnabled(
+        enabled = (
             layer_id is not None
             and self._workspace_service is not None
             and self.selected_composition is not None
         )
+        self.edit_metadata_button.setEnabled(enabled)
+        self.prepare_raster_button.setEnabled(enabled)
 
     def _current_layer(self) -> ImageLayer | None:
         if self.selected_composition is None:
@@ -1346,6 +1458,54 @@ class ReviewEditMode(QWidget):
         dialog = MetadataEditorDialog(layer, parent=self)
         dialog.metadataSaved.connect(self._apply_layer_metadata)
         dialog.exec()
+
+    def _prepare_selected_raster(self) -> None:
+        layer = self._current_layer()
+        if layer is None or self._workspace_service is None or self.selected_composition is None:
+            return
+        prepared_root = self._prepared_raster_root()
+        if prepared_root is None:
+            return
+        self.action_summary.setText("Dang tao prepared raster cho layer dang chon...")
+        QApplication.processEvents()
+        source_path = Path(layer.source_path)
+        if not source_path.is_absolute():
+            source_path = self._workspace_service.paths.root / source_path
+        try:
+            result = prepare_raster_copy(source_path, prepared_root=prepared_root)
+            updated = self._workspace_service.update_layer_prepared_path(
+                self.selected_composition.composition_id,
+                layer.layer_id,
+                prepared_path=result.prepared_path,
+            )
+        except (OSError, ValueError, WorkspaceError) as error:
+            self.action_summary.setText(f"Khong prepare duoc raster: {error}")
+            return
+        self.selected_composition = updated
+        self._update_detail_panels(updated)
+        self._refresh_workspace_projection(updated.composition_id, validate_selection=False)
+        self._canvas_render_cache.clear()
+        self._reset_tile_preview_state()
+        self._request_canvas_render(updated)
+        self.action_summary.setText(
+            f"Da tao prepared raster va se uu tien render tu: {result.prepared_path}"
+        )
+
+    def _prepared_raster_root(self) -> Path | None:
+        configured = self._render_preview_config.prepared_raster_root
+        if configured:
+            root = Path(configured)
+            if not root.is_absolute() and self._workspace_service is not None:
+                root = self._workspace_service.paths.root / root
+            return root
+        selected = QFileDialog.getExistingDirectory(
+            self,
+            "Chon thu muc prepared raster",
+            str(self._workspace_service.paths.root if self._workspace_service else Path.cwd()),
+        )
+        if not selected:
+            return None
+        return Path(selected)
 
     def _apply_layer_metadata(self, layer_id: str, payload: dict) -> None:
         if self._workspace_service is None or self.selected_composition is None:
@@ -2341,7 +2501,7 @@ def _has_existing_visible_raster(composition: Composition) -> bool:
     for layer in composition.layers:
         if not layer.visible:
             continue
-        path = layer.cache_path or layer.source_path
+        path = layer.prepared_path or layer.cache_path or layer.source_path
         if Path(path).exists():
             return True
     return False

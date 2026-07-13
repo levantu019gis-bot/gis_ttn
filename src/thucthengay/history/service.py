@@ -121,6 +121,23 @@ class HistoricalPathPrefixReplacementResult:
 
 
 @dataclass(frozen=True)
+class HistoricalImageManagementRow:
+    """Flattened row for history management screens and diagnostics."""
+
+    image_asset_id: int
+    target_id: str
+    source_path: Path
+    cache_path: Path | None
+    capture_date: date | None
+    capture_time: time | None
+    cloud_percent: float | None
+    active: bool
+    latest_status: str
+    latest_workspace_path: str | None
+    latest_composition_id: str | None
+
+
+@dataclass(frozen=True)
 class HistoryService:
     """Owns all direct SQLite access for the historical image registry."""
 
@@ -154,6 +171,55 @@ class HistoryService:
             database_path=database_path,
             schema_version=SCHEMA_VERSION,
         )
+
+    def list_image_management_rows(
+        self,
+        *,
+        target_id: str | None = None,
+        active_only: bool = True,
+    ) -> tuple[HistoricalImageManagementRow, ...]:
+        """List history image rows for management and path repair tools."""
+
+        if not self.enabled:
+            return ()
+        database_path = self._required_database_path()
+        if not database_path.exists():
+            return ()
+        clauses: list[str] = []
+        params: list[object] = []
+        if target_id:
+            clauses.append("target_history.target_id = ?")
+            params.append(target_id)
+        if active_only:
+            clauses.append("target_image_history.active = 1")
+        where_sql = f"WHERE {' AND '.join(clauses)}" if clauses else ""
+        with closing(self._connect()) as connection:
+            rows = connection.execute(
+                f"""
+                SELECT
+                    image_asset.image_asset_id,
+                    target_history.target_id,
+                    image_asset.source_path,
+                    image_asset.cache_path,
+                    image_asset.capture_date,
+                    image_asset.capture_time,
+                    image_asset.cloud_percent,
+                    target_image_history.active,
+                    target_image_history.latest_status,
+                    target_image_history.latest_workspace_path,
+                    target_image_history.latest_composition_id
+                FROM target_history
+                JOIN target_image_history USING (target_history_id)
+                JOIN image_asset USING (image_asset_id)
+                {where_sql}
+                ORDER BY target_history.target_id,
+                         image_asset.capture_date DESC,
+                         image_asset.capture_time DESC,
+                         image_asset.source_path
+                """,
+                tuple(params),
+            ).fetchall()
+        return tuple(_management_row_from_sql(row) for row in rows)
 
     def record_included_composition(
         self,
@@ -748,6 +814,22 @@ def _records_from_rows(rows: list[tuple[object, ...]]) -> list[HistoricalImageRe
         )
         for row in rows
     ]
+
+
+def _management_row_from_sql(row: tuple[object, ...]) -> HistoricalImageManagementRow:
+    return HistoricalImageManagementRow(
+        image_asset_id=int(row[0]),
+        target_id=str(row[1]),
+        source_path=Path(str(row[2])).expanduser(),
+        cache_path=Path(str(row[3])).expanduser() if row[3] else None,
+        capture_date=_parse_date(row[4]),
+        capture_time=_parse_time(row[5]),
+        cloud_percent=float(row[6]) if row[6] is not None else None,
+        active=bool(row[7]),
+        latest_status=str(row[8]),
+        latest_workspace_path=str(row[9]) if row[9] else None,
+        latest_composition_id=str(row[10]) if row[10] else None,
+    )
 
 
 def _validate_historical_records(

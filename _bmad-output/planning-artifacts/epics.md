@@ -2780,3 +2780,147 @@ So that further optimization decisions are evidence-based.
 **Given** Epic 12 completes
 **When** final regression tests run
 **Then** Review/Edit preview remains usable, final export remains stable, and map-frame layout invariance is verified.
+
+## Epic 13: Stabilize Runtime, Large-Raster Workflow, and Operational UX
+
+**Goal:** Harden the current application for real Windows deployments and large satellite imagery by stabilizing GIS runtime paths, render cancellation/recovery, prepared imagery workflows, diagnostics, data/history tools, and export preflight resilience.
+
+**Strategic Alignment:** This epic follows the post-Epic 11/12 review. The product now has broad functionality, so the next value is not another large rendering rewrite; it is making the existing workflow reliable under real operator conditions: wrong system PROJ installs, 0.5-1 GB rasters, stale render workers, incomplete metadata, moved history images, and target-specific PPTX templates.
+
+**Mandatory Epic Constraint:** Epic 13 must preserve the map-frame visual/layout contract exactly: frame shape, size, aspect, outer frame, inner raster panel, coordinate labels, tick placement, label format/text, temporal-compare pane gap, pane boundaries, and spacing must not change. Original source rasters must not be mutated unless the user explicitly chooses an in-place preparation action.
+
+### Story 13.1: Harden Windows GIS Runtime and Quality Gates
+
+As a Developer,
+I want the Windows runtime to consistently use the intended Conda/PyInstaller GDAL/PROJ resources,
+So that raster, CRS, ingestion, render, and packaged executable workflows do not fail because another installed GIS stack is found first.
+
+**Requirement References:** Epic 13, packaging/runtime review, Windows GIS deployment risk
+
+**Acceptance Criteria:**
+
+**Given** the app starts from source or packaged executable on Windows
+**When** `rasterio`, `pyproj`, or GDAL initialize
+**Then** they use the project/runtime PROJ data directory instead of a PostgreSQL/PostGIS `proj.db`.
+
+**Given** tests spawn subprocesses
+**When** isolated Qt or config-mode smoke tests run
+**Then** `PYTHONPATH`/runtime paths are available and `ModuleNotFoundError: thucthengay` does not occur.
+
+**Given** quality gates run
+**When** `ruff check src tests` executes
+**Then** import ordering and lint checks pass.
+
+**Given** PyInstaller build scripts run
+**When** the app is packaged
+**Then** required GDAL/PROJ data paths are bundled or initialized explicitly.
+
+### Story 13.2: Make Render State, Cancellation, and Refresh Recovery Robust
+
+As an Operator,
+I want pan/zoom, target switching, cancellation, and Refresh to recover reliably,
+So that old worker results cannot blank the canvas, show stale errors, or prevent later imagery from rendering.
+
+**Requirement References:** Epic 13, Epic 12 tile preview integration, Review/Edit reliability findings
+
+**Acceptance Criteria:**
+
+**Given** a render worker from an old viewport, target, or composition finishes late with success, warning, cancellation, or error
+**When** the canvas has moved to a newer generation
+**Then** the old result is ignored.
+
+**Given** Refresh is clicked after a stuck, cancelled, or failed tile preview
+**When** a composition is selected
+**Then** the app cancels old work, clears relevant caches/state, starts a new render generation, and surfaces a clear status.
+
+**Given** progressive tile frames arrive after a newer request has superseded them
+**When** they are handled by Review/Edit
+**Then** they cannot overwrite the current canvas or tile state.
+
+### Story 13.3: Add Large-Raster Preparation and Prepared Source Selection
+
+As an Operator,
+I want large source rasters prepared into tiled GeoTIFF/COG files with overview pyramids,
+So that Review/Edit can display 0.5-1 GB imagery without crashing or decoding full-resolution data unnecessarily.
+
+**Requirement References:** Epic 13, SOLUTION.md Giai doan 1, Epic 11 overview readiness
+
+**Acceptance Criteria:**
+
+**Given** a large raster lacks tiling or overview levels
+**When** ingestion or Review/Edit detects it
+**Then** the app reports a clear readiness warning and offers a non-destructive preparation path.
+
+**Given** the user chooses to prepare imagery
+**When** the job runs
+**Then** a separate prepared output is created as COG or tiled GeoTIFF with internal overviews, without mutating the original file by default.
+
+**Given** a prepared raster exists
+**When** Review/Edit builds render specs or tile jobs
+**Then** it prefers the prepared path while preserving source-path traceability.
+
+### Story 13.4: Surface Render Diagnostics and Cache Tuning in Review/Edit
+
+As an Operator or Developer,
+I want visible render diagnostics and cache status in Review/Edit,
+So that slow display can be diagnosed from the app instead of guessed from logs.
+
+**Requirement References:** Epic 13, Epic 11 diagnostics, Epic 12 progressive tile preview
+
+**Acceptance Criteria:**
+
+**Given** render diagnostics are enabled
+**When** Review/Edit renders or progressively loads tiles
+**Then** the UI can show tile count, decoded count, cache hit/miss, cache memory usage, decode time, compose time, and total latency.
+
+**Given** a raster lacks overviews or is not tiled
+**When** diagnostics are shown
+**Then** the user sees a warning and recommended preparation action.
+
+**Given** diagnostics are disabled
+**When** normal Review/Edit is used
+**Then** the UI remains quiet and rendering behavior is unchanged.
+
+### Story 13.5: Add History, Metadata, and Filename Management Tools
+
+As an Operator,
+I want tools to inspect and repair history images, filename parsing, metadata, bands, and symbology,
+So that data problems can be corrected before Review/Edit and export.
+
+**Requirement References:** Epic 9 history, Epic 10 filename metadata, recent metadata/band/symbology work
+
+**Acceptance Criteria:**
+
+**Given** historical registry is enabled
+**When** the user opens management tools
+**Then** active historical images can be listed by target, date, source path, and status.
+
+**Given** filename patterns are configured
+**When** a sample filename is tested
+**Then** the UI shows matched pattern, capture date/time, cloud percent, and unmatched reasons.
+
+**Given** many layers require similar corrections
+**When** batch metadata edits are applied
+**Then** changes are persisted safely and compositions are marked stale for revalidation.
+
+### Story 13.6: Improve Export Preflight, Template Resilience, and Partial Success
+
+As an Operator,
+I want export to preflight template problems clearly and continue with valid slides,
+So that one bad target/template does not hide usable output from other targets.
+
+**Requirement References:** Epic 6 export, Epic 7 placeholders/templates, Epic 9 compare export
+
+**Acceptance Criteria:**
+
+**Given** targets use different normal/compare PPTX templates
+**When** export preflight runs
+**Then** slide size, shape ids/selectors, required placeholders, and map image placeholders are validated per target/template.
+
+**Given** one included composition has unresolved placeholders or invalid template mapping
+**When** export runs
+**Then** only that slide is skipped and the output/log clearly reports the skipped reason.
+
+**Given** compare mode is enabled
+**When** placeholders such as `time_label_pane_A` and `time_label_pane_B` are required
+**Then** preflight explains which data or mapping is missing before export begins.

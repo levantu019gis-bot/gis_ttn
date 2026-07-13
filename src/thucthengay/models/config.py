@@ -236,6 +236,9 @@ class RenderPreviewConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     tile_preview: TilePreviewConfig = Field(default_factory=TilePreviewConfig)
+    diagnostics_enabled: bool = False
+    prepared_raster_root: str | None = None
+    auto_prefer_prepared_rasters: bool = True
 
 
 class ProjectDefaultsConfig(BaseModel):
