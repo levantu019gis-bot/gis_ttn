@@ -65,7 +65,7 @@ def config_result_for(target: TargetConfig, geojson_path: Path) -> ConfigLoadRes
     )
 
 
-def write_geotiff(path: Path) -> None:
+def write_geotiff(path: Path, *, origin_x: float = 106.0, origin_y: float = 11.0) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with rasterio.open(
         path,
@@ -76,7 +76,7 @@ def write_geotiff(path: Path) -> None:
         count=1,
         dtype="uint8",
         crs="EPSG:4326",
-        transform=from_origin(106.0, 11.0, 0.1, 0.1),
+        transform=from_origin(origin_x, origin_y, 0.1, 0.1),
     ) as dataset:
         dataset.write(np.ones((1, 2, 2), dtype="uint8"))
 
@@ -211,6 +211,35 @@ def test_ingestion_job_emits_progress_counters_and_success_state(tmp_path: Path)
     assert match_events[-1].matched_image_count == 1
     assert events[-1].state == JobState.SUCCESS
     assert events[-1].warning_count == 0
+
+
+def test_ingestion_job_can_keep_images_outside_all_target_geometry(
+    tmp_path: Path,
+) -> None:
+    imagery = tmp_path / "imagery"
+    geotiff = imagery / "20260525_101112_scene_cloud12.tif"
+    boundary = tmp_path / "target_001.geojson"
+    write_geotiff(geotiff, origin_x=120.0, origin_y=20.0)
+    write_geojson(boundary)
+    workspace = WorkspaceService(tmp_path / "workspace")
+
+    result = run_ingestion_job(
+        job_id="job-unmatched",
+        config_result=config_result_for(target_config(), boundary),
+        imagery_folder=imagery,
+        workspace_service=workspace,
+        include_unmatched_images=True,
+    )
+
+    assert result.state == JobState.SUCCESS
+    assert result.matched_image_count == 0
+    assert len(result.composition_ids) == 1
+    composition_id = result.composition_ids[0]
+    assert composition_id.startswith("__unmatched__")
+    composition = workspace.read_composition(composition_id)
+    assert composition.target_id.startswith("__unmatched__")
+    assert composition.layers[0].source_path == str(geotiff.resolve())
+    assert composition.view.center == [120.1, 19.9]
 
 
 def test_ingestion_job_preserves_nonfatal_warnings_for_summary(tmp_path: Path) -> None:

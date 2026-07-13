@@ -1365,6 +1365,8 @@ class ReviewEditMode(QWidget):
         source_changed = source_path != current_layer.source_path
         render_bands = payload.get("render_bands")
         bands_changed = render_bands != current_layer.render_bands
+        symbology = payload.get("symbology")
+        symbology_changed = symbology != current_layer.symbology
         try:
             payload, source_update_message = self._prepare_source_path_payload(
                 current_layer,
@@ -1410,6 +1412,7 @@ class ReviewEditMode(QWidget):
                         metadata_source=payload["metadata_source"],
                         metadata_status=payload["metadata_status"],
                         render_bands=render_bands,
+                        symbology=symbology,
                         source_path=source_path,
                         cache_path=payload.get("cache_path"),
                     )
@@ -1437,7 +1440,7 @@ class ReviewEditMode(QWidget):
                 f"cả hai composition cần revalidate."
                 f"{_summary_suffix(source_update_message)}{_summary_suffix(history_message)}"
             )
-            if source_changed or bands_changed:
+            if source_changed or bands_changed or symbology_changed:
                 self._request_canvas_render(updated_dest)
             return
 
@@ -1464,6 +1467,7 @@ class ReviewEditMode(QWidget):
                 metadata_source=payload["metadata_source"],
                 metadata_status=payload["metadata_status"],
                 render_bands=render_bands,
+                symbology=symbology,
                 cache_path=payload.get("cache_path"),
             )
         except (
@@ -1480,7 +1484,7 @@ class ReviewEditMode(QWidget):
         self.selected_composition = updated
         self._update_detail_panels(updated)
         self._refresh_workspace_projection(updated.composition_id, validate_selection=False)
-        if source_changed or bands_changed:
+        if source_changed or bands_changed or symbology_changed:
             self._request_canvas_render(updated)
         self.action_summary.setText(
             f"Đã lưu metadata/source path; composition cần revalidate."

@@ -60,6 +60,7 @@ from thucthengay.models.layer import (
     ImageLayer,
     ImageLayerSourceKind,
     LayerRenderBands,
+    LayerSymbology,
     MetadataSource,
     MetadataStatus,
 )
@@ -127,6 +128,7 @@ __all__ = [
     "ImageLayer",
     "ImageLayerSourceKind",
     "LayerRenderBands",
+    "LayerSymbology",
     "Issue",
     "IssueScope",
     "IssueSeverity",

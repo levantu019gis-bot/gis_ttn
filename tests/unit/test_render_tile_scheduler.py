@@ -7,7 +7,7 @@ from rasterio.enums import ColorInterp
 from rasterio.transform import from_bounds
 
 from thucthengay.gis.crs import GEOGRAPHIC_CRS
-from thucthengay.models import LayerRenderBands
+from thucthengay.models import LayerRenderBands, LayerSymbology
 from thucthengay.render import (
     GeoWindow,
     RasterFileSignature,
@@ -140,6 +140,27 @@ def test_decode_tile_job_uses_manual_render_bands() -> None:
     assert dataset.read_calls[1][0] == 4
 
 
+def test_decode_tile_job_applies_layer_symbology() -> None:
+    dataset = _FakeDataset(pixel_value=100, dtype=np.uint16)
+    job = scheduler_job(
+        request_id="req-1",
+        revision=1,
+        coverage=_coverages()[0],
+        output_size=4,
+        symbology=LayerSymbology(
+            stretch_mode="manual",
+            manual_min=[0],
+            manual_max=[200],
+        ),
+    )
+
+    result = decode_tile_job(job, opener=lambda _path: dataset)
+
+    assert result.state == TileDecodeState.SUCCESS
+    assert result.pixels is not None
+    assert tuple(result.pixels[2, 2].tolist()) == (127, 127, 127)
+
+
 def test_decode_tile_job_returns_valid_mask_for_nodata_pixels() -> None:
     result = decode_tile_job(
         _job(output_size=4),
@@ -225,6 +246,7 @@ def scheduler_job(  # noqa: ANN001
     coverage,
     output_size,
     render_bands=None,
+    symbology=None,
 ):
     from thucthengay.render import TileDecodeJob
 
@@ -234,6 +256,7 @@ def scheduler_job(  # noqa: ANN001
         coverage=coverage,
         source_path="source.tif",
         render_bands=render_bands,
+        symbology=symbology,
         output_width=output_size,
         output_height=output_size,
     )
@@ -248,12 +271,16 @@ class _FakeDataset:
         bounds: tuple[float, float, float, float] = (0.0, 0.0, 4.0, 4.0),
         mask_left_half: bool = False,
         band_count: int = 3,
+        pixel_value: int = 120,
+        dtype=np.uint8,
     ) -> None:
         self.width = width
         self.height = height
         self._bounds = bounds
         self.mask_left_half = mask_left_half
         self.count = band_count
+        self.pixel_value = pixel_value
+        self.dtype = dtype
         self.crs = GEOGRAPHIC_CRS
         self.bounds = bounds
         self.transform = from_bounds(*bounds, width, height)
@@ -282,5 +309,5 @@ class _FakeDataset:
             mask_array = np.zeros(shape, dtype=bool)
             mask_array[..., : shape[-1] // 2] = True
         if isinstance(indexes, tuple):
-            return np.ma.array(np.full(shape, 120, dtype=np.uint8), mask=mask_array)
-        return np.ma.array(np.full(shape, 255, dtype=np.uint8), mask=False)
+            return np.ma.array(np.full(shape, self.pixel_value, dtype=self.dtype), mask=mask_array)
+        return np.ma.array(np.full(shape, 255, dtype=self.dtype), mask=False)

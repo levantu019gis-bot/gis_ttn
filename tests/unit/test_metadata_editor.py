@@ -21,6 +21,7 @@ from thucthengay.models import (
     Composition,
     ImageLayer,
     LayerRenderBands,
+    LayerSymbology,
     MetadataSource,
     MetadataStatus,
     ViewState,
@@ -42,6 +43,7 @@ def _layer(
     metadata_status: MetadataStatus = MetadataStatus.VALID,
     metadata_source: MetadataSource = MetadataSource.FILENAME,
     render_bands: LayerRenderBands | None = None,
+    symbology: LayerSymbology | None = None,
 ) -> ImageLayer:
     return ImageLayer(
         layer_id=layer_id,
@@ -53,6 +55,7 @@ def _layer(
         metadata_status=metadata_status,
         metadata_source=metadata_source,
         render_bands=render_bands,
+        symbology=symbology,
     )
 
 
@@ -89,6 +92,14 @@ def _write_raster(path: Path, *, count: int = 4) -> Path:
                 ColorInterp.alpha,
             )
     return path
+
+
+def _set_combo_by_data(combo, value) -> None:  # noqa: ANN001
+    for index in range(combo.count()):
+        if combo.itemData(index) == value:
+            combo.setCurrentIndex(index)
+            return
+    raise AssertionError(f"Combo value not found: {value!r}")
 
 
 # --- WorkspaceService.update_layer_metadata tests ---
@@ -157,6 +168,30 @@ class TestUpdateLayerMetadata:
         assert updated.layers[0].render_bands == render_bands
         reloaded = service.read_composition(comp.composition_id)
         assert reloaded.layers[0].render_bands == render_bands
+
+    def test_persists_symbology_when_provided(self, tmp_path: Path) -> None:
+        service, comp = self._bootstrap_service(tmp_path)
+        symbology = LayerSymbology(
+            stretch_mode="manual",
+            manual_min=[0],
+            manual_max=[4095],
+            gamma=1.2,
+        )
+
+        updated = service.update_layer_metadata(
+            comp.composition_id,
+            "L1",
+            capture_date=date(2026, 5, 25),
+            capture_time=time(8, 0),
+            cloud_percent=12.5,
+            metadata_source=MetadataSource.MANUAL,
+            metadata_status=MetadataStatus.VALID,
+            symbology=symbology,
+        )
+
+        assert updated.layers[0].symbology == symbology
+        reloaded = service.read_composition(comp.composition_id)
+        assert reloaded.layers[0].symbology == symbology
 
     def test_marks_composition_needs_revalidation(self, tmp_path: Path) -> None:
         service, comp = self._bootstrap_service(tmp_path)
@@ -254,6 +289,7 @@ class TestMetadataEditorDialog:
         assert dialog._green_band_combo.currentData() == 3
         assert dialog._blue_band_combo.currentData() == 2
         assert dialog._alpha_band_combo.currentData() == 1
+        assert not dialog._symbology_enabled_checkbox.isChecked()
 
     def test_dialog_reads_band_count_and_colorinterp_from_source(self, tmp_path: Path) -> None:
         qapp()
@@ -303,8 +339,58 @@ class TestMetadataEditorDialog:
         assert payload["cloud_percent"] == 12.5
         assert payload["source_path"] == "L1.tif"
         assert payload["render_bands"] is None
+        assert payload["symbology"] is None
         assert payload["metadata_source"] == MetadataSource.MANUAL
         assert payload["metadata_status"] == MetadataStatus.VALID
+
+    def test_dialog_populates_existing_symbology(self) -> None:
+        qapp()
+        layer = _layer(
+            symbology=LayerSymbology(
+                stretch_mode="manual",
+                manual_min=[10, 20, 30],
+                manual_max=[100, 200, 300],
+                gamma=1.4,
+                brightness=5,
+                contrast=1.2,
+            )
+        )
+
+        dialog = MetadataEditorDialog(layer)
+
+        assert dialog._symbology_enabled_checkbox.isChecked()
+        assert dialog._stretch_mode_combo.currentData() == "manual"
+        assert dialog._manual_min_edit.text() == "10, 20, 30"
+        assert dialog._manual_max_edit.text() == "100, 200, 300"
+        assert dialog._gamma_spin.value() == pytest.approx(1.4)
+        assert dialog._brightness_spin.value() == pytest.approx(5)
+        assert dialog._contrast_spin.value() == pytest.approx(1.2)
+
+    def test_save_emits_symbology_when_enabled(self) -> None:
+        qapp()
+        layer = _layer()
+        dialog = MetadataEditorDialog(layer)
+        dialog._symbology_enabled_checkbox.setChecked(True)
+        _set_combo_by_data(dialog._stretch_mode_combo, "manual")
+        dialog._manual_min_edit.setText("0, 10, 20")
+        dialog._manual_max_edit.setText("100, 110, 120")
+        dialog._gamma_spin.setValue(1.5)
+        dialog._brightness_spin.setValue(6)
+        dialog._contrast_spin.setValue(1.25)
+
+        received: list[tuple[str, dict]] = []
+        dialog.metadataSaved.connect(lambda lid, payload: received.append((lid, payload)))
+
+        dialog._on_save()
+
+        assert received[0][1]["symbology"] == LayerSymbology(
+            stretch_mode="manual",
+            manual_min=[0, 10, 20],
+            manual_max=[100, 110, 120],
+            gamma=1.5,
+            brightness=6,
+            contrast=1.25,
+        )
 
     def test_save_emits_render_bands(self, tmp_path: Path) -> None:
         qapp()

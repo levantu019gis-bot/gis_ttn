@@ -12,7 +12,7 @@ import math
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator, model_validator
 
 from thucthengay.gis import view_geo_bounds
-from thucthengay.models import LayerRenderBands, TemporalCompareOrientation
+from thucthengay.models import LayerRenderBands, LayerSymbology, TemporalCompareOrientation
 from thucthengay.models.composition import Composition
 from thucthengay.models.config import GridConfig, TargetConfig
 from thucthengay.models.issue import Issue, IssueScope, IssueSeverity
@@ -73,6 +73,7 @@ class RenderLayerRef(BaseModel):
     cache_path: str | None = None
     order: int = Field(ge=0)
     render_bands: LayerRenderBands | None = None
+    symbology: LayerSymbology | None = None
 
 
 class RenderBackground(BaseModel):
@@ -543,6 +544,7 @@ def _visible_layer_refs(composition: Composition) -> list[RenderLayerRef]:
             cache_path=layer.cache_path,
             order=layer.order,
             render_bands=layer.render_bands,
+            symbology=layer.symbology,
         )
         for layer in visible_layers
     ]

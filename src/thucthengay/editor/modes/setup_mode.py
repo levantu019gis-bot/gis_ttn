@@ -45,6 +45,7 @@ class SetupPaths:
     workspace_folder: Path
     historical_loading_enabled: bool = False
     historical_image_selection: HistoricalImageSelectionConfig | None = None
+    include_unmatched_images: bool = False
     clear_existing_workspace: bool = False
     clear_workspace_confirmed: bool = False
     override_existing_workspace: bool = False
@@ -82,6 +83,12 @@ class SetupMode(QWidget):
         self.historical_loading_checkbox.setToolTip(
             "When enabled, ingestion also loads eligible images from the configured "
             "SQLite historical registry."
+        )
+        self.include_unmatched_checkbox = QCheckBox("Load images outside configured geometry")
+        self.include_unmatched_checkbox.setObjectName("setupIncludeUnmatchedImages")
+        self.include_unmatched_checkbox.setToolTip(
+            "Keep valid GeoTIFFs that do not intersect any enabled target geometry and "
+            "show them in a separate Review/Edit group."
         )
         self.historical_mode_combo = QComboBox()
         self.historical_mode_combo.setObjectName("setupHistoricalLoadingMode")
@@ -126,6 +133,7 @@ class SetupMode(QWidget):
         form.addRow(self.workspace_row)
         form.addRow("Historical images", self.historical_loading_checkbox)
         form.addRow("Historical mode", self._build_historical_mode_row())
+        form.addRow("Outside geometry", self.include_unmatched_checkbox)
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(16, 16, 16, 16)
@@ -192,6 +200,7 @@ class SetupMode(QWidget):
             workspace_folder=workspace_folder,
             historical_loading_enabled=self.historical_loading_checkbox.isChecked(),
             historical_image_selection=self._selected_historical_image_selection(),
+            include_unmatched_images=self.include_unmatched_checkbox.isChecked(),
         )
 
     def selected_workspace_folder(self) -> Path | None:
@@ -238,6 +247,7 @@ class SetupMode(QWidget):
     def _update_action_state(self, *_args: object) -> None:
         self.ingest_button.setEnabled(self.is_ready and not self._ingestion_running)
         self.historical_loading_checkbox.setEnabled(not self._ingestion_running)
+        self.include_unmatched_checkbox.setEnabled(not self._ingestion_running)
         self._update_historical_controls_state()
         self.open_workspace_button.setEnabled(
             self.workspace_row.validation.ok and not self._ingestion_running

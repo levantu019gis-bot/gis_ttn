@@ -105,6 +105,28 @@ def test_setup_mode_disables_ingest_until_all_required_paths_are_valid(tmp_path:
     assert selected_paths.imagery_input_folder == imagery_folder.resolve()
     assert selected_paths.workspace_folder == workspace_folder.resolve()
     assert selected_paths.historical_loading_enabled is False
+    assert selected_paths.include_unmatched_images is False
+
+
+def test_setup_mode_exposes_unmatched_image_option(tmp_path: Path) -> None:
+    qapp()
+    config_file = tmp_path / "project.json"
+    config_file.write_text("{}", encoding="utf-8")
+    imagery_folder = tmp_path / "imagery"
+    imagery_folder.mkdir()
+    workspace_folder = tmp_path / "workspace"
+    workspace_folder.mkdir()
+
+    setup = SetupMode()
+    setup.config_row.set_path(config_file)
+    setup.imagery_row.set_path(imagery_folder)
+    setup.workspace_row.set_path(workspace_folder)
+    setup.include_unmatched_checkbox.setChecked(True)
+
+    selected_paths = setup.selected_paths()
+
+    assert selected_paths is not None
+    assert selected_paths.include_unmatched_images is True
 
 
 def test_setup_mode_does_not_show_recent_project_picker() -> None:

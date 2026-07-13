@@ -42,6 +42,7 @@ class IngestionWorker(QObject):
         clear_existing: bool = False,
         clear_confirmed: bool = False,
         merge_existing: bool = False,
+        include_unmatched_images: bool = False,
         parent: QObject | None = None,
     ) -> None:
         super().__init__(parent)
@@ -55,6 +56,7 @@ class IngestionWorker(QObject):
         self.clear_existing = clear_existing
         self.clear_confirmed = clear_confirmed
         self.merge_existing = merge_existing
+        self.include_unmatched_images = include_unmatched_images
 
     @Slot()
     def run(self) -> None:
@@ -77,6 +79,7 @@ class IngestionWorker(QObject):
                 clear_existing=self.clear_existing,
                 clear_confirmed=self.clear_confirmed,
                 merge_existing=self.merge_existing,
+                include_unmatched_images=self.include_unmatched_images,
             )
         except Exception as error:  # pragma: no cover - defensive UI boundary
             issue = Issue(

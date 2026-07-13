@@ -121,6 +121,13 @@ class TileIndex:
                 size_bytes=source_signature.size_bytes,
                 mtime_ns=source_signature.mtime_ns,
             )
+        if layer.symbology is not None:
+            symbology_sig = "-".join(str(value) for value in layer.symbology.signature())
+            source_signature = RasterFileSignature(
+                path=f"{source_signature.path}#symbology:{symbology_sig}",
+                size_bytes=source_signature.size_bytes,
+                mtime_ns=source_signature.mtime_ns,
+            )
         return self.visible_tiles(
             viewport,
             map_scale=map_scale,

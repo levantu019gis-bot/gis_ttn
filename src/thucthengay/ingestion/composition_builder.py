@@ -21,6 +21,8 @@ from thucthengay.models import (
 from thucthengay.workspace import WorkspaceError, WorkspaceService
 
 CheckpointCallback = Callable[[], None]
+UNMATCHED_TARGET_ID_PREFIX = "__unmatched__"
+UNMATCHED_TARGET_DEFAULT_SCALE = 50000
 
 
 @dataclass(frozen=True)
@@ -47,7 +49,8 @@ def create_target_date_compositions(
         if checkpoint is not None:
             checkpoint()
         target = targets_by_id.get(target_id)
-        if target is None:
+        is_unmatched_target = _is_unmatched_target_id(target_id)
+        if target is None and not is_unmatched_target:
             issues.append(
                 _composition_issue(
                     "composition.target_missing",
@@ -73,12 +76,22 @@ def create_target_date_compositions(
                 incoming_layers=initial_layers,
             )
         else:
+            center = (
+                _unmatched_view_center(initial_layers)
+                if is_unmatched_target
+                else target.coordinate
+            )
+            scale = (
+                UNMATCHED_TARGET_DEFAULT_SCALE
+                if is_unmatched_target
+                else target.scale
+            )
             composition = Composition(
                 composition_id=composition_id,
                 target_id=target_id,
                 capture_date=capture_date,
                 layers=initial_layers,
-                view=ViewState(center=target.coordinate, scale=target.scale),
+                view=ViewState(center=center, scale=scale),
                 grid_override=None,
             )
         workspace_service.write_composition(composition)
@@ -221,6 +234,17 @@ def _capture_date_from_key(
 
 def _composition_id(target_id: str, date_key: str) -> str:
     return f"{target_id}__{date_key}"
+
+
+def _is_unmatched_target_id(target_id: str) -> bool:
+    return target_id.startswith(UNMATCHED_TARGET_ID_PREFIX)
+
+
+def _unmatched_view_center(layers: list[ImageLayer]) -> list[float]:
+    for layer in layers:
+        if layer.footprint_center is not None:
+            return list(layer.footprint_center)
+    return [0.0, 0.0]
 
 
 def _composition_issue(

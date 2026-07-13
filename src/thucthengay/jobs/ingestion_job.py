@@ -7,6 +7,9 @@ from dataclasses import dataclass
 from hashlib import sha1
 from pathlib import Path
 
+from pyproj import CRS, Transformer
+from pyproj.exceptions import CRSError, ProjError
+
 from thucthengay.config.path_resolver import resolve_config_asset_path
 from thucthengay.config.service import ConfigLoadResult
 from thucthengay.history import (
@@ -16,8 +19,10 @@ from thucthengay.history import (
     HistoryService,
 )
 from thucthengay.ingestion import (
+    UNMATCHED_TARGET_ID_PREFIX,
     CacheImageInput,
     CompositionCreationResult,
+    ScannedGeoTiff,
     TargetMatchingResult,
     create_target_date_compositions,
     match_imagery_to_targets,
@@ -71,6 +76,7 @@ def run_ingestion_job(
     control: JobControl | None = None,
     publish: ProgressPublisher | None = None,
     historical_loader: HistoricalLoader | None = None,
+    include_unmatched_images: bool = False,
 ) -> IngestionJobResult:
     """Run the ingestion pipeline and emit progress after every major phase."""
     progress = _ProgressBuilder(job_id=job_id, publish=publish)
@@ -164,6 +170,19 @@ def run_ingestion_job(
         return _finish_with_cancelled(progress, job_id=job_id)
     issues.extend(matching_result.issues)
     _emit_target_match_progress(progress, config_result.enabled_targets, matching_result, issues)
+    unmatched_cache_inputs = (
+        _unmatched_cache_inputs(matching_result.unmatched_images or [])
+        if include_unmatched_images
+        else []
+    )
+    if include_unmatched_images:
+        progress.emit(
+            stage="match",
+            message=(
+                f"Đã giữ {len(unmatched_cache_inputs)} ảnh không giao cắt target nào "
+                "vào nhóm Review/Edit riêng."
+            ),
+        )
     historical_cache_inputs: list[CacheImageInput] = []
     historical_plan = _build_historical_loading_plan(config_result, matching_result)
     historical_loaded_image_count = 0
@@ -185,7 +204,7 @@ def run_ingestion_job(
         cache_result = populate_workspace_cache(
             matching_result,
             workspace_service,
-            additional_images=historical_cache_inputs,
+            additional_images=[*historical_cache_inputs, *unmatched_cache_inputs],
             clear_existing=clear_existing,
             clear_confirmed=clear_confirmed,
             overwrite_existing=merge_existing and not clear_existing,
@@ -511,6 +530,42 @@ def _historical_layer_id(record: HistoricalImageRecord) -> str:
     )
     identity_hash = sha1(identity.encode("utf-8"), usedforsecurity=False).hexdigest()[:12]
     return f"history__{identity_hash}"
+
+
+def _unmatched_cache_inputs(images: list[ScannedGeoTiff]) -> list[CacheImageInput]:
+    return [
+        CacheImageInput(
+            target_id=_unmatched_target_id(image),
+            source_path=image.path,
+            layer=image.layer.model_copy(
+                update={
+                    "footprint_center": _raster_center_lon_lat(image),
+                }
+            ),
+        )
+        for image in images
+    ]
+
+
+def _unmatched_target_id(image: ScannedGeoTiff) -> str:
+    path_hash = sha1(str(image.path).encode("utf-8"), usedforsecurity=False).hexdigest()[:12]
+    return f"{UNMATCHED_TARGET_ID_PREFIX}{path_hash}"
+
+
+def _raster_center_lon_lat(image: ScannedGeoTiff) -> list[float] | None:
+    bounds = image.raster.bounds
+    x = (bounds.left + bounds.right) / 2
+    y = (bounds.bottom + bounds.top) / 2
+    try:
+        source = CRS.from_user_input(image.raster.crs)
+        target = CRS.from_user_input("EPSG:4326")
+        if source == target:
+            lon, lat = x, y
+        else:
+            lon, lat = Transformer.from_crs(source, target, always_xy=True).transform(x, y)
+    except (CRSError, ProjError, ValueError):
+        return None
+    return [float(lon), float(lat)]
 
 
 def _historical_loading_setup_issue(config_result: ConfigLoadResult) -> Issue | None:

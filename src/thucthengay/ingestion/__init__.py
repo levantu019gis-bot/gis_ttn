@@ -8,6 +8,7 @@ from thucthengay.ingestion.cache_builder import (
 )
 from thucthengay.ingestion.composition_builder import (
     CompositionCreationResult,
+    UNMATCHED_TARGET_ID_PREFIX,
     create_target_date_compositions,
 )
 from thucthengay.ingestion.intersection import (
@@ -41,6 +42,7 @@ __all__ = [
     "ScannedGeoTiff",
     "TargetBoundary",
     "TargetMatchingResult",
+    "UNMATCHED_TARGET_ID_PREFIX",
     "discover_geotiffs",
     "load_target_boundary",
     "match_imagery_to_targets",

@@ -110,6 +110,7 @@ class AppShell(QMainWindow):
             clear_existing=setup_paths.clear_existing_workspace,
             clear_confirmed=setup_paths.clear_workspace_confirmed,
             merge_existing=setup_paths.override_existing_workspace,
+            include_unmatched_images=setup_paths.include_unmatched_images,
         )
         worker.moveToThread(thread)
 

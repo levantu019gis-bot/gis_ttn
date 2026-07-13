@@ -13,7 +13,7 @@ from rasterio.io import MemoryFile
 from rasterio.transform import from_bounds
 
 from thucthengay.gis.crs import GEOGRAPHIC_CRS, get_transformer
-from thucthengay.models import LayerRenderBands
+from thucthengay.models import LayerRenderBands, LayerSymbology
 from thucthengay.models.config import GridConfig, GridInterval
 from thucthengay.models.template import MapFrame
 from thucthengay.render import (
@@ -455,6 +455,32 @@ class TestRasterDataSafety:
             canvas = render_raster_layers(spec, dataset_opener=opener).canvas
 
         assert tuple(canvas[4, 4].tolist()) == pytest.approx((128, 128, 128), abs=1)
+
+    def test_layer_symbology_manual_stretch_controls_display_range(self) -> None:
+        memfile = _make_memfile(
+            bounds=(106.0, 10.0, 107.0, 11.0),
+            crs=GEOGRAPHIC_CRS,
+            rgb=(100, 200, 300),
+            dtype="uint16",
+        )
+        layer = RenderLayerRef(
+            layer_id="L1",
+            source_path="L1.tif",
+            cache_path="L1.tif",
+            order=0,
+            render_bands=LayerRenderBands(red=1, green=2, blue=3),
+            symbology=LayerSymbology(
+                stretch_mode="manual",
+                manual_min=[0],
+                manual_max=[400],
+            ),
+        )
+        spec = _spec(layers=[layer], width=8, height=8)
+
+        with _opener_for({"L1.tif": memfile}) as opener:
+            canvas = render_raster_layers(spec, dataset_opener=opener).canvas
+
+        assert tuple(canvas[4, 4].tolist()) == pytest.approx((64, 128, 191), abs=1)
 
     def test_no_overlap_visible_layers_raise_structured_issue(self) -> None:
         memfile = _make_memfile(

@@ -45,6 +45,7 @@ class TargetMatchingResult:
 
     matches: dict[str, list[ImageryTargetMatch]]
     issues: list[Issue]
+    unmatched_images: list[ScannedGeoTiff] | None = None
 
 
 TargetMatchProgressCallback = Callable[[int, int, TargetConfig, int], None]
@@ -117,7 +118,17 @@ def match_imagery_to_targets(
         if checkpoint is not None:
             checkpoint()
 
-    return TargetMatchingResult(matches=matches, issues=issues)
+    matched_paths = {
+        match.image.path
+        for target_matches in matches.values()
+        for match in target_matches
+    }
+    unmatched_images = [image for image in images if image.path not in matched_paths]
+    return TargetMatchingResult(
+        matches=matches,
+        issues=issues,
+        unmatched_images=unmatched_images,
+    )
 
 
 def load_target_boundary(

@@ -35,10 +35,11 @@ from thucthengay.gis.crs import (
     geographic_window_to_raster_window,
     normalize_crs_key,
 )
-from thucthengay.models import LayerRenderBands
+from thucthengay.models import LayerRenderBands, LayerSymbology
 from thucthengay.models.issue import Issue, IssueScope, IssueSeverity
 from thucthengay.render.diagnostics import RenderDiagnostics
 from thucthengay.render.spec import MAX_RENDER_PIXELS, RenderLayerRef, RenderSpec
+from thucthengay.render.symbology import scale_to_uint8
 
 DatasetOpener = Callable[[str], "rasterio.DatasetReader"]
 CancelCallback = Callable[[], bool]
@@ -194,31 +195,7 @@ def _validate_render_bands(src: DatasetReader, render_bands: LayerRenderBands) -
 
 
 def _scale_to_uint8(data: np.ma.MaskedArray | np.ndarray) -> np.ndarray:
-    source = np.ma.asarray(data)
-    if source.dtype == np.uint8:
-        return source.filled(0).astype(np.uint8, copy=False)
-
-    valid = source.compressed()
-    if valid.size == 0:
-        return np.zeros(source.shape, dtype=np.uint8)
-
-    if np.issubdtype(source.dtype, np.integer):
-        dtype_info = np.iinfo(source.dtype)
-        scaled = source.astype(np.float32) / float(dtype_info.max) * 255.0
-    else:
-        finite = valid[np.isfinite(valid)]
-        if finite.size == 0:
-            return np.zeros(source.shape, dtype=np.uint8)
-        min_value = float(finite.min())
-        max_value = float(finite.max())
-        if min_value >= 0.0 and max_value <= 1.0:
-            scaled = source.astype(np.float32) * 255.0
-        elif max_value > min_value:
-            scaled = (source.astype(np.float32) - min_value) / (max_value - min_value) * 255.0
-        else:
-            scaled = np.ma.zeros(source.shape, dtype=np.float32)
-
-    return np.ma.clip(scaled, 0, 255).filled(0).astype(np.uint8)
+    return scale_to_uint8(data)
 
 
 def _read_alpha_mask(
@@ -253,6 +230,7 @@ def _read_layer_into(
     canvas: np.ndarray,
     covered_mask: np.ndarray,
     render_bands: LayerRenderBands | None,
+    symbology: LayerSymbology | None,
     diagnostics: RenderDiagnostics | None,
 ) -> _LayerReadResult:
     """Read ``dataset`` into the ``canvas`` region corresponding to its overlap.
@@ -345,9 +323,9 @@ def _read_layer_into(
         )
         with timer:
             if len(read_bands) == 1:
-                rgb = np.repeat(_scale_to_uint8(masked_data), 3, axis=0)
+                rgb = np.repeat(scale_to_uint8(masked_data, symbology), 3, axis=0)
             else:
-                rgb = _scale_to_uint8(masked_data)
+                rgb = scale_to_uint8(masked_data, symbology)
 
         valid = ~mask
         if not valid.any():
@@ -588,6 +566,7 @@ def _render_raster_layers_result(
                     canvas=canvas,
                     covered_mask=covered_mask,
                     render_bands=layer.render_bands,
+                    symbology=layer.symbology,
                     diagnostics=diagnostics,
                 )
                 if layer_result.written or layer_result.fully_occluded:

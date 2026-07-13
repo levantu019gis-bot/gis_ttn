@@ -29,7 +29,22 @@ from PySide6.QtWidgets import (
 )
 from rasterio.enums import ColorInterp
 
-from thucthengay.models import ImageLayer, LayerRenderBands, MetadataSource, MetadataStatus
+from thucthengay.models import (
+    ImageLayer,
+    LayerRenderBands,
+    LayerSymbology,
+    MetadataSource,
+    MetadataStatus,
+)
+
+_STRETCH_MODE_LABELS = {
+    "none": "None",
+    "dtype": "Data type",
+    "min_max": "Min / max",
+    "percent_clip": "Percent clip",
+    "stddev": "Stddev",
+    "manual": "Manual",
+}
 
 _STATE_LABELS = {
     MetadataStatus.VALID: "Đã parse",
@@ -130,6 +145,69 @@ class MetadataEditorDialog(QDialog):
         self._band_status_label = QLabel("")
         self._band_status_label.setObjectName("metadataBandStatus")
 
+        symbology = layer.symbology or LayerSymbology()
+        self._stretch_mode_combo = QComboBox()
+        self._stretch_mode_combo.setObjectName("metadataStretchModeCombo")
+        for mode, label in _STRETCH_MODE_LABELS.items():
+            self._stretch_mode_combo.addItem(label, mode)
+        _set_combo_data(self._stretch_mode_combo, symbology.stretch_mode)
+        self._lower_percentile_spin = _double_spin(
+            "metadataLowerPercentileSpin",
+            minimum=0.0,
+            maximum=100.0,
+            value=symbology.lower_percentile,
+            decimals=2,
+            suffix=" %",
+        )
+        self._upper_percentile_spin = _double_spin(
+            "metadataUpperPercentileSpin",
+            minimum=0.0,
+            maximum=100.0,
+            value=symbology.upper_percentile,
+            decimals=2,
+            suffix=" %",
+        )
+        self._stddev_factor_spin = _double_spin(
+            "metadataStddevFactorSpin",
+            minimum=0.1,
+            maximum=10.0,
+            value=symbology.stddev_factor,
+            decimals=2,
+        )
+        self._manual_min_edit = QLineEdit(_format_float_list(symbology.manual_min))
+        self._manual_min_edit.setObjectName("metadataManualMinEdit")
+        self._manual_max_edit = QLineEdit(_format_float_list(symbology.manual_max))
+        self._manual_max_edit.setObjectName("metadataManualMaxEdit")
+        self._gamma_spin = _double_spin(
+            "metadataGammaSpin",
+            minimum=0.1,
+            maximum=5.0,
+            value=symbology.gamma,
+            decimals=2,
+        )
+        self._brightness_spin = _double_spin(
+            "metadataBrightnessSpin",
+            minimum=-255.0,
+            maximum=255.0,
+            value=symbology.brightness,
+            decimals=1,
+        )
+        self._contrast_spin = _double_spin(
+            "metadataContrastSpin",
+            minimum=0.0,
+            maximum=10.0,
+            value=symbology.contrast,
+            decimals=2,
+        )
+        self._per_channel_checkbox = QCheckBox("Per channel")
+        self._per_channel_checkbox.setObjectName("metadataPerChannelCheck")
+        self._per_channel_checkbox.setChecked(symbology.per_channel)
+        self._symbology_enabled_checkbox = QCheckBox("Enable symbology")
+        self._symbology_enabled_checkbox.setObjectName("metadataSymbologyEnabledCheck")
+        self._symbology_enabled_checkbox.setChecked(
+            layer.symbology is not None and symbology.enabled
+        )
+
         self._validation_label = QLabel("")
         self._validation_label.setObjectName("metadataEditorValidation")
         self._validation_label.setWordWrap(True)
@@ -154,6 +232,17 @@ class MetadataEditorDialog(QDialog):
         form.addRow("Blue band:", self._blue_band_combo)
         form.addRow("Alpha band:", self._alpha_band_combo)
         form.addRow("Bands:", self._band_status_label)
+        form.addRow(self._symbology_enabled_checkbox)
+        form.addRow("Stretch:", self._stretch_mode_combo)
+        form.addRow("Lower clip:", self._lower_percentile_spin)
+        form.addRow("Upper clip:", self._upper_percentile_spin)
+        form.addRow("Stddev factor:", self._stddev_factor_spin)
+        form.addRow("Manual min:", self._manual_min_edit)
+        form.addRow("Manual max:", self._manual_max_edit)
+        form.addRow("Gamma:", self._gamma_spin)
+        form.addRow("Brightness:", self._brightness_spin)
+        form.addRow("Contrast:", self._contrast_spin)
+        form.addRow(self._per_channel_checkbox)
 
         layout = QVBoxLayout(self)
         layout.addLayout(form)
@@ -174,10 +263,12 @@ class MetadataEditorDialog(QDialog):
             return
 
         payload["render_bands"] = _render_bands_from_payload(payload)
+        payload["symbology"] = _symbology_from_payload(payload)
         payload.pop("_red_band", None)
         payload.pop("_green_band", None)
         payload.pop("_blue_band", None)
         payload.pop("_alpha_band", None)
+        payload.pop("_symbology", None)
         payload["metadata_status"] = MetadataStatus.VALID
         payload["metadata_source"] = MetadataSource.MANUAL
 
@@ -209,6 +300,19 @@ class MetadataEditorDialog(QDialog):
             "_green_band": self._green_band_combo.currentData(),
             "_blue_band": self._blue_band_combo.currentData(),
             "_alpha_band": self._alpha_band_combo.currentData(),
+            "_symbology": {
+                "enabled": self._symbology_enabled_checkbox.isChecked(),
+                "stretch_mode": self._stretch_mode_combo.currentData(),
+                "lower_percentile": float(self._lower_percentile_spin.value()),
+                "upper_percentile": float(self._upper_percentile_spin.value()),
+                "stddev_factor": float(self._stddev_factor_spin.value()),
+                "manual_min": self._manual_min_edit.text(),
+                "manual_max": self._manual_max_edit.text(),
+                "gamma": float(self._gamma_spin.value()),
+                "brightness": float(self._brightness_spin.value()),
+                "contrast": float(self._contrast_spin.value()),
+                "per_channel": self._per_channel_checkbox.isChecked(),
+            },
         }
 
     @staticmethod
@@ -224,6 +328,7 @@ class MetadataEditorDialog(QDialog):
             return "Cần nhập giờ chụp."
         try:
             _render_bands_from_payload(payload)
+            _symbology_from_payload(payload)
         except ValueError as exc:
             return str(exc)
         return None
@@ -306,6 +411,73 @@ def _render_bands_from_payload(payload: dict[str, Any]) -> LayerRenderBands | No
     except ValueError as exc:
         msg = f"Render bands khong hop le: {exc}"
         raise ValueError(msg) from exc
+
+
+def _symbology_from_payload(payload: dict[str, Any]) -> LayerSymbology | None:
+    raw = dict(payload.get("_symbology") or {})
+    if not bool(raw.get("enabled", False)):
+        return None
+    if raw.get("stretch_mode") != "manual":
+        raw["manual_min"] = None
+        raw["manual_max"] = None
+        try:
+            return LayerSymbology.model_validate(raw)
+        except ValueError as exc:
+            msg = f"Symbology khong hop le: {exc}"
+            raise ValueError(msg) from exc
+    try:
+        raw["manual_min"] = _parse_float_list(str(raw.get("manual_min") or ""))
+        raw["manual_max"] = _parse_float_list(str(raw.get("manual_max") or ""))
+    except ValueError as exc:
+        msg = f"Symbology khong hop le: {exc}"
+        raise ValueError(msg) from exc
+    try:
+        return LayerSymbology.model_validate(raw)
+    except ValueError as exc:
+        msg = f"Symbology khong hop le: {exc}"
+        raise ValueError(msg) from exc
+
+
+def _parse_float_list(text: str) -> list[float] | None:
+    cleaned = text.strip()
+    if not cleaned:
+        return None
+    values: list[float] = []
+    for part in cleaned.replace(";", ",").split(","):
+        item = part.strip()
+        if not item:
+            continue
+        try:
+            values.append(float(item))
+        except ValueError as exc:
+            msg = "Manual min/max phai la so, cach nhau bang dau phay."
+            raise ValueError(msg) from exc
+    return values or None
+
+
+def _format_float_list(values: list[float] | None) -> str:
+    if not values:
+        return ""
+    return ", ".join(f"{value:g}" for value in values)
+
+
+def _double_spin(
+    object_name: str,
+    *,
+    minimum: float,
+    maximum: float,
+    value: float,
+    decimals: int,
+    suffix: str = "",
+) -> QDoubleSpinBox:
+    spin = QDoubleSpinBox()
+    spin.setObjectName(object_name)
+    spin.setRange(minimum, maximum)
+    spin.setDecimals(decimals)
+    spin.setValue(value)
+    if suffix:
+        spin.setSuffix(suffix)
+    return spin
 
 
 def _read_band_options(source_path: str) -> tuple[list[_BandOption], str]:
@@ -398,7 +570,7 @@ def _populate_band_combo(
     combo.blockSignals(False)
 
 
-def _set_combo_data(combo: QComboBox, value: int | None) -> None:
+def _set_combo_data(combo: QComboBox, value: object | None) -> None:
     for index in range(combo.count()):
         if combo.itemData(index) == value:
             combo.setCurrentIndex(index)

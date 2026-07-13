@@ -17,6 +17,8 @@ from thucthengay.models import (
     target_order_key,
 )
 
+_UNMATCHED_TARGET_ID_PREFIX = "__unmatched__"
+
 
 class TreeNodeKind(StrEnum):
     """Node types exposed by the composition tree."""
@@ -179,7 +181,7 @@ class CompositionTreeModel(QAbstractItemModel):
             target_lookup[target_id].group is not None
             for target_id in grouped
             if target_id in target_lookup
-        )
+        ) or any(_is_unmatched_target_id(target_id) for target_id in grouped)
         if not use_group_nodes:
             for target_id in sorted(
                 grouped,
@@ -188,7 +190,7 @@ class CompositionTreeModel(QAbstractItemModel):
                 target = target_lookup.get(target_id)
                 target_node = _TreeNode(
                     kind=TreeNodeKind.TARGET,
-                    label=_target_label(target_id, target),
+                    label=_target_label(target_id, target, grouped[target_id]),
                     target_id=target_id,
                 )
                 self._root.append_child(target_node)
@@ -198,7 +200,7 @@ class CompositionTreeModel(QAbstractItemModel):
         group_nodes: dict[str, _TreeNode] = {}
         for target_id in sorted(grouped, key=lambda item: _target_sort_key(item, target_lookup)):
             target = target_lookup.get(target_id)
-            group_key, group_label = _group_identity(target)
+            group_key, group_label = _group_identity(target_id, target)
             group_node = group_nodes.get(group_key)
             if group_node is None:
                 group_node = _TreeNode(
@@ -211,7 +213,7 @@ class CompositionTreeModel(QAbstractItemModel):
 
             target_node = _TreeNode(
                 kind=TreeNodeKind.TARGET,
-                label=_target_label(target_id, target),
+                label=_target_label(target_id, target, grouped[target_id]),
                 group_key=group_key,
                 target_id=target_id,
             )
@@ -466,7 +468,13 @@ class CompositionTreeModel(QAbstractItemModel):
         return QModelIndex()
 
 
-def _target_label(target_id: str, target: TargetConfig | None) -> str:
+def _target_label(
+    target_id: str,
+    target: TargetConfig | None,
+    compositions: list[Composition] | None = None,
+) -> str:
+    if _is_unmatched_target_id(target_id):
+        return _unmatched_target_label(target_id, compositions or [])
     if target is None:
         return target_id
     if target.alias:
@@ -474,7 +482,9 @@ def _target_label(target_id: str, target: TargetConfig | None) -> str:
     return target.name
 
 
-def _group_identity(target: TargetConfig | None) -> tuple[str, str]:
+def _group_identity(target_id: str, target: TargetConfig | None) -> tuple[str, str]:
+    if _is_unmatched_target_id(target_id):
+        return (_UNMATCHED_TARGET_ID_PREFIX, "Ảnh không giao cắt")
     if target is None or target.group is None:
         return ("0", "Chưa phân nhóm")
     return (str(target.group.key), target.group.title)
@@ -485,9 +495,24 @@ def _target_sort_key(
     target_lookup: dict[str, TargetConfig],
 ) -> tuple[int, tuple[int, ...], str, int, str]:
     target = target_lookup.get(target_id)
+    if _is_unmatched_target_id(target_id):
+        return (2, (10_000,), _UNMATCHED_TARGET_ID_PREFIX, 10_000, target_id)
     if target is None:
         return (1, (10_000,), "", 10_000, target_id)
     return target_order_key(target)
+
+
+def _is_unmatched_target_id(target_id: str) -> bool:
+    return target_id.startswith(_UNMATCHED_TARGET_ID_PREFIX)
+
+
+def _unmatched_target_label(target_id: str, compositions: list[Composition]) -> str:
+    for composition in compositions:
+        for layer in composition.layers:
+            source_name = str(layer.source_path).replace("\\", "/").rsplit("/", 1)[-1]
+            if source_name:
+                return source_name
+    return target_id
 
 
 def _compositions_under(node: _TreeNode) -> list[Composition]:

@@ -15,8 +15,9 @@ from rasterio.vrt import WarpedVRT
 from rasterio.windows import from_bounds
 
 from thucthengay.gis.crs import GEOGRAPHIC_CRS, normalize_crs_key
-from thucthengay.models import LayerRenderBands
+from thucthengay.models import LayerRenderBands, LayerSymbology
 from thucthengay.render.spec import GeoWindow, RenderLayerRef
+from thucthengay.render.symbology import scale_to_uint8
 from thucthengay.render.tile import TileCache, TileCoverage, TileKey
 
 DEFAULT_DECODE_TILE_PIXELS = 256
@@ -43,6 +44,7 @@ class TileDecodeJob:
     coverage: TileCoverage
     source_path: str
     render_bands: LayerRenderBands | None = None
+    symbology: LayerSymbology | None = None
     output_width: int = DEFAULT_DECODE_TILE_PIXELS
     output_height: int = DEFAULT_DECODE_TILE_PIXELS
     priority: float = 0.0
@@ -93,6 +95,7 @@ class TileScheduler:
         revision = self._revision
         layer_paths = {layer.layer_id: layer.cache_path or layer.source_path for layer in layers}
         layer_bands = {layer.layer_id: layer.render_bands for layer in layers}
+        layer_symbology = {layer.layer_id: layer.symbology for layer in layers}
         center_lon = (viewport.min_lon + viewport.max_lon) / 2.0
         center_lat = (viewport.min_lat + viewport.max_lat) / 2.0
         jobs: list[TileDecodeJob] = []
@@ -110,6 +113,7 @@ class TileScheduler:
                     coverage=coverage,
                     source_path=source_path,
                     render_bands=layer_bands.get(coverage.key.layer_id),
+                    symbology=layer_symbology.get(coverage.key.layer_id),
                     output_width=max(1, int(tile_pixels)),
                     output_height=max(1, int(tile_pixels)),
                     priority=priority,
@@ -243,9 +247,9 @@ def _read_dataset_tile(
             )
             mask = np.logical_or(mask, np.ma.asarray(alpha).filled(0) <= 0)
         if len(band_indexes) == 1:
-            rgb = np.repeat(_scale_to_uint8(masked_data), 3, axis=0)
+            rgb = np.repeat(scale_to_uint8(masked_data, job.symbology), 3, axis=0)
         else:
-            rgb = _scale_to_uint8(masked_data)
+            rgb = scale_to_uint8(masked_data, job.symbology)
         pixels = np.zeros((job.output_height, job.output_width, 3), dtype=np.uint8)
         valid_mask = np.zeros((job.output_height, job.output_width), dtype=bool)
         read_pixels = np.transpose(rgb, (1, 2, 0))
@@ -309,28 +313,7 @@ def _validate_render_bands(src: Any, render_bands: LayerRenderBands) -> None:
 
 
 def _scale_to_uint8(data: np.ma.MaskedArray | np.ndarray) -> np.ndarray:
-    source = np.ma.asarray(data)
-    if source.dtype == np.uint8:
-        return source.filled(0).astype(np.uint8, copy=False)
-    valid = source.compressed()
-    if valid.size == 0:
-        return np.zeros(source.shape, dtype=np.uint8)
-    if np.issubdtype(source.dtype, np.integer):
-        dtype_info = np.iinfo(source.dtype)
-        scaled = source.astype(np.float32) / float(dtype_info.max) * 255.0
-    else:
-        finite = valid[np.isfinite(valid)]
-        if finite.size == 0:
-            return np.zeros(source.shape, dtype=np.uint8)
-        min_value = float(finite.min())
-        max_value = float(finite.max())
-        if min_value >= 0.0 and max_value <= 1.0:
-            scaled = source.astype(np.float32) * 255.0
-        elif max_value > min_value:
-            scaled = (source.astype(np.float32) - min_value) / (max_value - min_value) * 255.0
-        else:
-            scaled = np.ma.zeros(source.shape, dtype=np.float32)
-    return np.ma.clip(scaled, 0, 255).filled(0).astype(np.uint8)
+    return scale_to_uint8(data)
 
 
 def _tile_result(

@@ -382,6 +382,45 @@ def test_composition_tree_uses_group_nodes_and_local_target_order() -> None:
     ]
 
 
+def test_composition_tree_groups_unmatched_imagery_separately() -> None:
+    qapp()
+    model = CompositionTreeModel()
+    unmatched = composition(
+        "__unmatched__abc123__20260525",
+        "__unmatched__abc123",
+        date(2026, 5, 25),
+    ).model_copy(
+        update={
+            "layers": [
+                ImageLayer(
+                    layer_id="outside",
+                    source_path="D:/imagery/outside_scene.tif",
+                    order=0,
+                )
+            ]
+        }
+    )
+    model.set_compositions(
+        [
+            composition("alpha__20260525", "alpha", date(2026, 5, 25)),
+            unmatched,
+        ],
+        targets=[target_config("alpha", sort_order=1, name="Alpha Target")],
+    )
+
+    regular_group = model.index(0, 0)
+    unmatched_group = model.index(1, 0)
+    unmatched_target = model.index(0, 0, unmatched_group)
+
+    assert regular_group.data(CompositionTreeRole.NODE_KIND) == TreeNodeKind.GROUP
+    assert "Ảnh không giao cắt" in unmatched_group.data(Qt.ItemDataRole.DisplayRole)
+    assert unmatched_target.data(CompositionTreeRole.TARGET_ID) == "__unmatched__abc123"
+    assert "outside_scene.tif" in unmatched_target.data(Qt.ItemDataRole.DisplayRole)
+    assert model.index(0, 0, unmatched_target).data(CompositionTreeRole.COMPOSITION_ID) == (
+        "__unmatched__abc123__20260525"
+    )
+
+
 def test_composition_tree_exposes_text_status_severity_counts_and_tooltips() -> None:
     qapp()
     model = CompositionTreeModel()
