@@ -262,6 +262,36 @@ class TestLayerOrdering:
         assert spec.temporal_compare.pane_b.layer_id == "history"
         assert [ref.layer_id for ref in spec.visible_layers] == ["current", "history"]
 
+    def test_layer_temporal_compare_uses_independent_pane_centers(self) -> None:
+        comp = _composition(layers=[_layer("current", order=0), _layer("history", order=1)])
+        comp = comp.model_copy(
+            update={
+                "temporal_compare": TemporalCompareState(
+                    enabled=True,
+                    orientation=TemporalCompareOrientation.VERTICAL,
+                    pane_a_layer_id="current",
+                    pane_b_layer_id="history",
+                    pane_a_center=[106.7, 10.8],
+                    pane_b_center=[106.9, 10.9],
+                )
+            }
+        )
+
+        spec = build_render_spec(
+            composition=comp,
+            target=_target(),
+            template=_template(),
+            template_metadata_file="t.json",
+            output_width=1280,
+            output_height=720,
+        )
+
+        assert spec.temporal_compare.pane_a.view_center == [106.7, 10.8]
+        assert spec.temporal_compare.pane_b.view_center == [106.9, 10.9]
+        assert spec.temporal_compare.pane_a.geo_window is not None
+        assert spec.temporal_compare.pane_b.geo_window is not None
+        assert spec.temporal_compare.pane_a.geo_window != spec.temporal_compare.pane_b.geo_window
+
     def test_enabled_temporal_compare_builds_panes_from_selected_compositions(self) -> None:
         pane_a = _composition(
             layers=[_layer("A1", order=0), _layer("A2", order=1)],

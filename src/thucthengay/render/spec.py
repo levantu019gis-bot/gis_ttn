@@ -328,7 +328,6 @@ def build_render_spec(
         compare_compositions=compare_compositions or [],
         target=target,
         template=template,
-        base_geo_window=geo_window,
     )
     if temporal_compare.enabled:
         visible_refs = [*temporal_compare.pane_a.layers, *temporal_compare.pane_b.layers]
@@ -360,7 +359,6 @@ def _build_temporal_compare_spec(
     compare_compositions: list[Composition],
     target: TargetConfig,
     template: TemplateMetadata,
-    base_geo_window: GeoWindow,
 ) -> RenderComparisonSpec:
     state = composition.temporal_compare
     if not state.enabled:
@@ -393,21 +391,35 @@ def _build_temporal_compare_spec(
             ]
         )
 
+    pane_a_center = list(state.pane_a_center or composition.view.center)
+    pane_b_center = list(state.pane_b_center or composition.view.center)
     return RenderComparisonSpec(
         enabled=True,
         orientation=state.orientation,
         pane_a=RenderComparisonPane(
             layer_id=pane_a.layer_id,
-            view_center=list(composition.view.center),
+            view_center=pane_a_center,
             view_scale=composition.view.scale,
-            geo_window=base_geo_window,
+            geo_window=_comparison_pane_geo_window(
+                composition,
+                target=target,
+                template=template,
+                scale_denom=composition.view.scale,
+                center=pane_a_center,
+            ),
             layers=[pane_a],
         ),
         pane_b=RenderComparisonPane(
             layer_id=pane_b.layer_id,
-            view_center=list(composition.view.center),
+            view_center=pane_b_center,
             view_scale=composition.view.scale,
-            geo_window=base_geo_window,
+            geo_window=_comparison_pane_geo_window(
+                composition,
+                target=target,
+                template=template,
+                scale_denom=composition.view.scale,
+                center=pane_b_center,
+            ),
             layers=[pane_b],
         ),
     )
