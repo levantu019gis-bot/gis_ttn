@@ -105,10 +105,12 @@ def test_config_editor_create_save_and_backup(tmp_path: Path) -> None:
         {
             "name": "PlanetScope PSScene",
             "pattern": "*_yyyyMMdd_HHmmss_*_*_cloud_cloud-percent",
+            "split": ["_"],
         },
         {
             "name": "PlanetScope simple",
             "pattern": "yyyyMMdd_HHmmss_*",
+            "split": ["_"],
         },
     ]
 

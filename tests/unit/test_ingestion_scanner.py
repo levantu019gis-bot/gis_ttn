@@ -185,8 +185,18 @@ def test_geotiff_without_valid_footprint_is_warned_and_excluded(tmp_path: Path) 
 # --- FilenamePattern matching tests ---
 
 
-def _pattern(name: str, pattern: str, separator: str = "_") -> FilenamePatternConfig:
-    return FilenamePatternConfig(name=name, pattern=pattern, separator=separator)
+def _pattern(
+    name: str,
+    pattern: str,
+    split: list[str] | None = None,
+    separator: str | None = None,
+) -> FilenamePatternConfig:
+    kwargs: dict[str, object] = {"name": name, "pattern": pattern}
+    if split is not None:
+        kwargs["split"] = split
+    if separator is not None:
+        kwargs["separator"] = separator
+    return FilenamePatternConfig(**kwargs)
 
 
 class TestTryPatternMatch:
@@ -252,6 +262,62 @@ class TestTryPatternMatch:
         assert result.capture_date is not None
         assert result.capture_date.isoformat() == "2026-05-26"
         assert result.capture_time is None
+
+    def test_embedded_date_with_trailing_wildcard_pattern(self) -> None:
+        pat = _pattern("prefixed", "*.yyyyMMdd_HHmmss_*", split=["_", "."])
+        result = _try_pattern_match("2.20260712_021424_45_2514", pat)
+        assert result.capture_date is not None
+        assert result.capture_date.isoformat() == "2026-07-12"
+        assert result.capture_time is not None
+        assert result.capture_time.isoformat() == "09:14:24"
+
+    def test_split_chars_are_interchangeable_and_do_not_require_exact_segment_count(
+        self,
+    ) -> None:
+        pat = _pattern("multi split", "*_yyyyMMdd_HHmmss_*", split=["_", "."])
+        result = _try_pattern_match("2.20260712_021424_45_2514", pat)
+        assert result.capture_date is not None
+        assert result.capture_date.isoformat() == "2026-07-12"
+        assert result.capture_time is not None
+        assert result.capture_time.isoformat() == "09:14:24"
+
+        result = _try_pattern_match("2_20260712_021424_45_2514", pat)
+        assert result.capture_date is not None
+        assert result.capture_date.isoformat() == "2026-07-12"
+        assert result.capture_time is not None
+        assert result.capture_time.isoformat() == "09:14:24"
+
+    def test_decimal_cloud_percent_survives_dot_split_character(self) -> None:
+        pat = _pattern(
+            "skysat",
+            "*_yyyyMMdd_HHmmss_*_*_cloud_cloud-percent",
+            split=["_", "."],
+        )
+        result = _try_pattern_match(
+            "SkySatCollect_20250910_065056_ssc8_u0001_cloud_1.0",
+            pat,
+        )
+        assert result.capture_date is not None
+        assert result.capture_date.isoformat() == "2025-09-10"
+        assert result.capture_time is not None
+        assert result.capture_time.isoformat() == "13:50:56"
+        assert result.cloud_percent == 1.0
+
+    def test_large_decimal_cloud_percent_is_kept_as_percent_value(self) -> None:
+        pat = _pattern(
+            "psscene",
+            "*_yyyyMMdd_HHmmss_*_*_cloud_cloud-percent",
+            split=["_", "."],
+        )
+        result = _try_pattern_match(
+            "PSScene_20260706_031406_34_253d_cloud_88.77777",
+            pat,
+        )
+        assert result.capture_date is not None
+        assert result.capture_date.isoformat() == "2026-07-06"
+        assert result.capture_time is not None
+        assert result.capture_time.isoformat() == "10:14:06"
+        assert result.cloud_percent == 88.77777
 
 
 def test_scan_with_filename_patterns_extracts_metadata(tmp_path: Path) -> None:

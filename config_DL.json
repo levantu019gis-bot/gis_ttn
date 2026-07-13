@@ -74,11 +74,27 @@
   "filename_patterns": [
     {
       "name": "PlanetScope PSScene",
-      "pattern": "*_yyyyMMdd_HHmmss_*_*_cloud_cloud-percent"
+      "pattern": "*_yyyyMMdd_HHmmss_*_*_cloud_cloud-percent",
+      "split": [
+        "_",
+        "."
+      ]
     },
     {
       "name": "PlanetScope simple",
-      "pattern": "yyyyMMdd_HHmmss_*"
+      "pattern": "yyyyMMdd_HHmmss_*",
+      "split": [
+        "_",
+        "."
+      ]
+    },
+    {
+      "name": "Prefixed date-time",
+      "pattern": "*_yyyyMMdd_HHmmss_*",
+      "split": [
+        "_",
+        "."
+      ]
     }
   ],
   "targets": [

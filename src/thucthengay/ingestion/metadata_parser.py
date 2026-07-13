@@ -124,38 +124,34 @@ def _parse_filename_metadata(
 def _try_pattern_match(
     stem: str, pattern: FilenamePatternConfig
 ) -> ParsedBusinessMetadata:
-    parts = stem.split(pattern.separator)
-    tokens = pattern.pattern.split(pattern.separator)
-    if len(parts) != len(tokens):
+    marker_pattern = _filename_regex_for_pattern(pattern)
+    match = marker_pattern.fullmatch(stem)
+    if match is None:
         return ParsedBusinessMetadata()
 
     capture_date: date | None = None
     capture_time: time | None = None
     cloud_percent: float | None = None
     field_sources: dict[str, MetadataSource] = {}
+    groups = match.groupdict()
 
-    for part, token in zip(parts, tokens, strict=True):
-        if token == "yyyyMMdd":
-            try:
-                capture_date = datetime.strptime(part, "%Y%m%d").date()
-                field_sources["capture_date"] = MetadataSource.FILENAME
-            except ValueError:
-                return ParsedBusinessMetadata()
-        elif token == "HHmmss":
-            try:
-                capture_time = datetime.strptime(part, "%H%M%S").time()
-                field_sources["capture_time"] = MetadataSource.FILENAME
-            except ValueError:
-                return ParsedBusinessMetadata()
-        elif token == "cloud-percent":
-            parsed = _parse_cloud_value(part)
-            if parsed is not None:
-                cloud_percent = parsed
-                field_sources["cloud_percent"] = MetadataSource.FILENAME
-        elif token == "*":
-            continue
-        elif token != part:
+    if groups.get("capture_date"):
+        try:
+            capture_date = datetime.strptime(groups["capture_date"], "%Y%m%d").date()
+            field_sources["capture_date"] = MetadataSource.FILENAME
+        except ValueError:
             return ParsedBusinessMetadata()
+    if groups.get("capture_time"):
+        try:
+            capture_time = datetime.strptime(groups["capture_time"], "%H%M%S").time()
+            field_sources["capture_time"] = MetadataSource.FILENAME
+        except ValueError:
+            return ParsedBusinessMetadata()
+    if groups.get("cloud_percent") is not None:
+        parsed_cloud = _parse_cloud_value(groups["cloud_percent"])
+        if parsed_cloud is not None:
+            cloud_percent = parsed_cloud
+            field_sources["cloud_percent"] = MetadataSource.FILENAME
 
     source_identifier = stem if field_sources else None
     if source_identifier:
@@ -173,6 +169,63 @@ def _try_pattern_match(
         source_identifier=source_identifier,
         field_sources=field_sources,
     )
+
+
+def _filename_regex_for_pattern(pattern: FilenamePatternConfig) -> re.Pattern[str]:
+    marker_groups = {
+        "yyyyMMdd": "capture_date",
+        "HHmmss": "capture_time",
+        "cloud-percent": "cloud_percent",
+    }
+    split_chars = pattern.split
+    split_class = _split_char_class(split_chars)
+    non_split_class = _non_split_char_class(split_chars)
+    pieces: list[str] = []
+    index = 0
+    while index < len(pattern.pattern):
+        marker = _marker_at(pattern.pattern, index, marker_groups)
+        if marker is not None:
+            group_name = marker_groups[marker]
+            if marker == "yyyyMMdd":
+                pieces.append(f"(?P<{group_name}>\\d{{8}})")
+            elif marker == "HHmmss":
+                pieces.append(f"(?P<{group_name}>\\d{{6}})")
+            else:
+                pieces.append(
+                    f"(?P<{group_name}>\\d+(?:\\.\\d+)?%?|{non_split_class}*)"
+                )
+            index += len(marker)
+            continue
+        char = pattern.pattern[index]
+        if char == "*":
+            pieces.append(".*?")
+        elif char in split_chars:
+            pieces.append(f"{split_class}+")
+        else:
+            pieces.append(re.escape(char))
+        index += 1
+    return re.compile("".join(pieces))
+
+
+def _split_char_class(split_chars: list[str]) -> str:
+    escaped = "".join(re.escape(char) for char in split_chars)
+    return f"[{escaped}]"
+
+
+def _non_split_char_class(split_chars: list[str]) -> str:
+    escaped = "".join(re.escape(char) for char in split_chars)
+    return f"[^{escaped}]"
+
+
+def _marker_at(
+    token: str,
+    index: int,
+    marker_groups: dict[str, str],
+) -> str | None:
+    for marker in sorted(marker_groups, key=len, reverse=True):
+        if token.startswith(marker, index):
+            return marker
+    return None
 
 
 def _parse_sidecar_metadata(path: Path) -> ParsedBusinessMetadata:
@@ -332,8 +385,6 @@ def _parse_cloud_value(value: Any) -> float | None:
         cloud_percent = float(value)
     except (TypeError, ValueError):
         return None
-    if 0 <= cloud_percent <= 1:
-        cloud_percent *= 100
     if not 0 <= cloud_percent <= 100:
         return None
     return cloud_percent

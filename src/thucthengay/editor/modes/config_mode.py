@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import copy
 import json
+from collections.abc import Iterable
 from enum import IntEnum
 from pathlib import Path
 from typing import Any
@@ -401,7 +402,7 @@ class ConfigMode(QWidget):
         )
         self.historical_lookback_anchor_combo.addItem("today", "today")
         self.pattern_table = QTableWidget(0, 3)
-        self.pattern_table.setHorizontalHeaderLabels(["Tên", "Pattern", "Separator"])
+        self.pattern_table.setHorizontalHeaderLabels(["Tên", "Pattern", "Split"])
         self.add_pattern_button = QPushButton("Thêm pattern")
         self.apply_patterns_button = QPushButton("Apply patterns")
         self.pattern_test_input = QLineEdit("20260526_203927_sample_12.tif")
@@ -1168,7 +1169,8 @@ class ConfigMode(QWidget):
                 pattern = {}
             self.pattern_table.setItem(row, 0, QTableWidgetItem(str(pattern.get("name", ""))))
             self.pattern_table.setItem(row, 1, QTableWidgetItem(str(pattern.get("pattern", ""))))
-            self.pattern_table.setItem(row, 2, QTableWidgetItem(str(pattern.get("separator", "_"))))
+            split = pattern.get("split", pattern.get("separator", "_"))
+            self.pattern_table.setItem(row, 2, QTableWidgetItem(_format_split_value(split)))
         self.pattern_table.resizeColumnsToContents()
 
     def _refresh_raw_json(self) -> None:
@@ -1579,7 +1581,7 @@ class ConfigMode(QWidget):
                 {
                     "name": _table_text(self.pattern_table, row, 0),
                     "pattern": _table_text(self.pattern_table, row, 1),
-                    "separator": _table_text(self.pattern_table, row, 2) or "_",
+                    "split": _parse_split_value(_table_text(self.pattern_table, row, 2)),
                 }
             )
         self._service.update_filename_patterns(patterns)
@@ -1905,6 +1907,42 @@ def _format_default_value(value: Any) -> str:
     if isinstance(value, list):
         return ", ".join(str(item) for item in value)
     return str(value)
+
+
+def _format_split_value(value: Any) -> str:
+    if isinstance(value, list):
+        return ",".join(str(item) for item in value)
+    if isinstance(value, str):
+        return value
+    return "_"
+
+
+def _parse_split_value(value: str) -> list[str]:
+    text = value.strip()
+    if not text:
+        return ["_"]
+    if text.startswith("[") and text.endswith("]"):
+        try:
+            parsed = json.loads(text)
+        except json.JSONDecodeError:
+            parsed = None
+        if isinstance(parsed, list):
+            return _normalize_split_items(str(item) for item in parsed)
+    separators = [item.strip() for item in text.split(",")] if "," in text else list(text)
+    return _normalize_split_items(separators)
+
+
+def _normalize_split_items(items: Iterable[str]) -> list[str]:
+    normalized: list[str] = []
+    for item in items:
+        if not item:
+            continue
+        for char in item:
+            if char.isspace():
+                continue
+            if char not in normalized:
+                normalized.append(char)
+    return normalized or ["_"]
 
 
 def _parse_scalar(value: str) -> Any:

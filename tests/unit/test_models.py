@@ -311,7 +311,17 @@ def test_target_id_rejects_windows_unsafe_filename_characters() -> None:
     assert ("id",) in {tuple(error["loc"]) for error in exc_info.value.errors()}
 
 
-def test_filename_pattern_validator_uses_configured_separator() -> None:
+def test_filename_pattern_validator_uses_configured_split() -> None:
+    pattern = FilenamePatternConfig(
+        name="multi split",
+        pattern="*_yyyyMMdd_HHmmss_*",
+        split=["_", "."],
+    )
+
+    assert pattern.split == ["_", "."]
+
+
+def test_filename_pattern_accepts_legacy_separator() -> None:
     pattern = FilenamePatternConfig(
         name="dash separated",
         pattern="yyyyMMdd-HHmmss-*",
@@ -319,6 +329,7 @@ def test_filename_pattern_validator_uses_configured_separator() -> None:
     )
 
     assert pattern.separator == "-"
+    assert pattern.split == ["-"]
 
 
 def test_zero_grid_interval_fails_on_interval_field() -> None:

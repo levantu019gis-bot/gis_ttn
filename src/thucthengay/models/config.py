@@ -63,13 +63,30 @@ class FilenamePatternConfig(BaseModel):
 
     name: str
     pattern: str
-    separator: str = "_"
+    split: list[str] = Field(default_factory=lambda: ["_"])
+    separator: str | None = Field(default=None, exclude=True)
+
+    @field_validator("split")
+    @classmethod
+    def split_chars_must_be_single_characters(cls, value: list[str]) -> list[str]:
+        if not value:
+            msg = "split must contain at least one separator character"
+            raise ValueError(msg)
+        normalized: list[str] = []
+        for item in value:
+            if len(item) != 1:
+                msg = "each split entry must be exactly one character"
+                raise ValueError(msg)
+            if item not in normalized:
+                normalized.append(item)
+        return normalized
 
     @model_validator(mode="after")
     def pattern_must_have_extractable_token(self) -> FilenamePatternConfig:
+        if self.separator is not None and self.split == ["_"]:
+            self.split = [self.separator]
         extractable = {"yyyyMMdd", "HHmmss", "cloud-percent"}
-        tokens = self.pattern.split(self.separator)
-        if not any(token in extractable for token in tokens):
+        if not any(marker in self.pattern for marker in extractable):
             msg = (
                 "pattern must contain at least one extractable token"
                 " (yyyyMMdd, HHmmss, cloud-percent)"

@@ -550,10 +550,12 @@ _DEFAULT_FILENAME_PATTERNS_SEED: list[dict[str, Any]] = [
     {
         "name": "PlanetScope PSScene",
         "pattern": "*_yyyyMMdd_HHmmss_*_*_cloud_cloud-percent",
+        "split": ["_"],
     },
     {
         "name": "PlanetScope simple",
         "pattern": "yyyyMMdd_HHmmss_*",
+        "split": ["_"],
     },
 ]
 
